@@ -3,10 +3,10 @@
 """
 Drive the entire analysis package via the :class:`analysis` class.
 """
-from .driver.analysis import analysis
-from .driver.model import model
-from .driver.observation import observation
-from .driver.pair import pair
+from .analysis import analysis
+from .model import model
+from .observation import observation
+from .pair import pair
 
 __all__ = (
     "pair",
