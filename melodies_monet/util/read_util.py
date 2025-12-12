@@ -1,5 +1,37 @@
 # SPDX-License-Identifier: Apache-2.0
 #
+from glob import glob
+import os
+from typing import Iterable, List
+
+
+def _expand_filenames(read_dir: str, filenames: str or Iterable[str]) -> List[str]:
+    """Expand wildcards in filenames.
+
+    Parameters
+    ----------
+    read_dir : str
+        The directory to read files from.
+    filenames : str or iterable
+        The filenames to expand.
+
+    Returns
+    -------
+    list
+        A list of expanded filenames.
+    """
+    if isinstance(filenames, str):
+        filenames = [filenames]
+
+    files = []
+    for file_pattern in filenames:
+        expanded = glob(os.path.join(read_dir, file_pattern))
+        if not expanded:
+            raise FileNotFoundError(f"No such file: {file_pattern}")
+        files.extend(expanded)
+    return sorted(files)
+
+
 def read_saved_data(analysis, filenames, method, attr, xr_kws={}):
     """Read previously saved dict containing melodies-monet data (:attr:`paired`, :attr:`models`, or :attr:`obs`)
     from pickle file or netcdf file, populating the :attr:`paired`, :attr:`models`, or :attr:`obs` dict.
@@ -33,27 +65,26 @@ def read_saved_data(analysis, filenames, method, attr, xr_kws={}):
         read_dir = ''
     
     # expand any wildcards in the filenames
-    if method=='pkl':
-        if isinstance(filenames,str):
-            files = sorted([file for sublist in [glob(os.path.join(read_dir,file)) for file in [filenames]] for file in sublist])
-        else:
-            files = sorted([file for sublist in [glob(os.path.join(read_dir,file)) for file in filenames] for file in sublist])
-        if not files:
-            raise FileNotFoundError('No such file: ',filenames)
-    elif method=='netcdf':
-        if isinstance(filenames,dict): 
+    if method == 'pkl':
+        files = _expand_filenames(read_dir, filenames)
+    elif method == 'netcdf':
+        if isinstance(filenames, dict):
             files = {}
-            for group in filenames.keys():
-                if isinstance(filenames[group],str):
-                    files[group] = sorted([file for sublist in [glob(os.path.join(read_dir,file)) for file in [filenames[group]]] for file in sublist])
-                else:
-                     if filenames[group][0].startswith("example:"):
-                        files[group] = sorted([file for sublist in [
-                            [tutorial.fetch_example(":".join(s.strip() for s in file.split(":")[1:]))] for file in filenames[group]] for file in sublist])
-                     else:
-                         files[group] = sorted([file for sublist in [glob(os.path.join(read_dir,file)) for file in filenames[group]] for file in sublist])
-                if not files[group]:
-                    raise FileNotFoundError('No such file: ', filenames[group])
+            for group, file_list in filenames.items():
+                if isinstance(file_list, str):
+                    file_list = [file_list]
+
+                expanded_files = []
+                for file_pattern in file_list:
+                    if file_pattern.startswith("example:"):
+                        expanded_files.append(tutorial.fetch_example(":".join(s.strip() for s in file_pattern.split(":")[1:])))
+                    else:
+                        expanded_files.extend(_expand_filenames(read_dir, file_pattern))
+
+                if not expanded_files:
+                    raise FileNotFoundError(f"No such file: {file_list}")
+
+                files[group] = sorted(expanded_files)
         else:
             raise TypeError('NetCDF format filenames need to be specified as a dict, with format {group1:str or iterable of filenames, group2:...}')
     
