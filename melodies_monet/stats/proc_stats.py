@@ -6,6 +6,7 @@ MELODIES-MONET statistics processing module.
 Architected by Aero 🍃⚡ for the Pangeo ecosystem.
 """
 
+import inspect
 from typing import Any, Dict, List, Optional, Union
 
 import matplotlib.pyplot as plt
@@ -16,53 +17,74 @@ import xarray as xr
 from melodies_monet.plots import savefig
 
 # Using monet_stats for Pangeo-optimized, Aero-compliant statistics
-from monet_stats.correlation_metrics import (
-    AC,
-    E1,
-    IOA,
-    R2,
-    RMSE,
-    WDAC,
-    WDIOA,
-    WDRMSE,
-    d1,
-)
-from monet_stats.error_metrics import (
-    MB,
-    MNB,
-    MNE,
-    MO,
-    MP,
-    MdnB,
-    MdnNB,
-    MdnNE,
-    MdnO,
-    MdnP,
-    NMdnGE,
-    NO,
-    NOP,
-    NP,
-    RM,
-    RMdn,
-    STDO,
-    STDP,
-    WDMB,
-    WDMdnB,
-)
-from monet_stats.relative_metrics import (
-    FB,
-    FE,
-    ME,
-    MdnE,
-    NMB,
-    NMdnB,
-    NME,
-    NMdnE,
-    WDME,
-    WDMdnE,
-    WDNMB_m,
-)
+import monet_stats.contingency_metrics
+import monet_stats.correlation_metrics
+import monet_stats.efficiency_metrics
+import monet_stats.error_metrics
+import monet_stats.relative_metrics
 
+# Dynamically discover all statistics from monet-stats
+def _discover_stats() -> Dict[str, Any]:
+    """
+    Discover all uppercase statistical functions in monet-stats submodules.
+
+    Returns
+    -------
+    dict
+        A mapping of statistic names to their corresponding functions.
+    """
+    modules = [
+        monet_stats.contingency_metrics,
+        monet_stats.correlation_metrics,
+        monet_stats.efficiency_metrics,
+        monet_stats.error_metrics,
+        monet_stats.relative_metrics,
+    ]
+    discovered = {}
+    for mod in modules:
+        for name, func in inspect.getmembers(mod, inspect.isfunction):
+            # We assume stats are uppercase and from the module itself (not imported)
+            if name.isupper() and func.__module__ == mod.__name__:
+                discovered[name] = func
+    return discovered
+
+_ALL_STATS = _discover_stats()
+
+# Pre-defined mapping for friendly names
+_STAT_FRIENDLY_NAMES = {
+    "STDO": "Obs Standard Deviation",
+    "STDP": "Mod Standard Deviation",
+    "MNB": "Mean Normalized Bias (%)",
+    "MNE": "Mean Normalized Gross Error (%)",
+    "MdnNB": "Median Normalized Bias (%)",
+    "MdnNE": "Median Normalized Gross Error (%)",
+    "NMdnGE": "Normalized Median Gross Error (%)",
+    "NO": "Obs Number",
+    "NOP": "Pairs Number",
+    "NP": "Mod Number",
+    "MO": "Obs Mean",
+    "MP": "Mod Mean",
+    "MdnO": "Obs Median",
+    "MdnP": "Mod Median",
+    "RM": "Mean Ratio Obs/Mod",
+    "RMdn": "Median Ratio Obs/Mod",
+    "MB": "Mean Bias",
+    "MdnB": "Median Bias",
+    "NMB": "Normalized Mean Bias (%)",
+    "NMdnB": "Normalized Median Bias (%)",
+    "FB": "Fractional Bias (%)",
+    "ME": "Mean Gross Error",
+    "MdnE": "Median Gross Error",
+    "NME": "Normalized Mean Error (%)",
+    "NMdnE": "Normalized Median Error (%)",
+    "FE": "Fractional Error (%)",
+    "R2": "Coefficient of Determination (R2)",
+    "RMSE": "Root Mean Square Error",
+    "d1": "Modified Index of Agreement",
+    "E1": "Modified Coefficient of Efficiency",
+    "IOA": "Index of Agreement",
+    "AC": "Anomaly Correlation",
+}
 
 def produce_stat_dict(stat_list: List[str], spaces: bool = False) -> List[str]:
     """
@@ -81,47 +103,9 @@ def produce_stat_dict(stat_list: List[str], spaces: bool = False) -> List[str]:
     list of str
         List of full names of the statistics.
     """
-    dict_stats_def = {
-        "STDO": "Obs Standard Deviation",
-        "STDP": "Mod Standard Deviation",
-        "MNB": "Mean Normalized Bias (%)",
-        "MNE": "Mean Normalized Gross Error (%)",
-        "MdnNB": "Median Normalized Bias (%)",
-        "MdnNE": "Median Normalized Gross Error (%)",
-        "NMdnGE": "Normalized Median Gross Error (%)",
-        "NO": "Obs Number",
-        "NOP": "Pairs Number",
-        "NP": "Mod Number",
-        "MO": "Obs Mean",
-        "MP": "Mod Mean",
-        "MdnO": "Obs Median",
-        "MdnP": "Mod Median",
-        "RM": "Mean Ratio Obs/Mod",
-        "RMdn": "Median Ratio Obs/Mod",
-        "MB": "Mean Bias",
-        "MdnB": "Median Bias",
-        "NMB": "Normalized Mean Bias (%)",
-        "NMdnB": "Normalized Median Bias (%)",
-        "FB": "Fractional Bias (%)",
-        "ME": "Mean Gross Error",
-        "MdnE": "Median Gross Error",
-        "NME": "Normalized Mean Error (%)",
-        "NMdnE": "Normalized Median Error (%)",
-        "FE": "Fractional Error (%)",
-        "R2": "Coefficient of Determination (R2)",
-        "RMSE": "Root Mean Square Error",
-        "d1": "Modified Index of Agreement",
-        "E1": "Modified Coefficient of Efficiency",
-        "IOA": "Index of Agreement",
-        "AC": "Anomaly Correlation",
-    }
     stat_fullname_list = []
     for stat_id in stat_list:
-        if stat_id in dict_stats_def:
-            fullname = dict_stats_def[stat_id]
-        else:
-            # Fallback for stats not in the default dictionary
-            fullname = stat_id
+        fullname = _STAT_FRIENDLY_NAMES.get(stat_id, stat_id)
         if not spaces:
             fullname = fullname.replace(" ", "_")
         stat_fullname_list.append(fullname)
@@ -134,6 +118,7 @@ def calc(
     obsvar: Optional[str] = None,
     modvar: Optional[str] = None,
     wind: bool = False,
+    **kwargs: Any,
 ) -> Union[float, np.ndarray, xr.DataArray]:
     """
     Calculate statistics in a backend-agnostic manner.
@@ -141,6 +126,8 @@ def calc(
     This function supports both NumPy-backed and Dask-backed Xarray DataArrays,
     as well as Pandas Series (via DataFrame). It avoids forced computes on
     Xarray objects and maintains laziness when possible by using monet-stats.
+
+    All statistics available in monet-stats are supported.
 
     Parameters
     ----------
@@ -154,16 +141,19 @@ def calc(
         Column or variable name of model results.
     wind : bool, optional
         Whether the variable is wind direction (requires circular stats).
+    **kwargs : Any
+        Additional arguments passed to the monet-stats function.
 
     Returns
     -------
     float, numpy.ndarray, or xarray.DataArray
         Calculated statistical value.
     """
-    # Extract observations and model data without forcing a compute on xarray
+    if stat is None:
+        raise ValueError("The 'stat' parameter must be provided.")
+
+    # 1. Extract observations and model data without forcing a compute on xarray
     if isinstance(df, pd.DataFrame):
-        # For pandas, we use .values to avoid issues with some monet-stats
-        # functions that don't perfectly handle pd.Series with np.ma
         obs = df[obsvar].values
         mod = df[modvar].values
     elif isinstance(df, xr.Dataset):
@@ -174,85 +164,51 @@ def calc(
         obs = df
         mod = df
 
-    # Aero Protocol: For Xarray/Dask, explicit dimension names are preferred over None
-    # to avoid NotImplementedError in dask for certain reductions (like nanmedian).
-    # If it is 1D, we use the single dimension name instead of a tuple.
-    calc_axis = None
-    if isinstance(obs, xr.DataArray):
-        if obs.ndim == 1:
-            calc_axis = obs.dims[0]
+    # 2. Determine the stat function and apply circular logic if requested
+    target_stat = stat
+    if wind:
+        if not stat.startswith("WD"):
+            target_stat = f"WD{stat}"
+        # Special case for WDNMB_m in monet-stats
+        if target_stat == "WDNMB":
+            target_stat = "WDNMB_m"
+
+    func = _ALL_STATS.get(target_stat)
+    if func is None:
+        # Fallback to non-WD version if WD version not found
+        func = _ALL_STATS.get(stat)
+        if func is None:
+            print(f"Stat not found in monet-stats: {target_stat}")
+            return np.nan
+
+    # 3. Aero Protocol: Handle explicit dimensions for Xarray/Dask to avoid reductions errors
+    calc_kwargs = kwargs.copy()
+    sig = inspect.signature(func)
+
+    if "axis" in sig.parameters:
+        if isinstance(obs, xr.DataArray) and "axis" not in calc_kwargs and "dim" not in calc_kwargs:
+            if obs.ndim == 1:
+                calc_kwargs["axis"] = obs.dims[0]
+            else:
+                calc_kwargs["axis"] = tuple(obs.dims)
+        elif "axis" not in calc_kwargs:
+            calc_kwargs["axis"] = None
+
+    # Handle paxis if required and missing
+    if "paxis" in sig.parameters and "paxis" not in calc_kwargs:
+        if isinstance(obs, xr.DataArray):
+             calc_kwargs["paxis"] = obs.dims[0]
         else:
-            calc_axis = tuple(obs.dims)
+             calc_kwargs["paxis"] = 0
 
-    # Map stat abbreviations to monet-stats functions
-    # Note: monet-stats functions handle both numpy and xarray/dask backends
-    stat_func_map = {
-        "STDO": lambda o, m: STDO(o, m, axis=calc_axis),
-        "STDP": lambda o, m: STDP(o, m, axis=calc_axis),
-        "MNB": lambda o, m: MNB(o, m, axis=calc_axis),
-        "MNE": lambda o, m: MNE(o, m, axis=calc_axis),
-        "MdnNB": lambda o, m: MdnNB(o, m, axis=calc_axis),
-        "MdnNE": lambda o, m: MdnNE(o, m, axis=calc_axis),
-        "NMdnGE": lambda o, m: NMdnGE(o, m, axis=calc_axis),
-        "NO": lambda o, m: NO(o, m, axis=calc_axis),
-        "NOP": lambda o, m: NOP(o, m, axis=calc_axis),
-        "NP": lambda o, m: NP(o, m, axis=calc_axis),
-        "MO": lambda o, m: MO(o, m, axis=calc_axis),
-        "MP": lambda o, m: MP(o, m, axis=calc_axis),
-        "MdnO": lambda o, m: MdnO(o, m, axis=calc_axis),
-        "MdnP": lambda o, m: MdnP(o, m, axis=calc_axis),
-        "RM": lambda o, m: RM(o, m, axis=calc_axis),
-        "RMdn": lambda o, m: RMdn(o, m, axis=calc_axis),
-        "MB": lambda o, m: WDMB(o, m, axis=calc_axis)
-        if wind
-        else MB(o, m, axis=calc_axis),
-        "MdnB": lambda o, m: WDMdnB(o, m, axis=calc_axis)
-        if wind
-        else MdnB(o, m, axis=calc_axis),
-        "NMB": lambda o, m: WDNMB_m(o, m, axis=calc_axis)
-        if wind
-        else NMB(o, m, axis=calc_axis),
-        "NMdnB": lambda o, m: NMdnB(o, m, axis=calc_axis),
-        "FB": lambda o, m: FB(o, m, axis=calc_axis),
-        "ME": lambda o, m: WDME(o, m, axis=calc_axis)
-        if wind
-        else ME(o, m, axis=calc_axis),
-        "MdnE": lambda o, m: WDMdnE(o, m, axis=calc_axis)
-        if wind
-        else MdnE(o, m, axis=calc_axis),
-        "NME": lambda o, m: NME(o, m, axis=calc_axis),
-        "NMdnE": lambda o, m: NMdnE(o, m, axis=calc_axis),
-        "FE": lambda o, m: FE(o, m, axis=calc_axis),
-        "R2": lambda o, m: R2(o, m, axis=calc_axis),
-        "RMSE": lambda o, m: WDRMSE(o, m, axis=calc_axis)
-        if wind
-        else RMSE(o, m, axis=calc_axis),
-        "d1": lambda o, m: d1(o, m, axis=calc_axis),
-        "E1": lambda o, m: E1(o, m, axis=calc_axis),
-        "IOA": lambda o, m: WDIOA(o, m, axis=calc_axis)
-        if wind
-        else IOA(o, m, axis=calc_axis),
-        "AC": lambda o, m: WDAC(o, m, axis=calc_axis)
-        if wind
-        else AC(o, m, axis=calc_axis),
-    }
+    # 4. Perform calculation
+    value = func(obs, mod, **calc_kwargs)
 
-    if stat in stat_func_map:
-        value = stat_func_map[stat](obs, mod)
-    else:
-        print(f"Stat not found: {stat}")
-        value = np.nan
-
-    # Scientific Hygiene: Update history if it's an xarray object
+    # 5. Scientific Hygiene: Update history if it's an xarray object
     if isinstance(value, (xr.DataArray, xr.Dataset)):
-        if (
-            "history" not in value.attrs
-            or f"Calculated {stat}" not in value.attrs["history"]
-        ):
+        if "history" not in value.attrs or f"Calculated {stat}" not in value.attrs["history"]:
             history = f"Calculated {stat} using monet-stats"
-            value.attrs["history"] = (
-                f"{value.attrs.get('history', '')}\n{history}".strip()
-            )
+            value.attrs["history"] = f"{value.attrs.get('history', '')}\n{history}".strip()
 
     return value
 
@@ -291,9 +247,7 @@ def create_table(
         plt.ioff()
 
     # Define defaults if not provided:
-    out_table_def = dict(
-        fontsize=16.0, xscale=1.2, yscale=1.2, figsize=[10, 7], edges="open"
-    )
+    out_table_def = dict(fontsize=16.0, xscale=1.2, yscale=1.2, figsize=[10, 7], edges="open")
     if out_table_kwargs is not None:
         table_kwargs = {**out_table_def, **out_table_kwargs}
     else:
