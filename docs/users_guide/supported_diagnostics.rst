@@ -34,5 +34,3 @@ plotting characteristics for the regulatory options ("ylabel_reg_plot", "vmin_re
 An example input YAML file that calculates MDA8 ozone and 24 hr PM\ :sub:`2.5` \ is in
 ``examples/yaml/control_rrfs_cmaq_airnow_reg.yaml``. These input YAML file options are
 also further described in the Appendix under :doc:`/appendix/yaml`.
-
-

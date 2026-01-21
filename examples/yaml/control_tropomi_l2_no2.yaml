@@ -11,9 +11,9 @@ analysis:
       prefix: '201907'
       data: all
   read:
-    paired: 
+    paired:
       method: 'netcdf'
-      filenames: 
+      filenames:
         {tropomi_l2_no2_wrfchem_v4.2: ['201907_tropomi_l2_no2_wrfchem_v4.2.nc4']}
 
 obs:
@@ -28,7 +28,7 @@ obs:
             quality_flag_min: 0.7
             var_applied: ['nitrogendioxide_tropospheric_column']
             fillvalue: 9.96921e+36
-        nitrogendioxide_tropospheric_column:       
+        nitrogendioxide_tropospheric_column:
             scale: 6.022141e+19 # unit convert form mol_perm2to molec_percm2,6.022141e+19
             fillvalue: 9.96921e+36
             ylabel_plot: 'NO2 trop. columns'
@@ -44,11 +44,11 @@ obs:
             fillvalue: 9.96921e+36
         air_mass_factor_troposphere:
             fillvalue: 9.96921e+36
-        latitude: None 
-        longitude: None 
+        latitude: None
+        longitude: None
 
         preslev: # pressure of the vertical layer center
-            tm5_constant_a:    
+            tm5_constant_a:
                 group: ['PRODUCT']
                 maximum: 9.0e+36
             tm5_constant_b:
@@ -60,17 +60,17 @@ obs:
             tm5_tropopause_layer_index:
                 group: ['PRODUCT']
         #latitude_bounds:
-        #    group: ['PRODUCT/SUPPORT_DATA/GEOLOCATIONS/'] 
+        #    group: ['PRODUCT/SUPPORT_DATA/GEOLOCATIONS/']
         #longitude_bounds:
         #   group: ['PRODUCT/SUPPORT_DATA/GEOLOCATIONS/']
 
 model:
-  wrfchem_v4.2: 
+  wrfchem_v4.2:
     files: /Users/mengli/Work/melodies-monet/modeldata/wrfchem/0715/*
     #files: /Volumes/Meng/WRF_Chem/0715/*
     mod_type: 'wrfchem'
     apply_ak: True
-    mod_kwargs: 
+    mod_kwargs:
       mech: 'racm_esrl_vcp'
     mapping: #model species name : obs species name
       tropomi_l2_no2:
@@ -79,7 +79,7 @@ model:
     plot_kwargs: #Opt
       color: 'dodgerblue'
       marker: '^'
-      linestyle: ':' 
+      linestyle: ':'
 
 plots:
   plot_grp1:
@@ -91,12 +91,12 @@ plots:
       markersize: 10.
     text_kwargs: #Opt
       fontsize: 18.
-    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
     data: ['tropomi_l2_no2_wrfchem_v4.2'] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
     data_proc:
       #See 'altitde_yax2' list below for secondary y-axis options
-      #altitude_variable: altitude  
+      #altitude_variable: altitude
       #altitude_ticks: 1000  # Altitude tick interval in meters (for secondary y-axis for altitude (m))
       rem_obs_nan: True # True: Remove all points where model or obs variable is NaN. False: Remove only points where model variable is NaN.
       ts_select_time: 'time' #Time used for avg and plotting: Options: 'time' for UTC or 'time_local'
@@ -104,15 +104,15 @@ plots:
       set_axis: False #If select True, add vmin_plot and vmax_plot for each variable in obs.
       #vmin2, vmax2 filter not needed as filter_dict option added in 'altitude_yax2' to subset the paireddf as per altitude secondary-axis limits
       #vmin2: #0  #Optional
-      #vmax2: #5000 #12000 #Optional #Subset limits for secondary y-axis (altitude_variable) 
+      #vmax2: #5000 #12000 #Optional #Subset limits for secondary y-axis (altitude_variable)
   plot_grp2:
     type: 'gridded_spatial_bias' # plot type
     fig_kwargs: #For all spatial plots, specify map_kwargs here too.
       states: True
-      figsize: [10, 5] # figure size 
+      figsize: [10, 5] # figure size
     text_kwargs: #Opt
       fontsize: 16.
-    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
     data: ['tropomi_l2_no2_wrfchem_v4.2'] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
     data_proc:
@@ -129,7 +129,7 @@ plots:
       markersize: 10.
     text_kwargs: #Opt
       fontsize: 16.
-    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
     data: ['tropomi_l2_no2_wrfchem_v4.2'] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
     data_proc:
@@ -140,13 +140,13 @@ plots:
       set_axis: False #If select True, add ty_scale for each variable in obs.
   plot_grp4:
     type: 'boxplot' # plot type
-    fig_kwargs: 
-      figsize: [8, 6] # figure size 
+    fig_kwargs:
+      figsize: [8, 6] # figure size
     default_plot_kwargs: # Opt to define defaults for all plots. Model kwargs overwrite these.
       markersize: 10.
     text_kwargs: #Opt
       fontsize: 20.
-    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
     data: ['tropomi_l2_no2_wrfchem_v4.2'] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
     data_proc:
@@ -171,4 +171,3 @@ stats:
   domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
   domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
   data: ['tropomi_l2_no2_wrfchem_v4.2'] # make this a list of pairs in obs_model where the obs is the obs labeland model is the model_label
-

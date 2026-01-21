@@ -7,9 +7,9 @@ Observations
 Surface
 ^^^^^^^
 
-The MELODIES MONET tool has a :doc:`/cli` that can be used to download and create 
-MELODIES MONET-ready datasets for: AirNow, AERONET, AQS, ISH, ISH-Lite, and OpenAQ. 
-New surface observational datasets formally added to MELODIES MONET should be added 
+The MELODIES MONET tool has a :doc:`/cli` that can be used to download and create
+MELODIES MONET-ready datasets for: AirNow, AERONET, AQS, ISH, ISH-Lite, and OpenAQ.
+New surface observational datasets formally added to MELODIES MONET should be added
 to this Command Line Interface.
 
 If you are interested in converting a new observational dataset to our netCDF format
@@ -73,8 +73,8 @@ in pandas DataFrame format to xarray Dataset format.
 Aircraft, Sonde, Mobile, and Ground Campaign Data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-New aircraft, sonde, mobile, and ground campaign datasets should work in the tool with no changes as long 
-as the data format is NetCDF, ICARTT, or CSV. We are constantly working to generalize our code. If an issue 
+New aircraft, sonde, mobile, and ground campaign datasets should work in the tool with no changes as long
+as the data format is NetCDF, ICARTT, or CSV. We are constantly working to generalize our code. If an issue
 arises, please post `on GitHub Issues <https://github.com/NCAR/MELODIES-MONET/issues>`__.
 
 Satellite
@@ -83,7 +83,7 @@ Examples for reading satellite datasets can be
 found in the ``monetio/sat`` folder in the MONETIO repository
 `on GitHub <https://github.com/noaa-oar-arl/monetio>`__.
 While a part of the MONETIO repository,
-the private MELODIES MONET readers are designated with prefix ``_`` 
+the private MELODIES MONET readers are designated with prefix ``_``
 and suffix ``_mm``.
 
 Models
@@ -93,7 +93,7 @@ found in the ``monetio/models`` folder in the MONETIO repository
 `on GitHub <https://github.com/noaa-oar-arl/monetio>`__.
 These include e.g., _cesm_fv_mm.py, _cmaq_mm.py, and _wrfchem_mm.py.
 While a part of the MONETIO repository,
-the private MELODIES MONET readers are designated with prefix ``_`` 
+the private MELODIES MONET readers are designated with prefix ``_``
 and suffix ``_mm``.
 
 Support for additional models is also under developed.
@@ -105,7 +105,7 @@ Standard variables are required to be computed in each model reader for each cap
    :header-rows: 1
 
    * - Capability
-     - | Variable Name 
+     - | Variable Name
        | in Code
      - Description
      - Additional Requirements
@@ -116,11 +116,11 @@ Standard variables are required to be computed in each model reader for each cap
      - | Time in ``datetime64[ns]`` format
        | Latitude in degrees
        | Longitude in degrees
-     - | Provide only surface model data 
-       | or if provide vertical model data, 
-       | first level must be the level 
+     - | Provide only surface model data
+       | or if provide vertical model data,
+       | first level must be the level
        | nearest to the surface.
-       | All gases are in ppb and 
+       | All gases are in ppb and
        | all aerosols are in µg/m3.
    * - Aircraft
      - | ``time``
@@ -133,8 +133,8 @@ Standard variables are required to be computed in each model reader for each cap
        | Longitude in degrees
        | Mid-level pressure in pascals (Pa)
        | Mid-level temperature in kelvin (K)
-     - | Provide vertical model data. 
-       | All gases are in ppb and 
+     - | Provide vertical model data.
+       | All gases are in ppb and
        | all aerosols are in µg/m3.
    * - Satellites
      - | ``time``

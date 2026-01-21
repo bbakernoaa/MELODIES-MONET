@@ -35,7 +35,7 @@ installing it is relatively simple. There are two methods available.
 
 Option 1) Using Conda
 ^^^^^^^^^^^^^^^^^^^^^
-We have recently created a conda-forge release of MELODIES MONET to make installation very simple 
+We have recently created a conda-forge release of MELODIES MONET to make installation very simple
 with just 1 line of code below::
 
     $ conda create --name melodies-monet -y -c conda-forge python=3.11 melodies-monet netcdf4=1.7.2 wrf-python jupyterlab
@@ -45,7 +45,7 @@ with just 1 line of code below::
 
 Option 2) Using Conda and GitHub
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You are also welcome to install using our old method. The stable branch of MELODIES MONET (``main``) 
+You are also welcome to install using our old method. The stable branch of MELODIES MONET (``main``)
 should always be the same as the conda-forge release of MELODIES MONET and be compatible with the
 conda-forge releases of MONET/MONETIO.
 
@@ -57,7 +57,7 @@ First create and activate a conda environment::
 Add dependencies from conda-forge::
 
     $ conda install -y -c conda-forge pyyaml pandas=1 'matplotlib-base<3.9' monet monetio netcdf4=1.7.2 wrf-python typer rich pooch jupyterlab
-   
+
 Now, install the stable branch of MELODIES MONET to the environment::
 
     $ pip install --no-deps https://github.com/NCAR/MELODIES-MONET/archive/main.zip

@@ -127,10 +127,7 @@ def _create_shapefile_mask(data, mask_path=None, mask_url=None, region_name=None
     """
 
     if mask_url is not None and mask_path is not None:
-        warnings.warn(
-            "mask_url and mask_path provided. Only one can be used. "
-            "Selecting mask_path and discarding URL."
-        )
+        warnings.warn("mask_url and mask_path provided. Only one can be used. " "Selecting mask_path and discarding URL.")
 
     if mask_path is not None:
         url_or_path = mask_path
@@ -176,8 +173,7 @@ def control_custom_mask(data, domain_type, domain_info=None, **kwargs):
     """
     if regionmask is None:
         raise ImportError(
-            "regionmask is not installed, try alternative functions."
-            + " create_autoregion can probably do the trick."
+            "regionmask is not installed, try alternative functions." + " create_autoregion can probably do the trick."
         )
     if domain_info is None:
         raise KeyError("If regionmask is used, domain_info must exist.")

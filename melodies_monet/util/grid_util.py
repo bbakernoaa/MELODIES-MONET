@@ -6,13 +6,12 @@ file: grid_util.py
 """
 
 import math
-import numpy as np
+
 import numba
+import numpy as np
 
 
-def update_sparse_data_grid(time_edges, x_edges, y_edges,
-                            time_obs, x_obs, y_obs, data_obs,
-                            count_grid, data_grid):
+def update_sparse_data_grid(time_edges, x_edges, y_edges, time_obs, x_obs, y_obs, data_obs, count_grid, data_grid):
     """
     Accumulate obs data on a uniform grid with dimensions (time, x, y)
     Store running counts and sums in dictionaries keyed by grid index tuples (i_time, i_x, i_y)
@@ -66,9 +65,7 @@ def normalize_sparse_data_grid(count_grid, data_grid):
         data_grid[index_tuple] /= count_grid[index_tuple]
 
 
-def sparse_data_to_array(time_edges, x_edges, y_edges,
-                         count_grid, data_grid,
-                         count_type=np.uint32, data_type=np.float32):
+def sparse_data_to_array(time_edges, x_edges, y_edges, count_grid, data_grid, count_type=np.uint32, data_type=np.float32):
     """
     Convert sparse grid data to numpy arrays
 
@@ -96,9 +93,7 @@ def sparse_data_to_array(time_edges, x_edges, y_edges,
 
 
 @numba.jit(nopython=True)
-def update_data_grid(time_edges, x_edges, y_edges,
-                     time_obs, x_obs, y_obs, data_obs,
-                     count_grid, data_grid):
+def update_data_grid(time_edges, x_edges, y_edges, time_obs, x_obs, y_obs, data_obs, count_grid, data_grid):
     """
     Accumulate obs data on a uniform grid with dimensions (time, x, y)
     Store running counts and sums in numpy arrays
@@ -158,13 +153,14 @@ def normalize_data_grid(count_grid, data_grid):
     Returns
         None
     """
-    mask = (count_grid > 0)
+    mask = count_grid > 0
     data_grid[count_grid == 0] = np.nan
     data_grid[mask] /= count_grid[mask]
 
 
 def generate_uniform_grid(start, end, ntime, nlat, nlon):
     import pandas as pd
+
     start_timestamp = pd.to_datetime(start).timestamp()
     end_timestamp = pd.to_datetime(end).timestamp()
 
@@ -174,17 +170,15 @@ def generate_uniform_grid(start, end, ntime, nlat, nlon):
     lon0 = -180
 
     # generate uniform grid
-    time_edges = np.linspace(start_timestamp, end_timestamp, ntime+1, endpoint=True, dtype=float)
-    time_grid = 0.5 * (time_edges[0:ntime] + time_edges[1:ntime+1])
-    lat_edges = np.linspace(-90, 90, nlat+1, endpoint=True, dtype=float)
-    lat_grid = 0.5 * (lat_edges[0:nlat] + lat_edges[1:nlat+1])
+    time_edges = np.linspace(start_timestamp, end_timestamp, ntime + 1, endpoint=True, dtype=float)
+    time_grid = 0.5 * (time_edges[0:ntime] + time_edges[1 : ntime + 1])
+    lat_edges = np.linspace(-90, 90, nlat + 1, endpoint=True, dtype=float)
+    lat_grid = 0.5 * (lat_edges[0:nlat] + lat_edges[1 : nlat + 1])
     # lat_min, lat_max = lat_edges[0:nlat], lat_edges[1:nlat+1]
-    lon_edges = np.linspace(lon0, lon0 + 360, nlon+1, endpoint=True, dtype=float)
-    lon_grid = 0.5 * (lon_edges[0:nlon] + lon_edges[1:nlon+1])
+    lon_edges = np.linspace(lon0, lon0 + 360, nlon + 1, endpoint=True, dtype=float)
+    lon_grid = 0.5 * (lon_edges[0:nlon] + lon_edges[1 : nlon + 1])
 
-    grid = {'longitude':lon_grid,
-            'latitude':lat_grid,
-            'time':time_grid}  
-    edges = {'time_edges':time_edges,'lon_edges':lon_edges,'lat_edges':lat_edges}
+    grid = {"longitude": lon_grid, "latitude": lat_grid, "time": time_grid}
+    edges = {"time_edges": time_edges, "lon_edges": lon_edges, "lat_edges": lat_edges}
 
     return grid, edges

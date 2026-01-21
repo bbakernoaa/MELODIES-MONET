@@ -1,7 +1,7 @@
-# General Description:  
+# General Description:
 # Any key that is specific for a plot type will begin with ts for timeseries, ty for taylor
 # Opt: Specifying the variable or variable group is optional
-# For now all plots except time series average over the analysis window. 
+# For now all plots except time series average over the analysis window.
 # Seting axis values - If set_axis = True in data_proc section of each plot_grp the yaxis for the plot will be set based on the values specified in the obs section for each variable. If set_axis is set to False, then defaults will be used. 'vmin_plot' and 'vmax_plot' are needed for 'timeseries', 'spatial_overlay', and 'boxplot'. 'vdiff_plot' is needed for 'spatial_bias' plots and'ty_scale' is needed for 'taylor' plots. 'nlevels' or the number of levels used in the contour plot can also optionally be provided for spatial_overlay plot. If set_axis = True and the proper limits are not provided in the obs section, a warning will print, and the plot will be created using the default limits.
 analysis:
   start_time: '2019-09-05-00:00:00' #UTC
@@ -11,7 +11,7 @@ analysis:
   output_dir_save: /wrk/charkins/melodies_monet/aircraft/analysis_saveout2/savedir_test #Opt Directory to use for melodies-monet data from 'save' below.
   #   If not specified, saved melodies-monet data stored in output_dir.
   output_dir_read: /wrk/charkins/melodies_monet/aircraft/analysis_saveout2/readdir_test #Opt Directory to use for melodies-monet data from 'read' below.
-  #   If not specified, reads melodies-monet data from output_dir. 
+  #   If not specified, reads melodies-monet data from output_dir.
   #   To not assume any directory for reading (use paths specified under 'read' directly) set output_dir_read: null
   debug: True
   save:
@@ -34,7 +34,7 @@ model:
   wrfchem_v4.2: # model label
     files: /wrk/d2/charkins/melodies-monet_data/wrfchem/run_CONUS_fv19_BEIS_1.0xISO_RACM_v4.2.2_racm_berk_vcp_noI_phot_soa/0905/wrfout_d01_2019-09-05_*
     mod_type: 'wrfchem'
-    mod_kwargs: 
+    mod_kwargs:
       mech: 'racm_esrl_vcp'
     radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
@@ -48,13 +48,13 @@ model:
     plot_kwargs: #Opt
       color: 'dodgerblue'
       marker: '^'
-      linestyle: ':' 
+      linestyle: ':'
 obs:
   airnow: # obs label
     use_airnow: True
     filename: /wrk/d2/charkins/melodies-monet_data/airnow/AIRNOW_20190901_20190930.nc
     obs_type: pt_sfc
-    variables: #Opt 
+    variables: #Opt
       PM2.5:
         unit_scale: 1
         unit_scale_method: '*' # Multiply = '*' , Add = '+', subtract = '-', divide = '/'
@@ -69,7 +69,7 @@ obs:
         vdiff_plot: 15.0 #Opt +/- range to use in bias plots. To apply to a plot, change restrict_yaxis = True.
         nlevels_plot: 23 #Opt number of levels used in colorbar for contourf plot.
       OZONE:
-        unit_scale: 1 #Opt Scaling factor 
+        unit_scale: 1 #Opt Scaling factor
         unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
         nan_value: -1.0 # Opt Set this value to NaN
         ylabel_plot: 'Ozone (ppbv)'

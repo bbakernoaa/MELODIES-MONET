@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-set -x 
+set -x
 
 case='2021REB'
 indir=/scratch1/BMC/rcm2/jhe/model_output/sunvex21/run_CONUS_fv21_BEIS_0.75xISO_RACM_VCP_bdy/Output/
@@ -32,7 +32,7 @@ do
         ln -sf $indir/$month$day/wrfout_d01_${year}-${month}-${day}_06:00:00 .
         ln -sf $indir/$month$day/wrfout_d01_${year}-${month}-${day}_12:00:00 .
         ln -sf $indir/$month$day/wrfout_d01_${year}-${month}-${day}_18:00:00 .
-  
+
         if [ ${day#0} -eq 1 ]
         then
           pmonth=$((${month#0}-1))
@@ -52,7 +52,7 @@ do
           fday=$(printf '%02d' $nday)
           ln -sf $indir/$month$day/wrfout_d01_${year}-${month}-${fday}_00:00:00 .
         fi
- 
+
     done
     cd ../..
 
@@ -63,4 +63,3 @@ do
     cd ..
 
 done
-

@@ -1,7 +1,7 @@
 # General Description:
 # Any key that is specific for a plot type will begin with ts for timeseries, ty for taylor
 # Opt: Specifying the variable or variable group is optional
-# For now all plots except time series average over the analysis window. 
+# For now all plots except time series average over the analysis window.
 # Setting axis values - If set_axis = True in data_proc section of each plot_grp the yaxis for the plot will be set based on the values specified in the obs section for each variable. If set_axis is set to False, then defaults will be used. 'vmin_plot' and 'vmax_plot' are needed for 'timeseries', 'spatial_overlay', and 'boxplot'. 'vdiff_plot' is needed for 'spatial_bias' plots and'ty_scale' is needed for 'taylor' plots. 'nlevels' or the number of levels used in the contour plot can also optionally be provided for spatial_overlay plot. If set_axis = True and the proper limits are not provided in the obs section, a warning will print, and the plot will be created using the default limits.
 analysis:
   start_time: '2023-06-24-00:00:00' #UTC
@@ -50,7 +50,7 @@ obs:
   gml-ozonesondes: # obs label
     filename: 'example:gml-100m-ozonesondes:as-of-2024-02-09'
     obs_type: sonde
-    variables: #Opt 
+    variables: #Opt
       o3:
         unit_scale: 1000 #Opt Scaling factor (original ppmv, convert to ppbv)
         unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
@@ -62,10 +62,10 @@ obs:
         #nlevels_plot: 21 #Opt number of levels used in colorbar for contourf plot.
         #regulatory: False #Opt compute regulatory functions
       latitude:
-        unit_scale: 1  
+        unit_scale: 1
         unit_scale_method: '*'
       longitude:
-        unit_scale: 1  
+        unit_scale: 1
         unit_scale_method: '*'
       press:
         rename: pressure_obs # name to convert this variable to
@@ -86,14 +86,14 @@ plots:
       markersize: 5.
     text_kwargs: #Opt
       fontsize: 18.
-    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
- 
+
     altitude_range: [0,10]
     altitude_method: ['sea level'] #choose from 'ground level' or 'sea level'
     station_name: ['Trinidad Head, California']
     compare_date_single: [2023,6,24,20,30,18]
-    monet_logo_position: [1] #1 is lower left, 4 is upper left.    
+    monet_logo_position: [1] #1 is lower left, 4 is upper left.
     data: ['gml-ozonesondes_ufsaqm_cmaq52', 'gml-ozonesondes_ufsaqm_cmaq54'] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
 
     data_proc:
@@ -114,7 +114,7 @@ plots:
       markersize: 5.
     text_kwargs: #Opt
       fontsize: 18.
-    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
 
     altitude_range: [0,10]
@@ -122,9 +122,9 @@ plots:
     station_name: ['Trinidad Head, California']
     compare_date_single: [2023,6,24,20,30,18]
     monet_logo_position: [1] #1 is lower left, 4 is upper left.
-    altitude_threshold_list: [0,1,2,3,4,5,6,7,8,9,10]    
+    altitude_threshold_list: [0,1,2,3,4,5,6,7,8,9,10]
     data: ['gml-ozonesondes_ufsaqm_cmaq52', 'gml-ozonesondes_ufsaqm_cmaq54'] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
-    
+
     data_proc:
       #filter_dict: {'state_name':{'value':['CA','NY'],'oper':'isin'},'WS':{'value':1,'oper':'<'}}
       #filter_string: state_name in ['CA','NY'] and WS < 1 # Uses pandas query method.
@@ -143,7 +143,7 @@ plots:
       markersize: 5.
     text_kwargs: #Opt
       fontsize: 18.
-    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
 
     model_name_list: ['gml-ozonesondes', 'ufsaqm cmaq 5.2', 'ufsaqm cmaq 5.4']

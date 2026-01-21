@@ -1,7 +1,7 @@
-# General Description:  
+# General Description:
 # Any key that is specific for a plot type will begin with ts for timeseries, ty for taylor
 # Opt: Specifying the variable or variable group is optional
-# For now all plots except time series average over the analysis window. 
+# For now all plots except time series average over the analysis window.
 # Seting axis values - If set_axis = True in data_proc section of each plot_grp the yaxis for the plot will be set based on the values specified in the obs section for each variable. If set_axis is set to False, then defaults will be used. 'vmin_plot' and 'vmax_plot' are needed for 'timeseries', 'spatial_overlay', and 'boxplot'. 'vdiff_plot' is needed for 'spatial_bias' plots and'ty_scale' is needed for 'taylor' plots. 'nlevels' or the number of levels used in the contour plot can also optionally be provided for spatial_overlay plot. If set_axis = True and the proper limits are not provided in the obs section, a warning will print, and the plot will be created using the default limits.
 analysis:
   start_time: '2019-09-05-12:00:00' #UTC
@@ -12,7 +12,7 @@ model:
   wrfchem_v4.2: # model label
     files: /wrk/d2/rschwantes/wrf/firex_mech/wrfchem_example/racm_esrl/*
     mod_type: 'wrfchem'
-    mod_kwargs: 
+    mod_kwargs:
       mech: 'racm_esrl_vcp'
     radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
@@ -25,70 +25,70 @@ model:
     variables:
         'pres_pa_mid':
             rename: pressure_model # name to convert this variable to, use 'pressure_model' for aircraft obs
-            unit_scale: 1 #Opt Scaling factor 
+            unit_scale: 1 #Opt Scaling factor
             unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
         'temperature_k':
             rename: temp_model # name to convert this variable to
-            unit_scale: 1 #Opt Scaling factor 
+            unit_scale: 1 #Opt Scaling factor
             unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
     variable_summing:
       oa_tot:
-        vars: ['orgpai','orgpaj','asoa1i','asoa1j','asoa2i','asoa2j','asoa3i','asoa3j','asoa4i','asoa4j','bsoa1i','bsoa1j','bsoa2i','bsoa2j','bsoa3i','bsoa3j','bsoa4i','bsoa4j'] # Variables from the dataset that should be summed to create a new variable 
+        vars: ['orgpai','orgpaj','asoa1i','asoa1j','asoa2i','asoa2j','asoa3i','asoa3j','asoa4i','asoa4j','bsoa1i','bsoa1j','bsoa2i','bsoa2j','bsoa3i','bsoa3j','bsoa4i','bsoa4j'] # Variables from the dataset that should be summed to create a new variable
         ylabel_plot: 'Organic Aerosol Total' #Optional to set ylabel so can include units and/or instr etc.
       SO4A:
-        vars: ['so4aj','so4ai'] # Variables from the dataset that should be summed to create a new variable 
+        vars: ['so4aj','so4ai'] # Variables from the dataset that should be summed to create a new variable
         ylabel_plot: 'SO4A' #Optional to set ylabel so can include units and/or instr etc.
       NH4A:
-        vars: ['nh4aj','nh4ai'] # Variables from the dataset that should be summed to create a new variable 
+        vars: ['nh4aj','nh4ai'] # Variables from the dataset that should be summed to create a new variable
         ylabel_plot: 'NH4A' #Optional to set ylabel so can include units and/or instr etc.
       NO3A:
-        vars: ['no3aj','no3ai'] # Variables from the dataset that should be summed to create a new variable 
+        vars: ['no3aj','no3ai'] # Variables from the dataset that should be summed to create a new variable
         ylabel_plot: 'NO3A' #Optional to set ylabel so can include units and/or instr etc.
       EC:
-        vars: ['ecj','eci'] # Variables from the dataset that should be summed to create a new variable 
+        vars: ['ecj','eci'] # Variables from the dataset that should be summed to create a new variable
         ylabel_plot: 'EC' #Optional to set ylabel so can include units and/or instr etc.
     projection: None
     plot_kwargs: #Opt
       color: 'dodgerblue'
       marker: '^'
-      linestyle: ':' 
+      linestyle: ':'
 
 obs:
   firexaq: # obs label
     filename: '/wrk/d2/rschwantes/obs/firex-aq/R1/10s_merge/firexaq-mrg10-dc8_merge_20190905_R1.ict' #'/scratch2/BMC/rcm1/rhs/obs/firex_20201209/R1/10s_merge/firexaq-mrg10-dc8_merge_20190905_R1.ict'
     obs_type: aircraft
-    resample: '600S' #10 min so works on Hera as a test. Can comment this if submitting a job. 
-    variables: #Opt 
+    resample: '600S' #10 min so works on Hera as a test. Can comment this if submitting a job.
+    variables: #Opt
       'OA_PM1_AMS_JIMENEZ':
-        unit_scale: 1 #Opt Scaling factor 
+        unit_scale: 1 #Opt Scaling factor
         unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
         nan_value: -777777 # Opt Set this value to NaN
         LLOD_value: -888888 # Opt Set this value to LLOD_setvalue
         LLOD_setvalue: 0.0 # Opt Set LLOD_value=LLOD_setvalue, applied AFTER unit_scale and obs_unit
         ylabel_plot: 'OA_PM1_AMS_JIMENEZ'
       'Sulfate_PM1_AMS_JIMENEZ':
-        unit_scale: 1 #Opt Scaling factor 
+        unit_scale: 1 #Opt Scaling factor
         unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
         nan_value: -777777 # Opt Set this value to NaN
         LLOD_value: -888888 # Opt Set this value to LLOD_setvalue
         LLOD_setvalue: 0.0 # Opt Set LLOD_value=LLOD_setvalue, applied AFTER unit_scale and obs_unit
         ylabel_plot: 'Sulfate_PM1_AMS_JIMENEZ'
       'Ammonium_PM1_AMS_JIMENEZ':
-        unit_scale: 1 #Opt Scaling factor 
+        unit_scale: 1 #Opt Scaling factor
         unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
         nan_value: -777777 # Opt Set this value to NaN
         LLOD_value: -888888 # Opt Set this value to LLOD_setvalue
         LLOD_setvalue: 0.0 # Opt Set LLOD_value=LLOD_setvalue, applied AFTER unit_scale and obs_unit
         ylabel_plot: 'Ammonium_PM1_AMS_JIMENEZ'
       'Nitrate_PM1_AMS_JIMENEZ':
-        unit_scale: 1 #Opt Scaling factor 
+        unit_scale: 1 #Opt Scaling factor
         unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
         nan_value: -777777 # Opt Set this value to NaN
         LLOD_value: -888888 # Opt Set this value to LLOD_setvalue
         LLOD_setvalue: 0.0 # Opt Set LLOD_value=LLOD_setvalue, applied AFTER unit_scale and obs_unit
         ylabel_plot: 'Nitrate_PM1_AMS_JIMENEZ'
       'BC_mass_90_550_nm_SCHWARZ':
-        unit_scale: 1000 #Opt Scaling factor 
+        unit_scale: 1000 #Opt Scaling factor
         unit_scale_method: '/' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
         nan_value: -777777 # Opt Set this value to NaN
         LLOD_value: -888888 # Opt Set this value to LLOD_setvalue
@@ -96,25 +96,25 @@ obs:
         ylabel_plot: 'BC_mass_90_550_nm_SCHWARZ'
       'Latitude_YANG':
             rename: latitude # name to convert this variable to
-            unit_scale: 1 #Opt Scaling factor 
+            unit_scale: 1 #Opt Scaling factor
             unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
       'Longitude_YANG':
             rename: longitude # name to convert this variable to
-            unit_scale: 1 #Opt Scaling factor 
+            unit_scale: 1 #Opt Scaling factor
             unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
       'P_BUI':
             rename: pressure_obs # name to convert this variable to
-            unit_scale: 100 #Opt Scaling factor 
+            unit_scale: 100 #Opt Scaling factor
             unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
       'T_BUI':
             rename: temp_obs # name to convert this variable to
-            unit_scale: 1 #Opt Scaling factor 
+            unit_scale: 1 #Opt Scaling factor
             unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
       'MSL_GPS_Altitude_YANG':
           rename: altitude # name to convert this variable to
-          unit_scale: 1 #Opt Scaling factor 
+          unit_scale: 1 #Opt Scaling factor
           unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
-   
+
 plots:
   plot_grp1:
     type: 'timeseries' # plot type
@@ -125,12 +125,12 @@ plots:
       markersize: 10.
     text_kwargs: #Opt
       fontsize: 18.
-    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
     data: ['firexaq_wrfchem_v4.2'] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
     data_proc:
       #See 'altitde_yax2' list below for secondary y-axis options
-      #altitude_variable: altitude  
+      #altitude_variable: altitude
       #altitude_ticks: 1000  # Altitude tick interval in meters (for secondary y-axis for altitude (m))
       rem_obs_nan: True # True: Remove all points where model or obs variable is NaN. False: Remove only points where model variable is NaN.
       ts_select_time: 'time' #Time used for avg and plotting: Options: 'time' for UTC or 'time_local'
@@ -138,7 +138,7 @@ plots:
       set_axis: False #If select True, add vmin_plot and vmax_plot for each variable in obs.
       #vmin2, vmax2 filter not needed as filter_dict option added in 'altitude_yax2' to subset the paireddf as per altitude secondary-axis limits
       #vmin2: #0  #Optional
-      #vmax2: #5000 #12000 #Optional #Subset limits for secondary y-axis (altitude_variable) 
+      #vmax2: #5000 #12000 #Optional #Subset limits for secondary y-axis (altitude_variable)
       altitude_yax2:
         altitude_variable: altitude
         altitude_ticks: 1000
@@ -150,7 +150,7 @@ plots:
         #filter_dict: #Default is min and max if filter_dict doesn't define the options below (or if they are commented out)
         #  altitude:
         #    oper: "between"
-        #    value: [2000,8000] # values are [vmin_y2, vmax_y2] 
+        #    value: [2000,8000] # values are [vmin_y2, vmax_y2]
   plot_grp2:
     type: 'vertprofile'  # plot type
     fig_kwargs:  # Opt to define figure options
@@ -169,7 +169,7 @@ plots:
       interquartile_style: 'shading' # or 'box'
     #TO DO: altitude_variable: 'Static_Pressure_YANG' or 'pressure_obs' (=P_BUI(hPa)*100) (pressure in Pa)  # ISSUE created: Add capability of the altitude variable to take pressure as an option to MSL height
     altitude_variable: altitude #'MSL_GPS_Altitude_YANG' #'ALTITUDE' in m or desired unit
-    #vertprofile_bins: [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]   # Specify the Pressure altitude bin size in hPa    
+    #vertprofile_bins: [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]   # Specify the Pressure altitude bin size in hPa
     vertprofile_bins: [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000] # meters
     #vertprofile_bins: [0, 1000, 2000, 3000, 4000, 5000] # meters # Needs to be specified as per min and max altitude (vmin, vmax)
     vmin: #0  #Optional
@@ -185,10 +185,10 @@ plots:
     domain_name: ['CONUS']
     data: ['firexaq_wrfchem_v4.2']
     data_proc:
-      rem_obs_nan: True 
+      rem_obs_nan: True
       set_axis: False
 
-    
+
   plot_grp4:
     type: 'scatter_density'
     fig_kwargs:
@@ -224,7 +224,7 @@ plots:
     shade_lowest: True #False      # Set to True if you want to shade the lowest contour (if fill=TRUE for KDE plots)
     # Add other seaborn.kdeplot keyword arguments here as needed
     vcenter: #0  # Central value for TwoSlopeNorm
-    extensions: ['min', 'max']  # Extensions for the colorbar  
+    extensions: ['min', 'max']  # Extensions for the colorbar
   plot_grp5:
     type: 'taylor' # plot type
     fig_kwargs: #Opt to define figure options
@@ -234,7 +234,7 @@ plots:
       markersize: 10.
     text_kwargs: #Opt
       fontsize: 16.
-    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
     data: ['firexaq_wrfchem_v4.2'] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
     data_proc:
@@ -243,10 +243,10 @@ plots:
   plot_grp6:
     type: 'boxplot' # plot type
     fig_kwargs: #Opt to define figure options
-      figsize: [8, 6] # figure size 
+      figsize: [8, 6] # figure size
     text_kwargs: #Opt
       fontsize: 20.
-    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
     data: ['firexaq_wrfchem_v4.2'] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
     data_proc:
@@ -259,14 +259,12 @@ stats:
   #Full calc list ['STDO', 'STDP', 'MdnNB','MdnNE','NMdnGE', 'NO','NOP','NP','MO','MP', 'MdnO', 'MdnP', 'RM', 'RMdn', 'MB', 'MdnB', 'NMB', 'NMdnB', 'FB', 'ME','MdnE','NME', 'NMdnE', 'FE', 'R2', 'RMSE','d1','E1', 'IOA', 'AC']
   round_output: 2 #Opt, defaults to rounding to 3rd decimal place.
   output_table: False #Always outputs a .txt file. Optional to also output as a table.
-  output_table_kwargs: #Opt 
-    figsize: [7, 3] # figure size 
+  output_table_kwargs: #Opt
+    figsize: [7, 3] # figure size
     fontsize: 12.
     xscale: 1.4
     yscale: 1.4
     edges: 'horizontal'
-  domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+  domain_type: ['all'] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
   domain_name: ['CONUS'] #List of domain names. If domain_type = all domain_name is used in plot title.
   data: ['firexaq_wrfchem_v4.2'] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
-
-

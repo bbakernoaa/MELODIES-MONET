@@ -13,7 +13,7 @@ month=08
 # go to local data directory
 cd $dir_combined
 # Update this to include days you want to include with 0 if needed e.g., {01..10}
-# As you link, you need to rename the files to add year, month, day, so do not override. 
+# As you link, you need to rename the files to add year, month, day, so do not override.
 for dir in {01..10}
 do
   for days in {01..24}

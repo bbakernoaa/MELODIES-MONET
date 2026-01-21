@@ -24,20 +24,27 @@ dependencies = [
     "monet-stats @ git+https://github.com/noaa-oar-arl/monet-stats.git",
     "netCDF4",
     "numpy",
-    "pandas",
+    "pandas<2.0.0",
     "pyyaml",
     "seaborn",
     "statsmodels",
     "xarray",
     "dask",
+    "typer",
+    "pooch",
+    "pyarrow",
+    "numba",
+    "timezonefinder",
+    "h5py",
+    "h5netcdf",
+    "lxml",
+    "requests",
+    "beautifulsoup4",
 ]
 
 [project.optional-dependencies]
-tutorial = ["pooch"]
-cli = ["typer[all]"]
 all = [
-    "melodies-monet[tutorial]",
-    "melodies-monet[cli]",
+    "melodies-monet",
 ]
 
 [project.urls]

@@ -5,7 +5,7 @@ Installation problems
 ---------------------
 * Conda installation fails:
     * Often the problem is in the installation of wrf-python. Check that your computer does not have an Apple Silicon CPU (Apple Intel should be fine) and that the Python version is compatible with the wrf-python Conda package.
- 
+
 Runtime issues
 --------------
 * Pairing (:meth:`~melodies_monet.driver.analysis.pair_models`) takes too long:

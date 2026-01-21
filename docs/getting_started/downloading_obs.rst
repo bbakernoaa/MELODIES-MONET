@@ -1,25 +1,25 @@
 Downloading Observations
 ========================
 
-As described below, some observations can be directly used in the MELODIES MONET tool as is 
+As described below, some observations can be directly used in the MELODIES MONET tool as is
 and some need a preprocessing step to convert them into a consistent data format.
 
 Surface
 -------
 
-Surface datasets commonly used for air quality and atmospheric composition applications are all in different 
-formats and occasionally some HPC platforms including the NOAA Hera machine have download restrictions 
-that prevent us from using the automatic download features available in MONET. So for now, 
-MELODIES MONET has separate scripts to preprocess the surface observational datasets and save the output to an 
-intermediate NetCDF file. These preprocess scripts are also useful so that users do not have to re-download 
-observational data over and over again for the same analysis period. We will work on automating this process further 
+Surface datasets commonly used for air quality and atmospheric composition applications are all in different
+formats and occasionally some HPC platforms including the NOAA Hera machine have download restrictions
+that prevent us from using the automatic download features available in MONET. So for now,
+MELODIES MONET has separate scripts to preprocess the surface observational datasets and save the output to an
+intermediate NetCDF file. These preprocess scripts are also useful so that users do not have to re-download
+observational data over and over again for the same analysis period. We will work on automating this process further
 in the future.
 
-The MELODIES MONET tool has a Command Line Interface (CLI) that can be used to download and create 
+The MELODIES MONET tool has a Command Line Interface (CLI) that can be used to download and create
 MELODIES MONET-ready datasets for: AirNow, AERONET, AQS, ISH, ISH-Lite, and OpenAQ.
 
-The Command Line Interface allows users to very easily download datasets with a single command line argument. 
-Generally, users only need to select which subcommand to use (i.e., which observational data set you want to download) 
+The Command Line Interface allows users to very easily download datasets with a single command line argument.
+Generally, users only need to select which subcommand to use (i.e., which observational data set you want to download)
 and then specify the start date and end date like that below to download all US EPA AQS observations in August 2023::
 
     $ melodies-monet get-aqs -s 2023-08-01 -e 2023-09-01
@@ -33,7 +33,7 @@ The other datasets can be downloaded in the same way::
     $ melodies-monet get-openaq -s 2023-08-01 -e 2023-09-01
 
 The Command Line Interface will default to compressing the dataset, which can significantly save space. However, this
-compression step also takes time and some users have run into problems. Users can easily turn this compression off 
+compression step also takes time and some users have run into problems. Users can easily turn this compression off
 by adding ``--no-compress``::
 
     $ melodies-monet get-aqs -s 2023-08-01 -e 2023-09-01 --no-compress
@@ -41,20 +41,20 @@ by adding ``--no-compress``::
 There are many other optional features available that are fully described in the Appendix :doc:`/cli`.
 
 .. note::
-   For users using MELODIES MONET on the NOAA Hera machine (or other machines 
-   with download restrictions), you will need to use the MELODIES MONET Command Line Interface on a 
-   machine without download restrictions and manually copy the netCDF files produced 
+   For users using MELODIES MONET on the NOAA Hera machine (or other machines
+   with download restrictions), you will need to use the MELODIES MONET Command Line Interface on a
+   machine without download restrictions and manually copy the netCDF files produced
    onto the NOAA Hera machine.
 
 Aircraft, Sonde, Mobile, and Ground Campaign Data
 -------------------------------------------------
 
-Aircraft, sonde, mobile, and ground campaign data can be used directly in the tool as long 
-as the data format is NetCDF, `ICARTT <https://www-air.larc.nasa.gov/missions/etc/IcarttDataFormat.htm>`_, or CSV. Users download their own observational data. 
+Aircraft, sonde, mobile, and ground campaign data can be used directly in the tool as long
+as the data format is NetCDF, `ICARTT <https://www-air.larc.nasa.gov/missions/etc/IcarttDataFormat.htm>`_, or CSV. Users download their own observational data.
 No pre-processing is required for these datasets.
 
 Satellite
 ---------
 
-For satellite data, users download their own observational data. No pre-processing is required 
+For satellite data, users download their own observational data. No pre-processing is required
 for these datasets.

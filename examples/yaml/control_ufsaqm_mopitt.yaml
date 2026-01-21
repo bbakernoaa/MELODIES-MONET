@@ -8,20 +8,20 @@ analysis:
                         apply_ak: True
                         mod_to_overpass: True
 model:
-        ufsaqm: 
+        ufsaqm:
                 files: '/scratch1/BMC/rcm2/rhs/monet_example/AEROMMA/UFS-AQM/cmaq54_OriRave1/aqm.202306*/12/aqm.t12z.dyn.*.nc'
                 mod_type: 'ufs'
                 is_global: False
-                mapping: 
-                        mopitt: 
+                mapping:
+                        mopitt:
                                 co: column
-                plot_kwargs: 
+                plot_kwargs:
                         color: 'purple'
                         marker: '^'
                         linestyle: 'dotted'
 obs:
         mopitt:
-                filename: /scratch1/BMC/rcm2/mbruckner/mopitt/v009_daily/*he5 
+                filename: /scratch1/BMC/rcm2/mbruckner/mopitt/v009_daily/*he5
                 obs_type: sat_grid_clm
                 sat_type: mopitt_l3
                 variables:
@@ -31,7 +31,7 @@ obs:
                                 vmax_plot: 16
                                 vdiff_plot: 15.0
 plots:
-        #plot_ts: 
+        #plot_ts:
         #        type: 'timeseries'
         #        fig_kwargs:
         #                figsize: [12,6]
@@ -76,4 +76,3 @@ plots:
       #          data_proc:
       #                  rem_obs_nan: True # True: Remove all points where model or obs variable is NaN. False: Remove only points where model variable is NaN.
       #                 set_axis: True #If select True, add ty_scale for each variable in obs.
-

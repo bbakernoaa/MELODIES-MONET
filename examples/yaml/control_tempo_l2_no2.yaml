@@ -79,7 +79,7 @@ plots:
 
   plot_grp2:
     type: 'gridded_spatial_bias'
-    fig_kwargs: 
+    fig_kwargs:
       states: True
       counties: True
     text_kwargs:
