@@ -1,14 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# SPDX-License-Identifier: Apache-2.0
-#
-
 import os
-import xarray as xr
-import numpy as np
 
 import monetio as mio
+import numpy as np
+import xarray as xr
 
 
 class observation:
@@ -36,32 +33,19 @@ class observation:
 
     def __repr__(self):
         return (
-            f"{type(self).__name__}(
-"
-            f"    obs={self.obs!r},
-"
-            f"    label={self.label!r},
-"
-            f"    file={self.file!r},
-"
-            f"    obj={repr(self.obj) if self.obj is None else '...'},
-"
-            f"    type={self.type!r},
-"
-            f"    sat_type={self.sat_type!r},
-"
-            f"    sat_method={self.sat_method!r},
-"
-            f"    data_proc={self.data_proc!r},
-"
-            f"    variable_dict={self.variable_dict!r},
-"
-            f"    resample={self.resample!r},
-"
-            f"    time_var={self.time_var!r},
-"
-            f"    regrid_method={self.regrid_method!r},
-"
+            f"{type(self).__name__}(\n"
+            f"    obs={self.obs!r},\n"
+            f"    label={self.label!r},\n"
+            f"    file={self.file!r},\n"
+            f"    obj={repr(self.obj) if self.obj is None else '...'},\n"
+            f"    type={self.type!r},\n"
+            f"    sat_type={self.sat_type!r},\n"
+            f"    sat_method={self.sat_method!r},\n"
+            f"    data_proc={self.data_proc!r},\n"
+            f"    variable_dict={self.variable_dict!r},\n"
+            f"    resample={self.resample!r},\n"
+            f"    time_var={self.time_var!r},\n"
+            f"    regrid_method={self.regrid_method!r},\n"
             ")"
         )
 
@@ -79,6 +63,7 @@ class observation:
         None
         """
         from glob import glob
+
         from numpy import sort
 
         from melodies_monet import tutorial
@@ -131,18 +116,10 @@ class observation:
         # If ground site
         if self.obs_type == "ground":
             if self.ground_coordinate and isinstance(self.ground_coordinate, dict):
-                self.obj["latitude"] = (
-                    xr.ones_like(self.obj["time"], dtype=np.float64)
-                    * self.ground_coordinate["latitude"]
-                )
-                self.obj["longitude"] = (
-                    xr.ones_like(self.obj["time"], dtype=np.float64)
-                    * self.ground_coordinate["longitude"]
-                )
+                self.obj["latitude"] = xr.ones_like(self.obj["time"], dtype=np.float64) * self.ground_coordinate["latitude"]
+                self.obj["longitude"] = xr.ones_like(self.obj["time"], dtype=np.float64) * self.ground_coordinate["longitude"]
             elif self.ground_coordinate and ~isinstance(self.ground_coordinate, dict):
-                raise TypeError(
-                    "The ground_coordinate option must be specified as a dict with keys latitude and longitude."
-                )
+                raise TypeError("The ground_coordinate option must be specified as a dict with keys latitude and longitude.")
 
     def rename_vars(self):
         """Rename any variables in observation with rename set.
@@ -180,8 +157,9 @@ class observation:
         -------
         None
         """
-        from melodies_monet.util import time_interval_subset as tsub
         from glob import glob
+
+        from melodies_monet.util import time_interval_subset as tsub
 
         try:
             if self.sat_type == "omps_l3":
@@ -234,22 +212,16 @@ class observation:
                 flst = tsub.subset_MODIS_l2(self.file, time_interval)
                 # self.obj = mio.sat._modis_l2_mm.read_mfdataset(
                 #     self.file, self.variable_dict, debug=self.debug)
-                self.obj = mio.sat._modis_l2_mm.read_mfdataset(
-                    flst, self.variable_dict, debug=self.debug
-                )
+                self.obj = mio.sat._modis_l2_mm.read_mfdataset(flst, self.variable_dict, debug=self.debug)
                 # self.obj = granules, an OrderedDict of Datasets, keyed by datetime_str,
                 #   with variables: Latitude, Longitude, Scan_Start_Time, parameters, ...
             elif self.sat_type == "tropomi_l2_no2":
                 # from monetio import tropomi_l2_no2
                 print("Reading TROPOMI L2 NO2")
-                self.obj = mio.sat._tropomi_l2_no2_mm.read_trpdataset(
-                    self.file, self.variable_dict, debug=self.debug
-                )
+                self.obj = mio.sat._tropomi_l2_no2_mm.read_trpdataset(self.file, self.variable_dict, debug=self.debug)
             elif "tempo_l2" in self.sat_type:
                 print("Reading TEMPO L2")
-                self.obj = mio.sat._tempo_l2_no2_mm.open_dataset(
-                    self.file, self.variable_dict, debug=self.debug
-                )
+                self.obj = mio.sat._tempo_l2_no2_mm.open_dataset(self.file, self.variable_dict, debug=self.debug)
             else:
                 print("file reader not implemented for {} observation".format(self.sat_type))
                 raise ValueError
@@ -327,9 +299,7 @@ class observation:
 
                     # Then replace LLOD_value with LLOD_setvalue (after unit conversion)
                     if "LLOD_value" in d:
-                        self.obj[v].data = self.obj[v].where(
-                            self.obj[v] != d["LLOD_value"], d["LLOD_setvalue"]
-                        )
+                        self.obj[v].data = self.obj[v].where(self.obj[v] != d["LLOD_value"], d["LLOD_setvalue"])
 
     def sum_variables(self):
         """Sum any variables noted that should be summed to create new variables.
@@ -344,11 +314,7 @@ class observation:
             if self.variable_summing is not None:
                 for var_new in self.variable_summing.keys():
                     if var_new in self.obj.variables:
-                        print(
-                            "The variable name, {}, already exists and cannot be created with variable_summing.".format(
-                                var_new
-                            )
-                        )
+                        print("The variable name, {}, already exists and cannot be created with variable_summing.".format(var_new))
                         raise ValueError
                     var_new_info = self.variable_summing[var_new]
                     if self.variable_dict is None:

@@ -10,11 +10,6 @@ import inspect
 from typing import Any, Dict, List, Optional, Union
 
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import xarray as xr
-
-from melodies_monet.plots import savefig
 
 # Using monet_stats for Pangeo-optimized, Aero-compliant statistics
 import monet_stats.contingency_metrics
@@ -22,9 +17,13 @@ import monet_stats.correlation_metrics
 import monet_stats.efficiency_metrics
 import monet_stats.error_metrics
 import monet_stats.relative_metrics
+import numpy as np
+import pandas as pd
+import xarray as xr
+
+from melodies_monet.plots import savefig
 
 
-# Dynamically discover all statistics from monet-stats
 def _discover_stats() -> Dict[str, Any]:
     """
     Discover all uppercase statistical functions in monet-stats submodules.
@@ -189,11 +188,7 @@ def calc(
     sig = inspect.signature(func)
 
     if "axis" in sig.parameters:
-        if (
-            isinstance(obs, xr.DataArray)
-            and "axis" not in calc_kwargs
-            and "dim" not in calc_kwargs
-        ):
+        if isinstance(obs, xr.DataArray) and "axis" not in calc_kwargs and "dim" not in calc_kwargs:
             if obs.ndim == 1:
                 calc_kwargs["axis"] = obs.dims[0]
             else:
@@ -213,14 +208,9 @@ def calc(
 
     # 5. Scientific Hygiene: Update history if it's an xarray object
     if isinstance(value, (xr.DataArray, xr.Dataset)):
-        if (
-            "history" not in value.attrs
-            or f"Calculated {stat}" not in value.attrs["history"]
-        ):
+        if "history" not in value.attrs or f"Calculated {stat}" not in value.attrs["history"]:
             history = f"Calculated {stat} using monet-stats"
-            value.attrs["history"] = (
-                f"{value.attrs.get('history', '')}\n{history}".strip()
-            )
+            value.attrs["history"] = f"{value.attrs.get('history', '')}\n{history}".strip()
 
     return value
 
@@ -259,9 +249,7 @@ def create_table(
         plt.ioff()
 
     # Define defaults if not provided:
-    out_table_def = dict(
-        fontsize=16.0, xscale=1.2, yscale=1.2, figsize=[10, 7], edges="open"
-    )
+    out_table_def = dict(fontsize=16.0, xscale=1.2, yscale=1.2, figsize=[10, 7], edges="open")
     if out_table_kwargs is not None:
         table_kwargs = {**out_table_def, **out_table_kwargs}
     else:
