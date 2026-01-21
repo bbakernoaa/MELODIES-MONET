@@ -13,7 +13,7 @@ month=08
 # go to local data directory
 cd $dir_combined
 # Update this to include days you want to include with 0 if needed e.g., {01..10}
-for dir in {01..10} 
+for dir in {01..10}
 do
   ln -sf $dir_data/${month}${dir}/aqm.${year}${month}${dir}.t12z.aconc-pm25_24.ncf .
 done

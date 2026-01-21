@@ -12,7 +12,7 @@ DATE=/bin/date
 # || NAQFC (cmaq_exp)     ||            ""                     ||      ""      ||    N (06Z), N-1 (12Z)               || magenta          ||     x/x
 # || RAQMS                ||         0                         ||              ||                                     ||                  ||
 # || WACCM                ||
-# || HRRR-Smoke           ||            
+# || HRRR-Smoke           ||
 # || onlinecmaq_b1        ||         12*                       ||   48         ||    N-1
 # || onlinecmaq_c3
 # || RAP-Smoke
@@ -28,7 +28,7 @@ t3days_date=`${DATE} +%Y%m%d -d " 72 hours ago"`  # 3 days ago
 t4days_date=`${DATE} +%Y%m%d -d " 96 hours ago"`  # 4 days ago
 t5days_date=`${DATE} +%Y%m%d -d " 120 hours ago"`  # 5 days ago
 
-# Today variables 
+# Today variables
 YYYY_today=`${DATE} +%Y`
 MM_today=`${DATE} +%m`
 DD_today=`${DATE} +%d`
@@ -72,7 +72,7 @@ end_time_reformat=`${DATE} -d "${YYYY_ytday}${MM_ytday}${DD_ytday} + 24 hours" +
 #end_time_reformat=`${DATE} -d "${YYYY_t4day}${MM_t4day}${DD_t4day} + 24 hours" +%Y-%m-%d`
 
 # Print to verfiy  we are starting the script for today
-echo "Today is $todays_date" 
+echo "Today is $todays_date"
 echo "Attempting to run MONET Analysis over the period from ${start_time_reformat} to ${end_time_reformat}"
 
 
@@ -109,7 +109,7 @@ start_HH_rapsmoke="06"
 start_HH_hrrrchem="00"
 #------------------------------------------------
 
-#Region Choices? 
+#Region Choices?
 #------------------------------------------------
 #CONUS=1; R1=1; R2=1; R3=1; R4=1; R5=1; R6=1; R7=1; R8=1; R9=1; R10=1
 
@@ -123,7 +123,7 @@ ns=${#species_list[@]}
 echo "Will loop through variables: ${species_list[@]}"
 
 # .. Other namelist
-tol_hours_missing=0  #tolerance threshold for number of hours acceptable to be missing 
+tol_hours_missing=0  #tolerance threshold for number of hours acceptable to be missing
 mdl_lw=1.5
 
 # Loop over each of the species and perform the analysis individually
@@ -146,7 +146,7 @@ elif [[ "${species}" == "OZONE" ]]; then
 #        CONUS=1; R1=1; R2=1; R3=1; R4=1; R5=1; R6=1; R7=1; R8=0; R9=1; R10=1
 else
 	CONUS=0; R1=0; R2=0; R3=0; R4=0; R5=0; R6=0; R7=0; R8=0; R9=0; R10=0; site=1
-#        CONUS=1; R1=1; R2=1; R3=1; R4=1; R5=1; R6=1; R7=1; R8=1; R9=1; R10=1	
+#        CONUS=1; R1=1; R2=1; R3=1; R4=1; R5=1; R6=1; R7=1; R8=1; R9=1; R10=1
 fi
 
 # choose which models to use
@@ -225,14 +225,14 @@ do_hrrrchem=1
 if [[ ${species} == "AOD_550" ]]; then
 do_stats=0
 ts_select_time="'time'"
-else	
+else
 do_stats=0
 ts_select_time="'time_local'"
 fi
 
-# Loop over the plot types, the spatial plots take  a lot of time and may fail 
+# Loop over the plot types, the spatial plots take  a lot of time and may fail
 #for ip in $( seq 0 1 )
-#do 
+#do
 #	if [[ ${ip} == 0 ]]; then
 #		timeseries=1
 #		taylor=1
@@ -310,7 +310,7 @@ nsite=${#site_list[@]}
 fi
 
 
-#build array of region choices to go into control.yaml as RGN_list 
+#build array of region choices to go into control.yaml as RGN_list
 if [ ${CONUS} -eq 1 ]; then
 	echo "Adding plots/stats for CONUS"
   if [ ${#rgn_list[@]} -eq 0 ]; then
@@ -350,7 +350,7 @@ if [ ${site} -eq 1 ]; then
                 	rgn_list[0]="${site_list[$isite]}"
                  	rgn_type[0]="'siteid'"
         	 else
-                	# echo ${site_list[$isite]} 
+			# echo ${site_list[$isite]}
                  	rgn_list[ ${#rgn_list[@]} +1 ]=",${site_list[$isite]}"
                  	rgn_type[ ${#rgn_type[@]} +1 ]=",'siteid'"
         	 fi
@@ -362,7 +362,7 @@ if [ ${site} -eq 1 ]; then
                 	 rgn_list[0]="${site_list[$isite]}"
                 	 rgn_type[0]="'site'"
          	else
-                	# echo ${site_list[$isite]} 
+			# echo ${site_list[$isite]}
                  	rgn_list[ ${#rgn_list[@]} +1 ]=",${site_list[$isite]}"
                  	rgn_type[ ${#rgn_type[@]} +1 ]=",'site'"
         	 fi
@@ -372,26 +372,26 @@ fi
 
 echo "Including regions: ${rgn_list[*]}"
 
-start_time_rapchem1=${YYYY_t2day}${MM_t2day}${DD_t2day} 
-start_time_rapchem2=${YYYY_ytday}${MM_ytday}${DD_ytday} 
+start_time_rapchem1=${YYYY_t2day}${MM_t2day}${DD_t2day}
+start_time_rapchem2=${YYYY_ytday}${MM_ytday}${DD_ytday}
 start_time_rapchem3=${YYYY_t2day}${MM_t2day}${DD_t2day}
-start_time_wrfchem_firexaq=${YYYY_ytday}${MM_ytday}${DD_ytday} 
-start_time_wrfchem_aqwatch=${YYYY_ytday}${MM_ytday}${DD_ytday} 
+start_time_wrfchem_firexaq=${YYYY_ytday}${MM_ytday}${DD_ytday}
+start_time_wrfchem_aqwatch=${YYYY_ytday}${MM_ytday}${DD_ytday}
 start_time_wrfchem_firexaq2=${YYYY_t2day}${MM_t2day}${DD_t2day}
 start_time_wrfchem_aqwatch2=${YYYY_t2day}${MM_t2day}${DD_t2day}
-start_time_cmaq_oper12_2=${YYYY_t3day}${MM_t3day}${DD_t3day} 
-start_time_cmaq_oper06=${YYYY_t2day}${MM_t2day}${DD_t2day} 
+start_time_cmaq_oper12_2=${YYYY_t3day}${MM_t3day}${DD_t3day}
+start_time_cmaq_oper06=${YYYY_t2day}${MM_t2day}${DD_t2day}
 start_time_cmaq_oper12=${YYYY_t2day}${MM_t2day}${DD_t2day}
 start_time_cmaq_expr12=${YYYY_t2day}${MM_t2day}${DD_t2day}
-start_time_cmaq_expr06=${YYYY_t2day}${MM_t2day}${DD_t2day} 
-start_time_hrrr_smoke06=${YYYY_t2day}${MM_t2day}${DD_t2day} 
-start_time_hrrr_smoke18=${YYYY_t2day}${MM_t2day}${DD_t2day} 
+start_time_cmaq_expr06=${YYYY_t2day}${MM_t2day}${DD_t2day}
+start_time_hrrr_smoke06=${YYYY_t2day}${MM_t2day}${DD_t2day}
+start_time_hrrr_smoke18=${YYYY_t2day}${MM_t2day}${DD_t2day}
 start_time_geos_cf12=${YYYY_t2day}${MM_t2day}${DD_t2day}
-start_time_onlinecmaq_b1=${YYYY_t2day}${MM_t2day}${DD_t2day} 
+start_time_onlinecmaq_b1=${YYYY_t2day}${MM_t2day}${DD_t2day}
 start_time_onlinecmaq_c3=${YYYY_t2day}${MM_t2day}${DD_t2day}
 start_time_raqms=${YYYY_ytday}${MM_ytday}${DD_ytday}
-start_time_rapsmoke=${YYYY_ytday}${MM_ytday}${DD_ytday} 
-start_time_hrrrchem=${YYYY_ytday}${MM_ytday}${DD_ytday} 
+start_time_rapsmoke=${YYYY_ytday}${MM_ytday}${DD_ytday}
+start_time_hrrrchem=${YYYY_ytday}${MM_ytday}${DD_ytday}
 
 # Set the data directories based on the time
 rapchem1_datadir=/wrk/csd4/rahmadov/RAP-Chem/rapchem_covid/${start_time_rapchem1}${start_HH_rapchem1}
@@ -420,7 +420,7 @@ hrrrchem_datadir=/wrk/csd4/rahmadov/RAP-Chem/hrrrchem_covid/${start_time_hrrrche
 # -----------------------------------------------------------------------------------------
 
 # CHECKING FOR MODEL DATA
-# Check to see the model data is available and set some flags 
+# Check to see the model data is available and set some flags
 # Initiialie the flags
 has_rapchem1=0
 has_rapchem2=0
@@ -447,7 +447,7 @@ has_hrrrchem=0
 
 missing_rapchem1=0
  if [[ ${do_rapchem1} -eq 1 ]]; then
-  for i in $(seq 0 29) 
+  for i in $(seq 0 29)
   do
 	  datestr_rapchem=`${DATE} -d "${start_time_rapchem1} ${start_HH_rapchem1} + $i hours" +%Y-%m-%d_%H`
 	  rapchem_testfile=${rapchem1_datadir}/wrfout_d01_${datestr_rapchem}_00_00_surface
@@ -456,7 +456,7 @@ missing_rapchem1=0
 	  fi
   done
   if [[ ${missing_rapchem1} -gt ${tol_hours_missing} ]]; then
-	  echo "Missing ${missing_rapchem1} files for RAP-Chem, more than allowed (${tol_hours_missing}), not processing RAP-Chem (1)"  
+	  echo "Missing ${missing_rapchem1} files for RAP-Chem, more than allowed (${tol_hours_missing}), not processing RAP-Chem (1)"
   else
 	  echo "Found sufficient files to process RAP-Chem (1)"
 	has_rapchem1=1
@@ -508,7 +508,7 @@ missing_rapchem1=0
 
  missing_wrfchem_firexaq=0
  if [[ ${do_wrfchem_firexaq} -eq 1 ]]; then
-  for i in $(seq 0 23) 
+  for i in $(seq 0 23)
   do
 	  datestr_wrfchem=`${DATE} -d "${start_time_wrfchem_firexaq} ${start_HH_wrfchem_firexaq} + $i hours" +%Y-%m-%d_%H`
 	  wrfchem_testfile=${wrfchem_firexaq_datadir}/wrfout_hourly_d01_${datestr_wrfchem}:00:00_surface
@@ -517,7 +517,7 @@ missing_rapchem1=0
 	  fi
   done
   if [[ ${missing_wrfchem_firexaq} -gt ${tol_hours_missing} ]]; then
-	echo "Missing ${missing_wrfchem_firexaq} files for WRF-Chem (FIREX-AQ), more than allowed (${tol_hours_missing}), not processing WRF-Chem (FIREX-AQ)"  
+	echo "Missing ${missing_wrfchem_firexaq} files for WRF-Chem (FIREX-AQ), more than allowed (${tol_hours_missing}), not processing WRF-Chem (FIREX-AQ)"
    else
 	   echo "Found sufficent files to process NCAR_FIREX-AQ"
 	has_wrfchem_firexaq=1
@@ -536,7 +536,7 @@ missing_rapchem1=0
           fi
   done
 if [[ ${missing_wrfchem_aqwatch} -gt ${tol_hours_missing} ]]; then
-        echo "Missing ${missing_wrfchem_aqwatch} files for WRF-Chem (AQ-WATCH), more than allowed (${tol_hours_missing}), not processing WRF-Chem (AQ-WATCH)"  
+        echo "Missing ${missing_wrfchem_aqwatch} files for WRF-Chem (AQ-WATCH), more than allowed (${tol_hours_missing}), not processing WRF-Chem (AQ-WATCH)"
    else
 	   echo "Found sufficient files to process NCAR_AQ-WATCH"
         has_wrfchem_aqwatch=1
@@ -548,7 +548,7 @@ fi
 #
  missing_wrfchem_firexaq2=0
  if [[ ${do_wrfchem_firexaq2} -eq 1 ]]; then
-  for i in $(seq 0 47) 
+  for i in $(seq 0 47)
   do
 	  datestr_wrfchem=`${DATE} -d "${start_time_wrfchem_firexaq2} ${start_HH_wrfchem_firexaq2} + $i hours" +%Y-%m-%d_%H`
 	  wrfchem_testfile=${wrfchem_firexaq2_datadir}/wrfout_hourly_d01_${datestr_wrfchem}:00:00_surface
@@ -557,7 +557,7 @@ fi
 	  fi
   done
   if [[ ${missing_wrfchem_firexaq2} -gt ${tol_hours_missing} ]]; then
-	echo "Missing ${missing_wrfchem_firexaq2} files for WRF-Chem (FIREX-AQ, N-1), more than allowed (${tol_hours_missing}), not processing WRF-Chem (FIREX-AQ, N-1)"  
+	echo "Missing ${missing_wrfchem_firexaq2} files for WRF-Chem (FIREX-AQ, N-1), more than allowed (${tol_hours_missing}), not processing WRF-Chem (FIREX-AQ, N-1)"
    else
 	   echo "Found sufficent files to process NCAR_FIREX-AQ_N-1"
 	has_wrfchem_firexaq2=1
@@ -576,7 +576,7 @@ fi
           fi
   done
 if [[ ${missing_wrfchem_aqwatch2} -gt ${tol_hours_missing} ]]; then
-        echo "Missing ${missing_wrfchem_aqwatch2} files for WRF-Chem (AQ-WATCH, N-1), more than allowed (${tol_hours_missing}), not processing WRF-Chem (AQ-WATCH, N-1)"  
+        echo "Missing ${missing_wrfchem_aqwatch2} files for WRF-Chem (AQ-WATCH, N-1), more than allowed (${tol_hours_missing}), not processing WRF-Chem (AQ-WATCH, N-1)"
    else
 	   echo "Found sufficient files to process NCAR_AQ-WATCH_N-1"
         has_wrfchem_aqwatch2=1
@@ -643,7 +643,7 @@ fi
 
 # HRRR-SMOKE
 if [[ ${do_hrrrsmoke06} -eq 1 ]]; then
-	hrrrsmoke_testfile=${hrrr_smoke06_datadir}/smoke.all.${YYYY_t2day}${MM_t2day}${DD_t2day}.nc 
+	hrrrsmoke_testfile=${hrrr_smoke06_datadir}/smoke.all.${YYYY_t2day}${MM_t2day}${DD_t2day}.nc
 if [[ -r ${hrrrsmoke_testfile} ]]; then
 	has_hrrrsmoke06=1
 	echo "Found HRRR-Smoke file for 06Z, day N-1"
@@ -659,7 +659,7 @@ if [[ -r ${hrrrsmoke_testfile} ]]; then
         echo "Found HRRR-Smoke file for 18Z, day N-1"
 else
         echo "Cannot find HRRR-Smoke 18Z forecast file, not processing"
-fi      
+fi
 fi
 
 if [[ ${do_geos_cf12} -eq 1 ]]; then
@@ -673,7 +673,7 @@ if [[ ${do_geos_cf12} -eq 1 ]]; then
         fi
 fi
 
-# onlinecmaq_b1 
+# onlinecmaq_b1
 if [[ ${do_onlinecmaq_b1} -eq 1 ]]; then
 #checking for onlinecmaq_b1
 for i in {01..72}
@@ -685,7 +685,7 @@ for i in {01..72}
   done
 
   if [[ ${missing_onlinecmaq_b1} -gt ${tol_hours_missing} ]]; then
-        echo "Missing ${missing_onlinecmaq_b1} files for onlinecmaq_b1, more than allowed (${tol_hours_missing}), not processing onlinecmaq_b1"  
+        echo "Missing ${missing_onlinecmaq_b1} files for onlinecmaq_b1, more than allowed (${tol_hours_missing}), not processing onlinecmaq_b1"
    else
            echo "Found sufficent files to process onlinecmaq_b1"
         has_onlinecmaq_b1=1
@@ -704,7 +704,7 @@ for i in {01..72}
   done
 
   if [[ ${missing_onlinecmaq_c3} -gt ${tol_hours_missing} ]]; then
-        echo "Missing ${missing_onlinecmaq_c3} files for onlinecmaq_c3, more than allowed (${tol_hours_missing}), not processing onlinecmaq_c3"  
+        echo "Missing ${missing_onlinecmaq_c3} files for onlinecmaq_c3, more than allowed (${tol_hours_missing}), not processing onlinecmaq_c3"
    else
            echo "Found sufficent files to process onlinecmaq_c3"
         has_onlinecmaq_c3=1
@@ -764,7 +764,7 @@ missing_hrrrchem=0
 # -----------------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------------
 
-#... Create model list arrays dependent on model choices 
+#... Create model list arrays dependent on model choices
 # rapchem
 if [[ ${do_rapchem2} -eq 1 && ${has_rapchem2} -eq 1 ]]; then
   if [ ${#mdl_list[@]} -eq 0 ]; then
@@ -787,7 +787,7 @@ if [[ ${do_rapchem3} -eq 1 && ${has_rapchem3} -eq 1 ]]; then
          mdl_list[ ${#mdl_list[@]} +1 ]="RAP-Chem_06Z_N-1"
   fi
 fi
-#wrfchem-firexaq 
+#wrfchem-firexaq
 if [[ ${do_wrfchem_firexaq} -eq 1 && ${has_wrfchem_firexaq} -eq 1 ]]; then
   if [ ${#mdl_list[@]} -eq 0 ]; then
           mdl_list[0]="NCAR_FIREX-AQ" #"wrfchem_v4.0"
@@ -803,7 +803,7 @@ if [[ ${do_wrfchem_aqwatch} -eq 1 && ${has_wrfchem_aqwatch} -eq 1 ]]; then
          mdl_list[ $((${#mdl_list[@]}+1)) ]="NCAR_AQ-WATCH" #"wrfchem_v4.0"
   fi
 fi
-#wrfchem-firexaq2 
+#wrfchem-firexaq2
 if [[ ${do_wrfchem_firexaq2} -eq 1 && ${has_wrfchem_firexaq2} -eq 1 ]]; then
   if [ ${#mdl_list[@]} -eq 0 ]; then
           mdl_list[0]="NCAR_FIREX-AQ_N-1" #"wrfchem_v4.0"
@@ -851,7 +851,7 @@ if [[ ${do_cmaq_expr06} -eq 1 && ${has_cmaq_expr06} -eq 1 ]]; then
 fi
 #cmaq_expr
 if [[ ${do_cmaq_expr12} -eq 1 && ${has_cmaq_expr12} -eq 1 ]]; then
-  if [ ${#mdl_list[@]} -eq 0 ]; then 
+  if [ ${#mdl_list[@]} -eq 0 ]; then
 	  mdl_list[0]="NAQFC_CMAQ_expr_12Z"
   else
           mdl_list[ ${#mdl_list[@]} +1 ]="NAQFC_CMAQ_expr_12Z"
@@ -927,14 +927,14 @@ if [[ ${do_hrrrchem} -eq 1 && ${has_hrrrchem} -eq 1 ]]; then
 fi
 
 # .. Observations ..
-#for now we just have airnow, can create namelist and code similar to above to add in more i.e balloon soundings 
+#for now we just have airnow, can create namelist and code similar to above to add in more i.e balloon soundings
 if [[ ${species} == "AOD_550" ]]; then
       obs_list[0]="aeronet"
 else
       obs_list[0]="airnow"
 fi
 
-# check that at least one model is being used 
+# check that at least one model is being used
 if [ ${#mdl_list[@]} -eq 0 ]; then
 	echo "Model list empty, please choose at least one (e.g., rapchem)"
 	exit 1
@@ -943,7 +943,7 @@ elif [ ${#obs_list[@]} -eq 0 ]; then
 	exit 1
 else
 	echo "Proceeding using the obs: ${obs_list[*]} and models ${mdl_list[*]}"
-fi 
+fi
 
 # Construct obs-mdl pair for plot groups
 knt=0
@@ -962,7 +962,7 @@ done
 # General Description:
 # Any key that is specific for a plot type will begin with ts for timeseries, ty for taylor
 # Opt: Specifying the variable or variable group is optional
-# For now all plots except time series average over the analysis window. 
+# For now all plots except time series average over the analysis window.
 # Seting axis values - If set_axis = True in data_proc section of each plot_grp the yaxis for the plot will be set based on the values specified in the obs section for each variable. If set_axis is set to False, then defaults will be used. 'vmin_plot' and 'vmax_plot' are needed for 'timeseries', 'spatial_overlay', and 'boxplot'. 'vdiff_plot' is needed for 'spatial_bias' plots and'ty_scale' is needed for 'taylor' plots. 'nlevels' or the number of levels used in the contour plot can also optionally be provided for spatial_overlay plot. If set_axis = True and the proper limits are not provided in the obs section, a warning will print, and the plot will be created using the default limits.
 # ... Construct the control.yaml file/namelist
 echo "Bulding control.yaml"
@@ -981,7 +981,7 @@ cat << EOF >> control.yaml.${todays_date}
 model:
 EOF
 
-#RAP Chem 
+#RAP Chem
 if [[ ${do_rapchem1} -eq 1 && ${has_rapchem1} -eq 1 ]]; then
 echo "Including RAP-Chem 18Z"
 cat << EOF >> control.yaml.${todays_date}
@@ -1003,7 +1003,7 @@ cat << EOF >> control.yaml.${todays_date}
 EOF
 fi
 if [[ "${species}" == "CO" ]]; then
-	cat << EOF  >> control.yaml.${todays_date} 
+	cat << EOF  >> control.yaml.${todays_date}
         co: CO
 EOF
 fi
@@ -1052,7 +1052,7 @@ cat << EOF >> control.yaml.${todays_date}
       linewidth: ${mdl_lw}
 EOF
 fi
-#RAP Chem 
+#RAP Chem
 if [[ ${do_rapchem2} -eq 1 && ${has_rapchem2} -eq 1 ]]; then
 echo "Including RAP-Chem 06Z"
 cat << EOF >> control.yaml.${todays_date}
@@ -1521,7 +1521,7 @@ EOF
 fi
 cat << EOF >> control.yaml.${todays_date}
     projection: ~
-    plot_kwargs: #Opt 
+    plot_kwargs: #Opt
       color: 'red'
       marker: 'o'
       linestyle: '--'
@@ -1571,7 +1571,7 @@ EOF
 fi
 cat << EOF >> control.yaml.${todays_date}
     projection: ~
-    plot_kwargs: #Opt 
+    plot_kwargs: #Opt
       color: 'coral'
       marker: 'o'
       linestyle: '--'
@@ -1663,7 +1663,7 @@ EOF
 fi
 cat << EOF >> control.yaml.${todays_date}
     projection: ~
-    plot_kwargs: #Opt 
+    plot_kwargs: #Opt
       color: 'darkred'
       marker: '^'
       linestyle: '--'
@@ -1770,7 +1770,7 @@ cat << EOF >> control.yaml.${todays_date}
 EOF
 fi
 
-if [[ ${do_hrrrsmoke18} -eq 1 && ${has_hrrrsmoke18} -eq 1 ]]; then 
+if [[ ${do_hrrrsmoke18} -eq 1 && ${has_hrrrsmoke18} -eq 1 ]]; then
 echo "Including HRRR_Smoke_18Z"
 cat << EOF >> control.yaml.${todays_date}
   HRRR-Smoke_18Z: # model label
@@ -2021,7 +2021,7 @@ EOF
 fi
 cat << EOF >> control.yaml.${todays_date}
     projection: ~
-    plot_kwargs: #Opt 
+    plot_kwargs: #Opt
       color: 'hotpink'
       marker: 'o'
       linestyle: '--'
@@ -2142,7 +2142,7 @@ EOF
 fi
 
 
-#Observation Types 
+#Observation Types
 if [[ ${species} == "AOD_550" ]]; then
 cat << EOF >> control.yaml.${todays_date}
 
@@ -2150,7 +2150,7 @@ obs:
   aeronet: # obs label
     filename: test5.nc
     obs_type: pt_sfc
-    variables: #Opt 
+    variables: #Opt
 EOF
 else
 cat << EOF >> control.yaml.${todays_date}
@@ -2222,7 +2222,7 @@ echo "including OZONE"
 cat << EOF >> control.yaml.${todays_date}
 
       OZONE:
-        unit_scale: 1 #Opt Scaling factor 
+        unit_scale: 1 #Opt Scaling factor
         unit_scale_method: '*' #Opt Multiply = '*' , Add = '+', subtract = '-', divide = '/'
         nan_value: -1.0 # Opt Set this value to NaN
         ylabel_plot: 'Ozone (ppbv)'
@@ -2344,16 +2344,16 @@ EOF
 fi
 
 
-#Plot Types 
+#Plot Types
 
 cat << EOF >> control.yaml.${todays_date}
 plots:
 EOF
-# Now insert which plot groups  
-#Timeseries plot group 1 
+# Now insert which plot groups
+#Timeseries plot group 1
 if [[ ${timeseries} -eq 1 ]]; then
-echo "Now doing timeseries, plot group 1" 
-cat << EOF >> control.yaml.${todays_date} 
+echo "Now doing timeseries, plot group 1"
+cat << EOF >> control.yaml.${todays_date}
   plot_grp1:
     type: 'timeseries' # plot type
     fig_kwargs: #Opt to define figure options
@@ -2373,10 +2373,10 @@ cat << EOF >> control.yaml.${todays_date}
       set_axis: False #If select True, add vmin_plot and vmax_plot for each variable in obs.
 
 EOF
-fi 
+fi
 
-#Taylor Plot Group 2 
-if [[ ${taylor} -eq 1 ]]; then 
+#Taylor Plot Group 2
+if [[ ${taylor} -eq 1 ]]; then
 echo "Now doing Taylor plot, plot group 2"
 cat << EOF >> control.yaml.${todays_date}
 
@@ -2399,7 +2399,7 @@ cat << EOF >> control.yaml.${todays_date}
 EOF
 fi
 
-#Spatial Bias Plot Group 3 
+#Spatial Bias Plot Group 3
 if [[ ${spatial_bias} -eq 1 ]]; then
 echo "Now doing spatial bias, plot group 3"
 cat << EOF >> control.yaml.${todays_date}
@@ -2408,10 +2408,10 @@ cat << EOF >> control.yaml.${todays_date}
     type: 'spatial_bias' # plot type
     fig_kwargs: #For all spatial plots, specify map_kwargs here too.
       states: True
-      figsize: [10, 5] # figure size 
+      figsize: [10, 5] # figure size
     text_kwargs: #Opt
       fontsize: 16.
-    domain_type: [${rgn_type[*]}] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: [${rgn_type[*]}] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: [${rgn_list[*]}] #List of domain names. If domain_type = all domain_name is used in plot title.
     data: [${obs_mdl_list[*]}]
     data_proc:
@@ -2421,8 +2421,8 @@ cat << EOF >> control.yaml.${todays_date}
 EOF
 fi
 
-#Spatial Overlay 
-if [[ ${spatial_overlay} -eq 1 ]]; then 
+#Spatial Overlay
+if [[ ${spatial_overlay} -eq 1 ]]; then
 echo "Now doing spatial overlay, plot group 4"
 cat << EOF >> control.yaml.${todays_date}
 
@@ -2444,7 +2444,7 @@ EOF
 fi
 
 
-#Boxplot Plot Group 5 
+#Boxplot Plot Group 5
 if [[ ${boxplot} -eq 1 ]]; then
 echo "Now doing boxplot, plot group 5"
 cat << EOF >> control.yaml.${todays_date}
@@ -2452,10 +2452,10 @@ cat << EOF >> control.yaml.${todays_date}
   plot_grp5:
     type: 'boxplot' # plot type
     fig_kwargs: #Opt to define figure options
-      figsize: [8, 6] # figure size 
+      figsize: [8, 6] # figure size
     text_kwargs: #Opt
       fontsize: 20.
-    domain_type: [${rgn_type[*]}] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+    domain_type: [${rgn_type[*]}] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
     domain_name: [${rgn_list[*]}] #List of domain names. If domain_type = all domain_name is used in plot title.
     data: [${obs_mdl_list[*]}]
     data_proc:
@@ -2477,12 +2477,12 @@ stats:
   round_output: 2 #Opt, defaults to rounding to 3rd decimal place.
   output_table: True #Always outputs a .txt file. Optional to also output as a table.
   output_table_kwargs: #Opt For all spatial plots, specify map_kwargs here too.
-    figsize: [8, 11] # figure size 
+    figsize: [8, 11] # figure size
     fontsize: 12.
     xscale: 1.1
     yscale: 1.1
     edges: 'horizontal'
-  domain_type: [${rgn_type[*]}] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.) 
+  domain_type: [${rgn_type[*]}] #List of domain types: 'all' or any domain in obs file. (e.g., airnow: epa_region, state_name, siteid, etc.)
   domain_name: [${rgn_list[*]}] #List of domain names. If domain_type = all domain_name is used in plot title.
   data: [${obs_mdl_list[*]}] # make this a list of pairs in obs_model where the obs is the obs label and model is the model_label
 EOF
@@ -2492,7 +2492,7 @@ rm -f control.yaml
 # Now link to the one we have contructed for today
 ln -s control.yaml.${todays_date} control.yaml
 
-#once the test5.nc file is written and linked we can 
+#once the test5.nc file is written and linked we can
 #call and run Monet-analysis-example-plots-wrf-rapchemtest
 #this will pair the observational data with model data and generate the chosen plots with chosen models and species
 if [[ "${species}" == "AOD_550" ]]; then
@@ -2504,13 +2504,13 @@ fi
 
 output_directory=/wrk/csd4/rahmadov/RAP-Chem/MELODIES-MONET-analysis/run_sites/plots_out/${todays_date}
 mkdir -p ${output_directory}
-mv /wrk/csd4/rahmadov/RAP-Chem/MELODIES-MONET-analysis/run_sites/plot_*.png ${output_directory} 
+mv /wrk/csd4/rahmadov/RAP-Chem/MELODIES-MONET-analysis/run_sites/plot_*.png ${output_directory}
 #mv /wrk/csd4/rahmadov/RAP-Chem/MELODIES-MONET-analysis/run_sites/stats*.csv ${output_directory}
 #mv /wrk/csd4/rahmadov/RAP-Chem/MELODIES-MONET-analysis/run_sites/stats*.png ${output_directory}
 
 #done # Plot loop
-# plots will be outputted to /wrk/csd4/rahmadov/RAP-Chem/MONET-analysis/MONET-analysis/monet_analysis 
-# taking outputted plots and moving them to a directory 
+# plots will be outputted to /wrk/csd4/rahmadov/RAP-Chem/MONET-analysis/MONET-analysis/monet_analysis
+# taking outputted plots and moving them to a directory
 
 #renaming the plots by replacing spaces with underscores
 for f in  ${output_directory}/*
@@ -2549,6 +2549,3 @@ unset obs_mdl_list
 mv control.yaml.${todays_date} ${output_directory}/control.yaml.${species}.${todays_date}
 
 done # Species Loop
-
-
-

@@ -1,7 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+
 import os
 import warnings
-import xarray as xr
+
 import monetio as mio
+import xarray as xr
 
 
 class model:
@@ -57,8 +61,10 @@ class model:
         -------
         None
         """
-        from numpy import sort  # TODO: maybe use `sorted` for this
         from glob import glob
+
+        from numpy import sort  # TODO: maybe use `sorted` for this
+
         from melodies_monet import tutorial
 
         print(self.file_str)
@@ -73,8 +79,8 @@ class model:
         # add option to read list of files from text file
         if not isinstance(self.file_str, list):
             _, extension = os.path.splitext(self.file_str)
-            if extension.lower() == '.txt':
-                with open(self.file_str,'r') as f:
+            if extension.lower() == ".txt":
+                with open(self.file_str, "r") as f:
                     self.files = f.read().split()
 
         if self.file_vert_str is not None:
@@ -123,9 +129,7 @@ class model:
                     - set(list_input_var)
                 )
             else:
-                list_input_var = list_input_var + list(
-                    set(self.mapping[obs_map].keys()) - set(list_input_var)
-                )
+                list_input_var = list_input_var + list(set(self.mapping[obs_map].keys()) - set(list_input_var))
         # Only certain models need this option for speeding up i/o.
 
         # Remove standardized variable names that user may have requested to pair on or output in MM
@@ -198,24 +202,16 @@ class model:
             # self.obj.monet.scrip = self.obj_scrip
         elif "camx" in self.model.lower():
             self.mod_kwargs.update({"var_list": list_input_var})
-            self.mod_kwargs.update(
-                {"surf_only": control_dict["model"][self.label].get("surf_only", False)}
-            )
-            self.mod_kwargs.update(
-                {"fname_met_3D": control_dict["model"][self.label].get("files_vert", None)}
-            )
-            self.mod_kwargs.update(
-                {"fname_met_2D": control_dict["model"][self.label].get("files_met_surf", None)}
-            )
+            self.mod_kwargs.update({"surf_only": control_dict["model"][self.label].get("surf_only", False)})
+            self.mod_kwargs.update({"fname_met_3D": control_dict["model"][self.label].get("files_vert", None)})
+            self.mod_kwargs.update({"fname_met_2D": control_dict["model"][self.label].get("files_met_surf", None)})
             self.obj = mio.models._camx_mm.open_mfdataset(self.files, **self.mod_kwargs)
         elif "raqms" in self.model.lower():
             self.mod_kwargs.update({"var_list": list_input_var})
             if time_interval is not None:
                 # fill filelist with subset
                 print("subsetting model files to interval")
-                file_list = tsub.subset_model_filelist(
-                    self.files, "%m_%d_%Y_%HZ", "6H", time_interval
-                )
+                file_list = tsub.subset_model_filelist(self.files, "%m_%d_%Y_%HZ", "6H", time_interval)
             else:
                 file_list = self.files
             if len(file_list) > 1:
@@ -290,11 +286,7 @@ class model:
             if self.variable_summing is not None:
                 for var_new in self.variable_summing.keys():
                     if var_new in self.obj.variables:
-                        print(
-                            "The variable name, {}, already exists and cannot be created with variable_summing.".format(
-                                var_new
-                            )
-                        )
+                        print("The variable name, {}, already exists and cannot be created with variable_summing.".format(var_new))
                         raise ValueError
                     var_new_info = self.variable_summing[var_new]
                     if self.variable_dict is None:

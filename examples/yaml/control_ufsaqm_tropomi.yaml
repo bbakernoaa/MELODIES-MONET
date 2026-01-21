@@ -8,18 +8,18 @@ analysis:
                         apply_ak: True
                         mod_to_overpass: True
 model:
-        ufsaqm: 
+        ufsaqm:
                 files: '/scratch1/BMC/rcm2/rhs/monet_example/AEROMMA/UFS-AQM/cmaq54_OriRave1/aqm.2023*/12/aqm.t12z.dyn.*.nc'
                 mod_type: 'ufs'
                 is_global: False
-                variables: 
+                variables:
                        no2_ave:
                                unit_scale: 1
                                unit_scale_method: '*'
-                mapping: 
-                       tropomi: 
+                mapping:
+                       tropomi:
                                 no2_ave: nitrogendioxide_tropospheric_column
-                plot_kwargs: 
+                plot_kwargs:
                         color: 'purple'
                         marker: '^'
                         linestyle: 'dotted'
@@ -34,7 +34,7 @@ obs:
                                 quality_flag_min: 0.7
                                 var_applied: ['nitrogendioxide_tropospheric_column']
                                 fillvalue: 9.96921e+36
-                        nitrogendioxide_tropospheric_column:       
+                        nitrogendioxide_tropospheric_column:
                                 scale: 6.022141e+19 # unit convert form mol_perm2to molec_percm2,6.022141e+19
                                 fillvalue: 9.96921e+36
                                 ylabel_plot: 'NO2 trop. columns'
@@ -50,10 +50,10 @@ obs:
                                 fillvalue: 9.96921e+36
                         air_mass_factor_troposphere:
                                 fillvalue: 9.96921e+36
-                        latitude: None 
-                        longitude: None 
+                        latitude: None
+                        longitude: None
                         preslev: # pressure of the vertical layer center
-                                tm5_constant_a:    
+                                tm5_constant_a:
                                         group: ['PRODUCT']
                                         maximum: 9.0e+36
                                 tm5_constant_b:
@@ -78,4 +78,3 @@ plots:
                 data_proc:
                         rem_obs_nan: True
                         set_axis: True
-

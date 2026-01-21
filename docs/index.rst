@@ -1,42 +1,42 @@
 MELODIES MONET
 ==============
 
-**MELODIES MONET** is a joint project between NSF NCAR and NOAA to develop a 
-modular framework that integrates existing and future diverse atmospheric 
-chemistry observational datasets with chemistry model results for the 
-evaluation of air quality and atmospheric composition. MELODIES MONET combines 
-the Model EvaLuation using Observations, DIagnostics and Experiments Software 
-(MELODIES) project at NSF NCAR with the Model and ObservatioN Evaluation Toolkit 
-(MONET) project at NOAA to develop a python diagnostic package that is open 
-source, generic, portable, and model-agnostic. Overall, the project provides a 
-framework for evaluating a wide range of models in a more consistent manner. 
-The tool is accessible to everyone including university and national 
+**MELODIES MONET** is a joint project between NSF NCAR and NOAA to develop a
+modular framework that integrates existing and future diverse atmospheric
+chemistry observational datasets with chemistry model results for the
+evaluation of air quality and atmospheric composition. MELODIES MONET combines
+the Model EvaLuation using Observations, DIagnostics and Experiments Software
+(MELODIES) project at NSF NCAR with the Model and ObservatioN Evaluation Toolkit
+(MONET) project at NOAA to develop a python diagnostic package that is open
+source, generic, portable, and model-agnostic. Overall, the project provides a
+framework for evaluating a wide range of models in a more consistent manner.
+The tool is accessible to everyone including university and national
 laboratory researchers, as well as graduate students and postdocs.
 
-The goal is to evaluate research, operational, and regulatory models against 
-a variety of observations including surface, aircraft, and satellite data all 
-within a common framework. MELODIES MONET uses the functionality already 
-developed by MONETIO to read in multiple observational and model datasets and 
-MONET to do pairing/analysis/plotting. For more information on MONET and 
+The goal is to evaluate research, operational, and regulatory models against
+a variety of observations including surface, aircraft, and satellite data all
+within a common framework. MELODIES MONET uses the functionality already
+developed by MONETIO to read in multiple observational and model datasets and
+MONET to do pairing/analysis/plotting. For more information on MONET and
 MONETIO please refer to:
- 
+
 - https://monet-arl.readthedocs.io
 - https://monetio.readthedocs.io
 
 .. note::
    Please cite the following to acknowledge use of MELODIES MONET
 
-   - Baker, B. and Pan, L.: Overview of the Model and Observation Evaluation 
-     Toolkit (MONET) Version 1.0 for Evaluating Atmospheric Transport Models, Atmosphere, 8, 
+   - Baker, B. and Pan, L.: Overview of the Model and Observation Evaluation
+     Toolkit (MONET) Version 1.0 for Evaluating Atmospheric Transport Models, Atmosphere, 8,
      no. 11, 210, https://doi.org/10.3390/atmos8110210, 2017.
 
-   - Two MELODIES MONET development papers are currently in preparation. We will 
+   - Two MELODIES MONET development papers are currently in preparation. We will
      update this list when they are available.
 
 Funding
 -------
 
-Funding for MELODIES MONET has been provided by NSF NCAR, NOAA ARL, NOAA CSL, 
+Funding for MELODIES MONET has been provided by NSF NCAR, NOAA ARL, NOAA CSL,
 NOAA GSL, and the following:
 
 * This material is also based upon work supported by the NSF National Center
@@ -48,8 +48,8 @@ NOAA GSL, and the following:
 
 * NSF Earthcube Award Number 2026924 (2020-2024)
 
-* Public Law 117-43 Disaster Relief Supplemental Appropriations Act 
-  signed 30 September 2021 including $55M (ORF) related to the consequences 
+* Public Law 117-43 Disaster Relief Supplemental Appropriations Act
+  signed 30 September 2021 including $55M (ORF) related to the consequences
   of hurricanes and wildfires in calendar years 2020 and 2021
 
 * Funding for this project was partially provided by the Bi-Partisan
@@ -89,7 +89,7 @@ Table of Contents
 .. toctree::
    :maxdepth: 4
    :caption: Contribute
-   
+
    develop/contribute
    develop/development_team
    develop/developers_guide
@@ -129,5 +129,3 @@ Table of Contents
    appendix/machine-specific-install
    appendix/yaml
    appendix/troubleshooting
-
-

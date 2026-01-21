@@ -3,6 +3,7 @@
 """
 melodies-monet -- MELODIES MONET CLI
 """
+
 import os
 import time
 from contextlib import contextmanager
@@ -34,7 +35,7 @@ SUCCESS_COLOR = typer.colors.GREEN
 HEADER = """
 ------------------
 | MELODIES MONET |
-------------------    
+------------------
 """.strip()
 
 
@@ -62,10 +63,7 @@ def _timer(desc=""):
     try:
         yield
     except Exception as e:
-        typer.secho(
-            tpl.format(status="failed", elapsed=time.perf_counter() - start),
-            fg=ERROR_COLOR
-        )
+        typer.secho(tpl.format(status="failed", elapsed=time.perf_counter() - start), fg=ERROR_COLOR)
         typer.secho(f"Error message (type: {_get_full_name(type(e))}): {e}", fg=ERROR_COLOR)
         if DEBUG:
             raise
@@ -73,10 +71,7 @@ def _timer(desc=""):
             typer.echo("(Use the '--debug' flag to see more info.)")
             raise typer.Exit(1)
     else:
-        typer.secho(
-            tpl.format(status="succeeded", elapsed=time.perf_counter() - start),
-            fg=SUCCESS_COLOR
-        )
+        typer.secho(tpl.format(status="succeeded", elapsed=time.perf_counter() - start), fg=SUCCESS_COLOR)
 
 
 @contextmanager
@@ -112,9 +107,7 @@ app = typer.Typer()
 
 @app.callback()
 def main(
-    version: bool = typer.Option(
-        False, "--version/", help="Print version.", callback=_version_callback, is_eager=True
-    ),
+    version: bool = typer.Option(False, "--version/", help="Print version.", callback=_version_callback, is_eager=True),
 ):
     """MELODIES MONET"""
 
@@ -123,11 +116,9 @@ def main(
 def run(
     control: str = typer.Argument(
         ...,
-        help="Path to the control file to use.", 
+        help="Path to the control file to use.",
     ),
-    debug: bool = typer.Option(
-        False, "--debug/", help="Print more messages (including full tracebacks)."
-    ),
+    debug: bool = typer.Option(False, "--debug/", help="Print more messages (including full tracebacks)."),
 ):
     """Run MELODIES MONET as described in the control file CONTROL."""
 
@@ -146,7 +137,7 @@ def run(
 
     with _timer("Importing the driver"):
         from melodies_monet.driver import analysis
-    
+
     with _timer("Reading control file and initializing"):
         an = analysis()
         an.control = control
@@ -204,41 +195,45 @@ def get_aeronet(
     start_date: str = typer.Option(..., "-s", "--start-date", help=f"Start date. {_DATE_FMT_NOTE}"),
     end_date: str = typer.Option(..., "-e", "--end-date", help=f"End date. {_DATE_FMT_NOTE} {_DATE_END_NOTE}"),
     daily: bool = typer.Option(False, help="Whether to retrieve the daily averaged data product."),
-    freq: str = typer.Option("h", "-f", "--freq", help=(
-            "Frequency to resample to. "
-            "Mean is used to reduce the time groups (as opposed to nearest, e.g.)."
-        )
+    freq: str = typer.Option(
+        "h",
+        "-f",
+        "--freq",
+        help=("Frequency to resample to. " "Mean is used to reduce the time groups (as opposed to nearest, e.g.)."),
     ),
-    interp_to: str = typer.Option(None, "--interp-to", help=(
+    interp_to: str = typer.Option(
+        None,
+        "--interp-to",
+        help=(
             "Wavelength(s) to interpolate the AOD values to (unit: micron). "
             "Separate with commas to specify multiple. "
             "Examples: '0.55' (550 nm), '0.55,0.7,1.0'. "
             "Note that this functionality requires pytspack "
             "(https://github.com/noaa-oar-arl/pytspack)."
-        )
+        ),
     ),
-    out_name: str = typer.Option(None, "-o",
+    out_name: str = typer.Option(
+        None,
+        "-o",
         help=(
             "Output file name (or full/relative path). "
             "By default the name is generated like 'AERONET_<product>_<start-date>_<end-date>.nc'."
-        )
+        ),
     ),
-    dst: Path = typer.Option(".", "-d", "--dst", help=(
-            "Destination directory (to control output location "
-            "if using default output file name)."
-        )
+    dst: Path = typer.Option(
+        ".", "-d", "--dst", help=("Destination directory (to control output location " "if using default output file name).")
     ),
-    compress: bool = typer.Option(True, help=(
+    compress: bool = typer.Option(
+        True,
+        help=(
             "If true, pack float to int and apply compression using zlib with complevel 7. "
             "This can take time if the dataset is large, but can lead to "
             "significant space savings."
-        )
+        ),
     ),
     num_workers: int = typer.Option(1, "-n", "--num-workers", help="Number of download workers."),
     verbose: bool = typer.Option(False),
-    debug: bool = typer.Option(
-        False, "--debug/", help="Print more messages (including full tracebacks)."
-    ),
+    debug: bool = typer.Option(False, "--debug/", help="Print more messages (including full tracebacks)."),
 ):
     """Download AERONET data using monetio and reformat for MM usage."""
     import monetio as mio
@@ -291,7 +286,7 @@ def get_aeronet(
             if daily and interp_to is not None:
                 typer.echo("Note that using interp with the daily product requires monetio >0.2.2")
             raise
-  
+
     site_vns = [
         "siteid",
         "latitude",
@@ -314,8 +309,7 @@ def get_aeronet(
         )
 
         ds = (
-            df
-            .set_index(["time", "siteid"])
+            df.set_index(["time", "siteid"])
             .to_xarray()
             .swap_dims(siteid="x")
             .drop_vars(site_vns)
@@ -337,33 +331,31 @@ def get_aeronet(
 def get_airnow(
     start_date: str = typer.Option(..., "-s", "--start-date", help=f"Start date. {_DATE_FMT_NOTE}"),
     end_date: str = typer.Option(..., "-e", "--end-date", help=f"End date. {_DATE_FMT_NOTE} {_DATE_END_NOTE}"),
-    daily: bool = typer.Option(False, help=(
-            "Whether to retrieve the daily averaged data product. "
-            "By default, the hourly data is fetched."
-        )
+    daily: bool = typer.Option(
+        False, help=("Whether to retrieve the daily averaged data product. " "By default, the hourly data is fetched.")
     ),
-    out_name: str = typer.Option(None, "-o",
+    out_name: str = typer.Option(
+        None,
+        "-o",
         help=(
             "Output file name (or full/relative path). "
             "By default the name is generated like 'AirNow_<start-date>_<end-date>.nc'."
-        )
+        ),
     ),
-    dst: Path = typer.Option(".", "-d", "--dst", help=(
-            "Destination directory (to control output location "
-            "if using default output file name)."
-        )
+    dst: Path = typer.Option(
+        ".", "-d", "--dst", help=("Destination directory (to control output location " "if using default output file name).")
     ),
-    compress: bool = typer.Option(True, help=(
+    compress: bool = typer.Option(
+        True,
+        help=(
             "If true, pack float to int and apply compression using zlib with complevel 7. "
             "This can take time if the dataset is large, but can lead to "
             "significant space savings."
-        )
+        ),
     ),
     num_workers: int = typer.Option(1, "-n", "--num-workers", help="Number of download workers."),
     verbose: bool = typer.Option(False),
-    debug: bool = typer.Option(
-        False, "--debug/", help="Print more messages (including full tracebacks)."
-    ),
+    debug: bool = typer.Option(False, "--debug/", help="Print more messages (including full tracebacks)."),
 ):
     """Download AirNow data using monetio and reformat for MM usage."""
     import warnings
@@ -409,10 +401,7 @@ def get_airnow(
 
     with _timer("Fetching data with monetio"):
         with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="The (error|warn)_bad_lines argument has been deprecated"
-            )
+            warnings.filterwarnings("ignore", message="The (error|warn)_bad_lines argument has been deprecated")
             df = mio.airnow.add_data(
                 dates,
                 download=False,
@@ -482,7 +471,7 @@ def get_airnow(
 
         # Add units
         for k, u in units.items():
-            vn = k[:-len(unit_suff)]
+            vn = k[: -len(unit_suff)]
             ds[vn].attrs.update(units=u)
 
         # Fill in local time array
@@ -491,11 +480,7 @@ def get_airnow(
             ds["time_local"] = ds.time + ds.utcoffset.astype("timedelta64[h]")
 
         # Expand
-        ds = (
-            ds
-            .expand_dims("y")
-            .transpose("time", "y", "x")
-        )
+        ds = ds.expand_dims("y").transpose("time", "y", "x")
 
     with _timer("Writing netCDF file"):
         if compress:
@@ -508,45 +493,46 @@ def get_airnow(
 def get_ish_lite(
     start_date: str = typer.Option(..., "-s", "--start-date", help=f"Start date. {_DATE_FMT_NOTE}"),
     end_date: str = typer.Option(..., "-e", "--end-date", help=f"End date. {_DATE_FMT_NOTE} {_DATE_END_NOTE}"),
-    country: str = typer.Option(None, "--country",
-        help=(
-            "Two-letter country code (e.g., in order of site count, "
-            "US, RS, CA, AS, BR, IN, CH, NO, JA, UK, FR, ...)."
-        )
+    country: str = typer.Option(
+        None,
+        "--country",
+        help=("Two-letter country code (e.g., in order of site count, " "US, RS, CA, AS, BR, IN, CH, NO, JA, UK, FR, ...)."),
     ),
     state: str = typer.Option(None, "--state", help="Two-letter state code (e.g., MD, ...)."),
-    box: Tuple[float, float, float, float] = typer.Option((None, None, None, None), "--box",
+    box: Tuple[float, float, float, float] = typer.Option(
+        (None, None, None, None),
+        "--box",
         help=(
             "Bounding box for site selection. "
             "(latmin, lonmin, latmax, lonmax) in [-180, 180) format. "
             "Can't be used if specifying country or state."
-        )
+        ),
     ),
-    out_name: str = typer.Option(None, "-o",
+    out_name: str = typer.Option(
+        None,
+        "-o",
         help=(
             "Output file name (or full/relative path). "
             "By default the name is generated like 'ISH-Lite_<start-date>_<end-date>.nc'."
-        )
+        ),
     ),
-    dst: Path = typer.Option(".", "-d", "--dst", help=(
-            "Destination directory (to control output location "
-            "if using default output file name)."
-        )
+    dst: Path = typer.Option(
+        ".", "-d", "--dst", help=("Destination directory (to control output location " "if using default output file name).")
     ),
-    compress: bool = typer.Option(True, help=(
+    compress: bool = typer.Option(
+        True,
+        help=(
             "If true, pack float to int and apply compression using zlib with complevel 7. "
             "This can take time if the dataset is large, but can lead to "
             "significant space savings."
-        )
+        ),
     ),
     num_workers: int = typer.Option(1, "-n", "--num-workers", help="Number of download workers."),
     verbose: bool = typer.Option(False),
-    debug: bool = typer.Option(
-        False, "--debug/", help="Print more messages (including full tracebacks)."
-    ),
+    debug: bool = typer.Option(False, "--debug/", help="Print more messages (including full tracebacks)."),
 ):
     """Download ISH-Lite data using monetio and reformat for MM usage.
-    
+
     Note that the data are stored in yearly files by site, so the runtime
     mostly depends on the number of unique years that your date range includes,
     as well as any site selection narrowing.
@@ -599,10 +585,7 @@ def get_ish_lite(
 
     with _timer("Fetching data with monetio"):
         with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="The (error|warn)_bad_lines argument has been deprecated"
-            )
+            warnings.filterwarnings("ignore", message="The (error|warn)_bad_lines argument has been deprecated")
             df = mio.ish_lite.add_data(
                 dates,
                 box=box,
@@ -616,8 +599,8 @@ def get_ish_lite(
     with _timer("Computing UTC offset for selected ISH-Lite sites"):
         import datetime
 
-        from timezonefinder import TimezoneFinder
         from pytz import timezone, utc
+        from timezonefinder import TimezoneFinder
 
         tf = TimezoneFinder(in_memory=True)
         ref_date = datetime.datetime(2022, 1, 1, 0, 0)
@@ -633,12 +616,10 @@ def get_ish_lite(
 
             return uo_h
 
-
         locs = df[["siteid", "latitude", "longitude"]].groupby("siteid").first().reset_index()
         locs["utcoffset"] = locs.apply(lambda r: get_utc_offset(lat=r.latitude, lon=r.longitude), axis="columns")
 
         df = df.merge(locs[["siteid", "utcoffset"]], on="siteid", how="left")
-
 
     with _timer("Forming xarray Dataset"):
         df = df.dropna(subset=["latitude", "longitude"])
@@ -668,13 +649,7 @@ def get_ish_lite(
         ]
         # NOTE: time_local not included since it varies in time as well as by site
 
-        ds_site = (
-            df[site_vns]
-            .groupby("siteid")
-            .first()
-            .to_xarray()
-            .swap_dims(siteid="x")
-        )
+        ds_site = df[site_vns].groupby("siteid").first().to_xarray().swap_dims(siteid="x")
 
         # TODO: units?
         units = {}
@@ -701,11 +676,7 @@ def get_ish_lite(
         ds["time_local"] = ds.time + (ds.utcoffset * 60).astype("timedelta64[m]")
 
         # Expand
-        ds = (
-            ds
-            .expand_dims("y")
-            .transpose("time", "y", "x")
-        )
+        ds = ds.expand_dims("y").transpose("time", "y", "x")
 
     with _timer("Writing netCDF file"):
         if compress:
@@ -718,50 +689,51 @@ def get_ish_lite(
 def get_ish(
     start_date: str = typer.Option(..., "-s", "--start-date", help=f"Start date. {_DATE_FMT_NOTE}"),
     end_date: str = typer.Option(..., "-e", "--end-date", help=f"End date. {_DATE_FMT_NOTE} {_DATE_END_NOTE}"),
-    freq: str = typer.Option("h", "-f", "--freq", help=(
-            "Frequency to resample to. "
-            "Mean is used to reduce the time groups (as opposed to nearest, e.g.)."
-        )
+    freq: str = typer.Option(
+        "h",
+        "-f",
+        "--freq",
+        help=("Frequency to resample to. " "Mean is used to reduce the time groups (as opposed to nearest, e.g.)."),
     ),
-    country: str = typer.Option(None, "--country",
-        help=(
-            "Two-letter country code (e.g., in order of site count, "
-            "US, RS, CA, AS, BR, IN, CH, NO, JA, UK, FR, ...)."
-        )
+    country: str = typer.Option(
+        None,
+        "--country",
+        help=("Two-letter country code (e.g., in order of site count, " "US, RS, CA, AS, BR, IN, CH, NO, JA, UK, FR, ...)."),
     ),
     state: str = typer.Option(None, "--state", help="Two-letter state code (e.g., MD, ...)."),
-    box: Tuple[float, float, float, float] = typer.Option((None, None, None, None), "--box",
+    box: Tuple[float, float, float, float] = typer.Option(
+        (None, None, None, None),
+        "--box",
         help=(
             "Bounding box for site selection. "
             "(latmin, lonmin, latmax, lonmax) in [-180, 180) format. "
             "Can't be used if specifying country or state."
-        )
+        ),
     ),
-    out_name: str = typer.Option(None, "-o",
+    out_name: str = typer.Option(
+        None,
+        "-o",
         help=(
-            "Output file name (or full/relative path). "
-            "By default the name is generated like 'ISH_<start-date>_<end-date>.nc'."
-        )
+            "Output file name (or full/relative path). " "By default the name is generated like 'ISH_<start-date>_<end-date>.nc'."
+        ),
     ),
-    dst: Path = typer.Option(".", "-d", "--dst", help=(
-            "Destination directory (to control output location "
-            "if using default output file name)."
-        )
+    dst: Path = typer.Option(
+        ".", "-d", "--dst", help=("Destination directory (to control output location " "if using default output file name).")
     ),
-    compress: bool = typer.Option(True, help=(
+    compress: bool = typer.Option(
+        True,
+        help=(
             "If true, pack float to int and apply compression using zlib with complevel 7. "
             "This can take time if the dataset is large, but can lead to "
             "significant space savings."
-        )
+        ),
     ),
     num_workers: int = typer.Option(1, "-n", "--num-workers", help="Number of download workers."),
     verbose: bool = typer.Option(False),
-    debug: bool = typer.Option(
-        False, "--debug/", help="Print more messages (including full tracebacks)."
-    ),
+    debug: bool = typer.Option(False, "--debug/", help="Print more messages (including full tracebacks)."),
 ):
     """Download ISH data using monetio and reformat for MM usage.
-    
+
     Note that the data are stored in yearly files by site, so the runtime
     mostly depends on the number of unique years that your date range includes,
     as well as any site selection narrowing.
@@ -815,10 +787,7 @@ def get_ish(
 
     with _timer("Fetching data with monetio"), _ignore_pandas_numeric_only_futurewarning():
         with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="The (error|warn)_bad_lines argument has been deprecated"
-            )
+            warnings.filterwarnings("ignore", message="The (error|warn)_bad_lines argument has been deprecated")
             df = mio.ish.add_data(
                 dates,
                 box=box,
@@ -833,8 +802,8 @@ def get_ish(
     with _timer("Computing UTC offset for selected ISH sites"):
         import datetime
 
-        from timezonefinder import TimezoneFinder
         from pytz import timezone, utc
+        from timezonefinder import TimezoneFinder
 
         tf = TimezoneFinder(in_memory=True)
         ref_date = datetime.datetime(2022, 1, 1, 0, 0)
@@ -850,12 +819,10 @@ def get_ish(
 
             return uo_h
 
-
         locs = df[["siteid", "latitude", "longitude"]].groupby("siteid").first().reset_index()
         locs["utcoffset"] = locs.apply(lambda r: get_utc_offset(lat=r.latitude, lon=r.longitude), axis="columns")
 
         df = df.merge(locs[["siteid", "utcoffset"]], on="siteid", how="left")
-
 
     with _timer("Forming xarray Dataset"):
         df = (
@@ -865,7 +832,7 @@ def get_ish(
                     "station name": "station_name",
                     "elev(m)": "elevation",
                 },
-            errors="ignore",
+                errors="ignore",
             )
             .drop(columns=["elev"], errors="ignore")  # keep just elevation from the site meta file
         )
@@ -887,13 +854,7 @@ def get_ish(
         ]
         # NOTE: time_local not included since it varies in time as well as by site
 
-        ds_site = (
-            df[site_vns]
-            .groupby("siteid")
-            .first()
-            .to_xarray()
-            .swap_dims(siteid="x")
-        )
+        ds_site = df[site_vns].groupby("siteid").first().to_xarray().swap_dims(siteid="x")
 
         # TODO: units?
         units = {}
@@ -920,11 +881,7 @@ def get_ish(
         ds["time_local"] = ds.time + (ds.utcoffset * 60).astype("timedelta64[m]")
 
         # Expand
-        ds = (
-            ds
-            .expand_dims("y")
-            .transpose("time", "y", "x")
-        )
+        ds = ds.expand_dims("y").transpose("time", "y", "x")
 
     with _timer("Writing netCDF file"):
         if compress:
@@ -937,41 +894,42 @@ def get_ish(
 def get_aqs(
     start_date: str = typer.Option(..., "-s", "--start-date", help=f"Start date. {_DATE_FMT_NOTE}"),
     end_date: str = typer.Option(..., "-e", "--end-date", help=f"End date. {_DATE_FMT_NOTE} {_DATE_END_NOTE}"),
-    daily: bool = typer.Option(False, help=(
-            "Whether to retrieve the daily averaged data product. "
-            "By default, the hourly data is fetched."
-        )
+    daily: bool = typer.Option(
+        False, help=("Whether to retrieve the daily averaged data product. " "By default, the hourly data is fetched.")
     ),
-    param: List[str] = typer.Option(["O3", "PM2.5", "PM10"], "-p", "--params", help=(
+    param: List[str] = typer.Option(
+        ["O3", "PM2.5", "PM10"],
+        "-p",
+        "--params",
+        help=(
             "Parameter groups. "
             "Use '-p' more than once to get multiple groups. "
             "Other examples: 'SPEC' (speciated PM2.5), 'PM10SPEC' (speciated PM10), "
             "'VOC', 'NONOxNOy', 'SO2', 'NO2', 'CO', 'PM2.5_FRM'."
-        )
+        ),
     ),
     # TODO: add network selection option once working in monetio
-    out_name: str = typer.Option(None, "-o",
+    out_name: str = typer.Option(
+        None,
+        "-o",
         help=(
-            "Output file name (or full/relative path). "
-            "By default the name is generated like 'AQS_<start-date>_<end-date>.nc'."
-        )
+            "Output file name (or full/relative path). " "By default the name is generated like 'AQS_<start-date>_<end-date>.nc'."
+        ),
     ),
-    dst: Path = typer.Option(".", "-d", "--dst", help=(
-            "Destination directory (to control output location "
-            "if using default output file name)."
-        )
+    dst: Path = typer.Option(
+        ".", "-d", "--dst", help=("Destination directory (to control output location " "if using default output file name).")
     ),
-    compress: bool = typer.Option(True, help=(
+    compress: bool = typer.Option(
+        True,
+        help=(
             "If true, pack float to int and apply compression using zlib with complevel 7. "
             "This can take time if the dataset is large, but can lead to "
             "significant space savings."
-        )
+        ),
     ),
     num_workers: int = typer.Option(1, "-n", "--num-workers", help="Number of download workers."),
     verbose: bool = typer.Option(False),
-    debug: bool = typer.Option(
-        False, "--debug/", help="Print more messages (including full tracebacks)."
-    ),
+    debug: bool = typer.Option(False, "--debug/", help="Print more messages (including full tracebacks)."),
 ):
     """Download EPA AQS data using monetio and reformat for MM usage.
 
@@ -1025,10 +983,7 @@ def get_aqs(
 
     with _timer("Fetching data with monetio"):
         with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="The (error|warn)_bad_lines argument has been deprecated"
-            )
+            warnings.filterwarnings("ignore", message="The (error|warn)_bad_lines argument has been deprecated")
             try:
                 df = mio.aqs.add_data(
                     dates,
@@ -1080,18 +1035,15 @@ def get_aqs(
             encoding="ISO-8859-1",
             dtype=str,
         )
-        counties = (
-            counties0.copy()
-            .rename(
-                columns={
-                    "State Code": "state_code",
-                    "State Name": "state_name",
-                    "State Abbreviation": "state_abbr",
-                    "County Code": "county_code",
-                    "County Name": "county_name",
-                    "EPA Region": "epa_region",  # note without R prefix
-                }
-            )
+        counties = counties0.copy().rename(
+            columns={
+                "State Code": "state_code",
+                "State Name": "state_name",
+                "State Abbreviation": "state_abbr",
+                "County Code": "county_code",
+                "County Name": "county_name",
+                "EPA Region": "epa_region",  # note without R prefix
+            }
         )
         counties["epa_region"] = "R" + counties["epa_region"].str.lstrip("0")
 
@@ -1163,13 +1115,7 @@ def get_aqs(
 
         df = df.merge(meta, on="siteid", how="left", suffixes=(None, "_meta"))
 
-        ds_site = (
-            df[site_vns]
-            .groupby("siteid")
-            .first()
-            .to_xarray()
-            .swap_dims(siteid="x")
-        )
+        ds_site = df[site_vns].groupby("siteid").first().to_xarray().swap_dims(siteid="x")
 
         # Extract units info so we can add as attrs
         unit_suff = "_unit"
@@ -1193,7 +1139,7 @@ def get_aqs(
 
         # Add units
         for k, u in units.items():
-            vn = k[:-len(unit_suff)]
+            vn = k[: -len(unit_suff)]
             ds[vn].attrs.update(units=u)
 
         # Fill in local time array
@@ -1202,11 +1148,7 @@ def get_aqs(
             ds["time_local"] = ds.time + ds.utcoffset.astype("timedelta64[h]")
 
         # Expand
-        ds = (
-            ds
-            .expand_dims("y")
-            .transpose("time", "y", "x")
-        )
+        ds = ds.expand_dims("y").transpose("time", "y", "x")
 
         # Can't have `/` in variable name for netCDF
         to_rename = [vn for vn in ds.data_vars if "/" in vn]
@@ -1223,55 +1165,61 @@ def get_aqs(
 def get_openaq(
     start_date: str = typer.Option(..., "-s", "--start-date", help=f"Start date. {_DATE_FMT_NOTE}"),
     end_date: str = typer.Option(..., "-e", "--end-date", help=f"End date. {_DATE_FMT_NOTE} {_DATE_END_NOTE}"),
-    out_name: str = typer.Option(None, "-o",
+    out_name: str = typer.Option(
+        None,
+        "-o",
         help=(
             "Output file name (or full/relative path). "
             "By default the name is generated like 'OpenAQ_<start-date>_<end-date>.nc'."
-        )
+        ),
     ),
-    dst: Path = typer.Option(".", "-d", "--dst", help=(
-            "Destination directory (to control output location "
-            "if using default output file name)."
-        )
+    dst: Path = typer.Option(
+        ".", "-d", "--dst", help=("Destination directory (to control output location " "if using default output file name).")
     ),
-    param: List[str] = typer.Option(["o3", "pm25", "pm10"], "-p", "--param", help=(
+    param: List[str] = typer.Option(
+        ["o3", "pm25", "pm10"],
+        "-p",
+        "--param",
+        help=(
             "Parameters. "
             "Use '-p' more than once to get multiple parameters. "
             "Other examples: 'no', 'no2', 'nox', 'so2', 'co', 'bc'. "
             "Only applicable to the web API methods ('api-v*')."
-        )
+        ),
     ),
     reference_grade: bool = typer.Option(True, help="Include reference-grade sensors."),
     low_cost: bool = typer.Option(False, help="Include low-cost sensors."),
-    country: List[str] = typer.Option(None, "-c", "--country",
-        help=(
-            "Two-letter country code(s). (US, CA, MX, ...). "
-            "Use more than once to specify multiple countries."
-        )
+    country: List[str] = typer.Option(
+        None,
+        "-c",
+        "--country",
+        help=("Two-letter country code(s). (US, CA, MX, ...). " "Use more than once to specify multiple countries."),
     ),
-    method: str = typer.Option("api-v3", "-m", "--method", help=(
-            "Method (reader) to use for fetching data. "
-            "Options: 'api-v3', 'api-v2', 'openaq-fetches'."
-        )
+    method: str = typer.Option(
+        "api-v3",
+        "-m",
+        "--method",
+        help=("Method (reader) to use for fetching data. " "Options: 'api-v3', 'api-v2', 'openaq-fetches'."),
     ),
-    sensor_limit: int = typer.Option(None,
+    sensor_limit: int = typer.Option(
+        None,
         help=(
             "Limit the number of sensors to fetch data for. "
             "This is useful for testing or debugging. "
             "Only applicable to the 'api-v3' method."
-        )
+        ),
     ),
-    compress: bool = typer.Option(True, help=(
+    compress: bool = typer.Option(
+        True,
+        help=(
             "If true, pack float to int and apply compression using zlib with complevel 7. "
             "This can take time if the dataset is large, but can lead to "
             "significant space savings."
-        )
+        ),
     ),
     num_workers: int = typer.Option(1, "-n", "--num-workers", help="Number of download workers."),
     verbose: bool = typer.Option(False),
-    debug: bool = typer.Option(
-        False, "--debug/", help="Print more messages (including full tracebacks)."
-    ),
+    debug: bool = typer.Option(False, "--debug/", help="Print more messages (including full tracebacks)."),
 ):
     """Download hourly OpenAQ data using monetio and reformat for MM usage."""
     import warnings
@@ -1350,10 +1298,7 @@ def get_openaq(
     with _timer("Fetching data with monetio"):
         if method == "openaq-fetches":
             with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore",
-                    message="The (error|warn)_bad_lines argument has been deprecated"
-                )
+                warnings.filterwarnings("ignore", message="The (error|warn)_bad_lines argument has been deprecated")
                 df = mio.openaq.add_data(
                     dates,
                     n_procs=num_workers,
@@ -1392,9 +1337,7 @@ def get_openaq(
 
             dupes = df[df.duplicated(["time", "siteid"], keep=False)]
             if not dupes.empty:
-                typer.echo(
-                    f"warning: {len(dupes)} unexpected time-siteid duplicated rows:"
-                )
+                typer.echo(f"warning: {len(dupes)} unexpected time-siteid duplicated rows:")
                 if verbose:
                     typer.echo(dupes)
                 df = df.drop_duplicates(["time", "siteid"])
@@ -1469,13 +1412,7 @@ def get_openaq(
         else:
             raise AssertionError
 
-        ds_site = (
-            df[site_vns]
-            .groupby("siteid")
-            .first()
-            .to_xarray()
-            .swap_dims(siteid="x")
-        )
+        ds_site = df[site_vns].groupby("siteid").first().to_xarray().swap_dims(siteid="x")
 
         ds = (
             df.drop(columns=[vn for vn in site_vns if vn not in ["siteid"]])
@@ -1491,7 +1428,7 @@ def get_openaq(
         nice_us = {"ppm": "ppmv", "ugm3": "ug m-3", "ppb": "pbbv"}
         for vn0 in [n for n in df.columns if n.endswith(("_ppm", "ppb", "_ugm3", "_umg3"))]:
             i_last_underscore = vn0.rfind("_")
-            vn, u = vn0[:i_last_underscore], vn0[i_last_underscore + 1:]
+            vn, u = vn0[:i_last_underscore], vn0[i_last_underscore + 1 :]
             if u == "umg3":
                 u = "ugm3"
             nice_u = nice_us[u]
@@ -1503,17 +1440,14 @@ def get_openaq(
         ds["time_local"] = ds.time + ds.utcoffset
 
         # Expand
-        ds = (
-            ds
-            .expand_dims("y")
-            .transpose("time", "y", "x")
-        )
+        ds = ds.expand_dims("y").transpose("time", "y", "x")
 
     with _timer("Writing netCDF file"):
         if compress:
             write_ncf(ds, dst / out_name, verbose=verbose)
         else:
             ds.to_netcdf(dst / out_name)
+
 
 cli = app
 

@@ -1,9 +1,9 @@
 Development Team
 ================
 
-MELODIES MONET development is a collaboration between NOAA Chemical Sciences 
-Laboratory (CSL), NOAA Air Resources Laboratory (ARL), NOAA Global Systems 
-Laboratory (GSL), and NSF NCAR Atmospheric Chemistry Observations and Modeling 
+MELODIES MONET development is a collaboration between NOAA Chemical Sciences
+Laboratory (CSL), NOAA Air Resources Laboratory (ARL), NOAA Global Systems
+Laboratory (GSL), and NSF NCAR Atmospheric Chemistry Observations and Modeling
 (ACOM) Laboratory. The representative leads for each organization are below.
 
 ===============  =============================
@@ -36,14 +36,14 @@ Beiming Tang       btang1          Docs, Surface and sonde obs, Plots, Stats
 Development Team Members
 ------------------------
 
-Below is a list of people who have contributed to MELODIES MONET along with 
+Below is a list of people who have contributed to MELODIES MONET along with
 their current and future development goals.
 
 **Mackenzie Arnold:**
 I’m a summer intern at CIRES/NOAA GSL working on model verification of smoke-forecast
 models. I plan to help review the code, work to improve the site-specific analysis, add
 in a new capability to interactively view plots for individual surface sites online,
-and help with various other aspects of development. 
+and help with various other aspects of development.
 
 **Megan Bela:**
 I am a research scientist at CIRES/NOAA CSL working to improve process-level
@@ -55,7 +55,7 @@ research and operational models of fire impacts on air quality and weather.
 **Maggie Bruckner:**
 I am an NRC postdoc associated with NOAA CSL. My development plans
 primarily focus on adding capabilities for comparison of satellite observations to model
-output and expanding data processing options. 
+output and expanding data processing options.
 
 **Rebecca Buchholz:**
 I am a Project Scientist at NSF NCAR/ACOM helping with the development of MELODIES MONET.
@@ -77,7 +77,7 @@ observational datasets, and adding the capability of pairing to 3D aircraft obse
 **Louisa Emmons:**
 I am a Scientist at NSF NCAR/ACOM and PI of the NSF Earthcube MELODIES grant.  I have been
 working on comparisons of model results and observations for over 20 years and hope to
-contribute to many aspects of the development. 
+contribute to many aspects of the development.
 
 **David Fillmore:**
 I am a software developer at NSF NCAR/ACOM and work on MELODIES MONET and the NASA CERES project.
@@ -98,10 +98,10 @@ TROPOMI NO2 L2 product released by KNMI, paring the satellite pixels to WRF-Chem
 the plotting and statistical analyses in satellite-model comparisons.
 
 **Rebecca Schwantes:**
-I am a research chemist at NOAA CSL coordinating the 
-development of MELODIES MONET. My development plans include incorporating 
-additional surface observational datasets, adding the capability of pairing 
-to aircraft observations, and expanding plotting and statistics for analysis 
+I am a research chemist at NOAA CSL coordinating the
+development of MELODIES MONET. My development plans include incorporating
+additional surface observational datasets, adding the capability of pairing
+to aircraft observations, and expanding plotting and statistics for analysis
 of aircraft data.
 
 **Jun Zhang:**

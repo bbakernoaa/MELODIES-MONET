@@ -1,5 +1,8 @@
-import xarray as xr
+# SPDX-License-Identifier: Apache-2.0
+#
+
 import pandas as pd
+import xarray as xr
 
 
 class pair:
@@ -65,9 +68,7 @@ class pair:
         ]  # only columns for single site identificaiton
 
         # site only xarray obj (no time dependence)
-        dfps = (
-            dfpsite.loc[:, columns[columns.isin(site_columns)]].set_index(["x"]).to_xarray()
-        )  # single column index
+        dfps = dfpsite.loc[:, columns[columns.isin(site_columns)]].set_index(["x"]).to_xarray()  # single column index
 
         # now pivot df and convert back to xarray using only non site_columns
         site_columns.remove("x")  # need to keep x to merge later

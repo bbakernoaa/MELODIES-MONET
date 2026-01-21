@@ -44,10 +44,11 @@ jobs:
           micromamba list | grep monet
           python -c "import monetio; print('monetio.__version__', getattr(monetio, '__version__', '?'))"
           python -c "import monet;   print('monet.__version__',   getattr(monet, '__version__', '?'))"
+          python -c "import monet_stats; print('monet_stats.__version__', getattr(monet_stats, '__version__', '?'))"
 
       - name: pytest
         run: python -m pytest -v -ra melodies_monet
-      
+
       - name: Run docs/examples notebooks as scripts
         run: |
           cd docs/examples
@@ -122,7 +123,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
 

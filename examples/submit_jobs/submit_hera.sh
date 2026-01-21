@@ -1,9 +1,9 @@
 #!/bin/bash -l
 
 #SBATCH --qos batch
-#SBATCH --job-name=mm_eval                                                                       
-#SBATCH --partition=bigmem                                                                        
-#SBATCH --time=05:00:00                                                                       
+#SBATCH --job-name=mm_eval
+#SBATCH --partition=bigmem
+#SBATCH --time=05:00:00
 #SBATCH --ntasks=5
 # -- Update to your account number
 #SBATCH --account=rcm1
