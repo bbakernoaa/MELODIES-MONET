@@ -23,6 +23,7 @@ import monet_stats.efficiency_metrics
 import monet_stats.error_metrics
 import monet_stats.relative_metrics
 
+
 # Dynamically discover all statistics from monet-stats
 def _discover_stats() -> Dict[str, Any]:
     """
@@ -47,6 +48,7 @@ def _discover_stats() -> Dict[str, Any]:
             if name.isupper() and func.__module__ == mod.__name__:
                 discovered[name] = func
     return discovered
+
 
 _ALL_STATS = _discover_stats()
 
@@ -85,6 +87,7 @@ _STAT_FRIENDLY_NAMES = {
     "IOA": "Index of Agreement",
     "AC": "Anomaly Correlation",
 }
+
 
 def produce_stat_dict(stat_list: List[str], spaces: bool = False) -> List[str]:
     """
@@ -186,7 +189,11 @@ def calc(
     sig = inspect.signature(func)
 
     if "axis" in sig.parameters:
-        if isinstance(obs, xr.DataArray) and "axis" not in calc_kwargs and "dim" not in calc_kwargs:
+        if (
+            isinstance(obs, xr.DataArray)
+            and "axis" not in calc_kwargs
+            and "dim" not in calc_kwargs
+        ):
             if obs.ndim == 1:
                 calc_kwargs["axis"] = obs.dims[0]
             else:
@@ -197,18 +204,23 @@ def calc(
     # Handle paxis if required and missing
     if "paxis" in sig.parameters and "paxis" not in calc_kwargs:
         if isinstance(obs, xr.DataArray):
-             calc_kwargs["paxis"] = obs.dims[0]
+            calc_kwargs["paxis"] = obs.dims[0]
         else:
-             calc_kwargs["paxis"] = 0
+            calc_kwargs["paxis"] = 0
 
     # 4. Perform calculation
     value = func(obs, mod, **calc_kwargs)
 
     # 5. Scientific Hygiene: Update history if it's an xarray object
     if isinstance(value, (xr.DataArray, xr.Dataset)):
-        if "history" not in value.attrs or f"Calculated {stat}" not in value.attrs["history"]:
+        if (
+            "history" not in value.attrs
+            or f"Calculated {stat}" not in value.attrs["history"]
+        ):
             history = f"Calculated {stat} using monet-stats"
-            value.attrs["history"] = f"{value.attrs.get('history', '')}\n{history}".strip()
+            value.attrs["history"] = (
+                f"{value.attrs.get('history', '')}\n{history}".strip()
+            )
 
     return value
 
@@ -247,7 +259,9 @@ def create_table(
         plt.ioff()
 
     # Define defaults if not provided:
-    out_table_def = dict(fontsize=16.0, xscale=1.2, yscale=1.2, figsize=[10, 7], edges="open")
+    out_table_def = dict(
+        fontsize=16.0, xscale=1.2, yscale=1.2, figsize=[10, 7], edges="open"
+    )
     if out_table_kwargs is not None:
         table_kwargs = {**out_table_def, **out_table_kwargs}
     else:

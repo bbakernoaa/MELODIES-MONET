@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# SPDX-License-Identifier: Apache-2.0
+#
+
 import os
 import warnings
 import xarray as xr
@@ -34,18 +40,30 @@ class model:
 
     def __repr__(self):
         return (
-            f"{type(self).__name__}(\n"
-            f"    model={self.model!r},\n"
-            f"    is_global={self.is_global!r},\n"
-            f"    radius_of_influence={self.radius_of_influence!r},\n"
-            f"    mod_kwargs={self.mod_kwargs!r},\n"
-            f"    file_str={self.file_str!r},\n"
-            f"    label={self.label!r},\n"
-            f"    obj={repr(self.obj) if self.obj is None else '...'},\n"
-            f"    mapping={self.mapping!r},\n"
-            f"    variable_dict={self.variable_dict!r},\n"
-            f"    label={self.label!r},\n"
-            "    ...\n"
+            f"{type(self).__name__}(
+"
+            f"    model={self.model!r},
+"
+            f"    is_global={self.is_global!r},
+"
+            f"    radius_of_influence={self.radius_of_influence!r},
+"
+            f"    mod_kwargs={self.mod_kwargs!r},
+"
+            f"    file_str={self.file_str!r},
+"
+            f"    label={self.label!r},
+"
+            f"    obj={repr(self.obj) if self.obj is None else '...'},
+"
+            f"    mapping={self.mapping!r},
+"
+            f"    variable_dict={self.variable_dict!r},
+"
+            f"    label={self.label!r},
+"
+            "    ...
+"
             ")"
         )
 
@@ -214,96 +232,4 @@ class model:
                 # fill filelist with subset
                 print("subsetting model files to interval")
                 file_list = tsub.subset_model_filelist(
-                    self.files, "%m_%d_%Y_%HZ", "6H", time_interval
-                )
-            else:
-                file_list = self.files
-            if len(file_list) > 1:
-                self.obj = mio.models.raqms.open_mfdataset(file_list, **self.mod_kwargs)
-            else:
-                self.obj = mio.models.raqms.open_dataset(file_list)
-            if "ptrop" in self.obj and "pres_pa_trop" not in self.obj:
-                self.obj = self.obj.rename({"ptrop": "pres_pa_trop"})
-
-        else:
-            print("**** Reading Unspecified model output. Take Caution...")
-            if len(self.files) > 1:
-                self.obj = xr.open_mfdataset(self.files, **self.mod_kwargs)
-            else:
-                self.obj = xr.open_dataset(self.files[0], **self.mod_kwargs)
-        self.mask_and_scale()
-        self.rename_vars()  # rename any variables as necessary
-        self.sum_variables()
-
-    def rename_vars(self):
-        """Rename any variables in model with rename set.
-
-        Returns
-        -------
-        None
-        """
-        data_vars = self.obj.data_vars
-        if self.variable_dict is not None:
-            for v in data_vars:
-                if v in self.variable_dict:
-                    d = self.variable_dict[v]
-                    if "rename" in d:
-                        self.obj = self.obj.rename({v: d["rename"]})
-                        self.variable_dict[d["rename"]] = self.variable_dict.pop(v)
-
-    def mask_and_scale(self):
-        """Mask and scale model data including unit conversions.
-
-        Returns
-        -------
-        None
-        """
-        vars = self.obj.data_vars
-        if self.variable_dict is not None:
-            for v in vars:
-                if v in self.variable_dict:
-                    d = self.variable_dict[v]
-                    if "unit_scale" in d:
-                        scale = d["unit_scale"]
-                    else:
-                        scale = 1
-                    if "unit_scale_method" in d:
-                        if d["unit_scale_method"] == "*":
-                            self.obj[v].data *= scale
-                        elif d["unit_scale_method"] == "/":
-                            self.obj[v].data /= scale
-                        elif d["unit_scale_method"] == "+":
-                            self.obj[v].data += scale
-                        elif d["unit_scale_method"] == "-":
-                            self.obj[v].data += -1 * scale
-
-    def sum_variables(self):
-        """Sum any variables noted that should be summed to create new variables.
-        This occurs after any unit scaling.
-
-        Returns
-        -------
-        None
-        """
-
-        try:
-            if self.variable_summing is not None:
-                for var_new in self.variable_summing.keys():
-                    if var_new in self.obj.variables:
-                        print(
-                            "The variable name, {}, already exists and cannot be created with variable_summing.".format(
-                                var_new
-                            )
-                        )
-                        raise ValueError
-                    var_new_info = self.variable_summing[var_new]
-                    if self.variable_dict is None:
-                        self.variable_dict = {}
-                    self.variable_dict[var_new] = var_new_info
-                    for i, var in enumerate(var_new_info["vars"]):
-                        if i == 0:
-                            self.obj[var_new] = self.obj[var].copy()
-                        else:
-                            self.obj[var_new] += self.obj[var]
-        except ValueError as e:
-            raise Exception("Something happened when using variable_summing:") from e
+                    self.files, "

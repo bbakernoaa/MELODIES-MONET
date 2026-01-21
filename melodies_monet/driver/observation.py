@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# SPDX-License-Identifier: Apache-2.0
+#
+
 import os
 import xarray as xr
 import numpy as np
@@ -30,19 +36,32 @@ class observation:
 
     def __repr__(self):
         return (
-            f"{type(self).__name__}(\n"
-            f"    obs={self.obs!r},\n"
-            f"    label={self.label!r},\n"
-            f"    file={self.file!r},\n"
-            f"    obj={repr(self.obj) if self.obj is None else '...'},\n"
-            f"    type={self.type!r},\n"
-            f"    sat_type={self.sat_type!r},\n"
-            f"    sat_method={self.sat_method!r},\n"
-            f"    data_proc={self.data_proc!r},\n"
-            f"    variable_dict={self.variable_dict!r},\n"
-            f"    resample={self.resample!r},\n"
-            f"    time_var={self.time_var!r},\n"
-            f"    regrid_method={self.regrid_method!r},\n"
+            f"{type(self).__name__}(
+"
+            f"    obs={self.obs!r},
+"
+            f"    label={self.label!r},
+"
+            f"    file={self.file!r},
+"
+            f"    obj={repr(self.obj) if self.obj is None else '...'},
+"
+            f"    type={self.type!r},
+"
+            f"    sat_type={self.sat_type!r},
+"
+            f"    sat_method={self.sat_method!r},
+"
+            f"    data_proc={self.data_proc!r},
+"
+            f"    variable_dict={self.variable_dict!r},
+"
+            f"    resample={self.resample!r},
+"
+            f"    time_var={self.time_var!r},
+"
+            f"    regrid_method={self.regrid_method!r},
+"
             ")"
         )
 

@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# SPDX-License-Identifier: Apache-2.0
+#
+
 import xarray as xr
 import pandas as pd
 
@@ -21,14 +27,22 @@ class pair:
 
     def __repr__(self):
         return (
-            f"{type(self).__name__}(\n"
-            f"    type={self.type!r},\n"
-            f"    radius_of_influence={self.radius_of_influence!r},\n"
-            f"    obs={self.obs!r},\n"
-            f"    model={self.model!r},\n"
-            f"    model_vars={self.model_vars!r},\n"
-            f"    obs_vars={self.obs_vars!r},\n"
-            f"    filename={self.filename!r},\n"
+            f"{type(self).__name__}(
+"
+            f"    type={self.type!r},
+"
+            f"    radius_of_influence={self.radius_of_influence!r},
+"
+            f"    obs={self.obs!r},
+"
+            f"    model={self.model!r},
+"
+            f"    model_vars={self.model_vars!r},
+"
+            f"    obs_vars={self.obs_vars!r},
+"
+            f"    filename={self.filename!r},
+"
             ")"
         )
 
