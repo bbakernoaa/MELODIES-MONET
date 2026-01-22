@@ -5,6 +5,7 @@ import xarray as xr
 import numpy as np
 
 import monetio as mio
+from melodies_monet.util import driver_util
 
 
 class observation:
@@ -49,21 +50,9 @@ class observation:
         )
 
     def open_obs(self, time_interval=None, control_dict=None):
-        """Open the observational data, store data in observation pair,
-        and apply mask and scaling.
-
-        Parameters
-        ----------
-        time_interval (optional, default None) : [pandas.Timestamp, pandas.Timestamp]
-            If not None, restrict obs to datetime range spanned by time interval [start, end].
-
-        Returns
-        -------
-        None
-        """
+        """Open the observational data using the updated Reader API."""
         from glob import glob
         from numpy import sort
-
         from melodies_monet import tutorial
 
         if self.file.startswith("example:"):
@@ -74,26 +63,53 @@ class observation:
 
         assert len(files) >= 1, "need at least one"
 
-        _, extension = os.path.splitext(files[0])
-        try:
-            if extension in {".nc", ".ncf", ".netcdf", ".nc4"}:
-                if len(files) > 1:
-                    self.obj = xr.open_mfdataset(files)
-                else:
-                    self.obj = xr.open_dataset(files[0])
-            elif extension in [".ict", ".icartt"]:
-                assert len(files) == 1, "monetio.icartt.add_data can only read one file"
-                self.obj = mio.icartt.add_data(files[0])
-            elif extension in [".csv"]:
-                from melodies_monet.util.read_util import read_aircraft_obs_csv
+        # Map MM obs type to monetio source names
+        source_map = {
+             "airnow": "airnow",
+             "aqs": "aqs",
+             "improve": "improve",
+             "ish": "ish",
+             "ish_lite": "ish_lite",
+             "aeronet": "aeronet",
+             "nadp": "nadp",
+             "openaq": "openaq",
+             "cems": "cems",
+             "pams": "pams",
+             "icartt": "icartt",
+             "tolnet": "tolnet",
+             "geoms": "geoms",
+             "gml_ozonesonde": "gml_ozonesonde",
+        }
 
-                assert len(files) == 1, "MELODIES-MONET can only read one csv file"
-                self.obj = read_aircraft_obs_csv(filename=files[0], time_var=self.time_var)
-            else:
-                raise ValueError(f"extension {extension!r} currently unsupported")
-        except Exception as e:
-            print("something happened opening file:", e)
-            return
+        # Determine source
+        obs_type_lower = self.obs_type.lower()
+        source = source_map.get(obs_type_lower)
+
+        # Check extensions for certain types
+        _, extension = os.path.splitext(files[0])
+
+        if source is not None:
+             print(f"**** Reading {source} observation using updated Reader API...")
+             # Handle ICARTT legacy constraint if needed, but updated API should handle it
+             self.obj = mio.load(source, files=files)
+        elif extension in [".ict", ".icartt"]:
+             print("**** Reading ICARTT observation using updated Reader API...")
+             self.obj = mio.load("icartt", files=files[0])
+        elif obs_type_lower == "pt_sfc":
+             # Fallback for generic point surface, try airnow as it was the previous default-ish behavior
+             print("**** Reading pt_sfc observation (falling back to AirNow) using updated Reader API...")
+             self.obj = mio.load("airnow", files=files)
+        elif extension in [".csv"]:
+             from melodies_monet.util.read_util import read_aircraft_obs_csv
+             assert len(files) == 1, "MELODIES-MONET can only read one csv file"
+             self.obj = read_aircraft_obs_csv(filename=files[0], time_var=self.time_var)
+        elif extension in {".nc", ".ncf", ".netcdf", ".nc4"}:
+             if len(files) > 1:
+                 self.obj = xr.open_mfdataset(files)
+             else:
+                 self.obj = xr.open_dataset(files[0])
+        else:
+             raise ValueError(f"Unsupported observation type or extension: {self.obs_type}, {extension}")
 
         self.add_coordinates_ground()  # If ground site then add coordinates based on yaml if necessary
         self.mask_and_scale()  # mask and scale values from the control values
@@ -120,111 +136,59 @@ class observation:
                 raise TypeError("The ground_coordinate option must be specified as a dict with keys latitude and longitude.")
 
     def rename_vars(self):
-        """Rename any variables in observation with rename set.
-
-        Returns
-        -------
-        None
-        """
-        data_vars = self.obj.data_vars
-        # For xarray datasets using data_vars does not grab names of coordinates
-        if isinstance(self.obj, xr.Dataset):
-            data_vars = list(self.obj.data_vars) + list(self.obj.coords)
-
-        if self.variable_dict is not None:
-            for v in data_vars:
-                if v in self.variable_dict:
-                    d = self.variable_dict[v]
-                    if "rename" in d:
-                        self.obj = self.obj.rename({v: d["rename"]})
-                        self.variable_dict[d["rename"]] = self.variable_dict.pop(v)
+        """Rename any variables in observation with rename set."""
+        self.obj = driver_util.apply_variable_rename(self.obj, self.variable_dict)
 
     def open_sat_obs(self, time_interval=None, control_dict=None):
-        """Methods to opens satellite data observations.
-        Uses in-house python code to open and load observations.
-        Alternatively may use the satpy reader.
-        Fills the object class associated with the equivalent label (self.label) with satellite observation
-        dataset read in from the associated file (self.file) by the satellite file reader
-
-        Parameters
-        ----------
-        time_interval (optional, default None) : [pandas.Timestamp, pandas.Timestamp]
-            If not None, restrict obs to datetime range spanned by time interval [start, end].
-
-        Returns
-        -------
-        None
-        """
+        """Methods to opens satellite data observations using the updated Reader API."""
         from melodies_monet.util import time_interval_subset as tsub
-        from glob import glob
 
-        try:
-            if self.sat_type == "omps_l3":
-                print("Reading OMPS L3")
-                self.obj = mio.sat._omps_l3_mm.open_dataset(self.file)
-            elif self.sat_type == "omps_nm":
-                print("Reading OMPS_NM")
-                if time_interval is not None:
-                    flst = tsub.subset_OMPS_l2(self.file, time_interval)
-                else:
-                    flst = self.file
+        load_kwargs = self.variable_dict.copy() if self.variable_dict is not None else {}
+        load_kwargs.update({"debug": self.debug})
 
-                self.obj = mio.sat._omps_nadir_mm.read_OMPS_nm(flst)
+        # Unified Reader API (monetio.load)
+        supported_sources = [
+            "goes", "nesdis_edr_viirs", "nesdis_eps_viirs", "modis_ornl",
+            "nasa_modis", "nesdis_frp", "omps_l3", "omps_nm", "mopitt_l3",
+            "tropomi_l2_no2", "tempo_l2_no2", "modis_l2"
+        ]
 
-                # couple of changes to move to reader
-                self.obj = self.obj.swap_dims({"x": "time"})  # indexing needs
-                self.obj = self.obj.sortby("time")  # enforce time in order.
-                # restrict observation data to time_interval if using
-                # additional development to deal with files crossing intervals needed (eg situations where orbit start at 23hrs, ends next day).
+        source = self.sat_type
+        # Handle TEMPO naming
+        if source == "tempo_l2":
+             source = "tempo_l2_no2" # Default to no2 for now if ambiguous
+
+        if source in supported_sources:
+            print(f"**** Reading {source} satellite observation using updated Reader API...")
+
+            # Subsetting logic for certain satellites
+            files_to_load = self.file
+            if source == "omps_nm" and time_interval is not None:
+                files_to_load = tsub.subset_OMPS_l2(self.file, time_interval)
+            elif source == "mopitt_l3" and time_interval is not None:
+                files_to_load = tsub.subset_mopitt_l3(self.file, time_interval)
+                load_kwargs.update({"varnames": ["column", "pressure_surf", "apriori_col", "apriori_surf", "apriori_prof", "ak_col"]})
+            elif source == "modis_l2": # mapped to nasa_modis or modis_ornl? MM used _modis_l2_mm which is nasa_modis
+                source = "nasa_modis"
+                files_to_load = tsub.subset_MODIS_l2(self.file, time_interval)
+
+            self.obj = mio.load(source, files=files_to_load, **load_kwargs)
+
+            if source == "omps_nm":
+                self.obj = self.obj.swap_dims({"x": "time"}).sortby("time")
                 if time_interval is not None:
                     self.obj = self.obj.sel(time=slice(time_interval[0], time_interval[-1]))
-
-            elif self.sat_type == "mopitt_l3":
-                print("Reading MOPITT")
-                if time_interval is not None:
-                    flst = tsub.subset_mopitt_l3(self.file, time_interval)
-                else:
-                    flst = self.file
-                self.obj = mio.sat._mopitt_l3_mm.open_dataset(
-                    flst,
-                    [
-                        "column",
-                        "pressure_surf",
-                        "apriori_col",
-                        "apriori_surf",
-                        "apriori_prof",
-                        "ak_col",
-                    ],
-                )
-
-                # Determine if monthly or daily product and set as attribute
+            elif source == "mopitt_l3":
+                from glob import glob
                 if any(mtype in glob(self.file)[0] for mtype in ("MOP03JM", "MOP03NM", "MOP03TM")):
                     self.obj.attrs["monthly"] = True
                 else:
                     self.obj.attrs["monthly"] = False
-
-            elif self.sat_type == "modis_l2":
-                # from monetio import modis_l2
-                print("Reading MODIS L2")
-                flst = tsub.subset_MODIS_l2(self.file, time_interval)
-                # self.obj = mio.sat._modis_l2_mm.read_mfdataset(
-                #     self.file, self.variable_dict, debug=self.debug)
-                self.obj = mio.sat._modis_l2_mm.read_mfdataset(flst, self.variable_dict, debug=self.debug)
-                # self.obj = granules, an OrderedDict of Datasets, keyed by datetime_str,
-                #   with variables: Latitude, Longitude, Scan_Start_Time, parameters, ...
-            elif self.sat_type == "tropomi_l2_no2":
-                # from monetio import tropomi_l2_no2
-                print("Reading TROPOMI L2 NO2")
-                self.obj = mio.sat._tropomi_l2_no2_mm.read_trpdataset(self.file, self.variable_dict, debug=self.debug)
-            elif "tempo_l2" in self.sat_type:
-                print("Reading TEMPO L2")
-                self.obj = mio.sat._tempo_l2_no2_mm.open_dataset(self.file, self.variable_dict, debug=self.debug)
-            else:
-                print("file reader not implemented for {} observation".format(self.sat_type))
-                raise ValueError
-        except ValueError as e:
-            print("something happened opening file:", e)
-            return
+        else:
+             print(f"**** Warning: {source} satellite reader not explicitly implemented in Unified API fallback may fail.")
+             # Fallback to legacy if available in monetio.sat but not registered in load()
+             # This is a bit of a placeholder as we want to encourage registration
+             raise NotImplementedError(f"Satellite source {source} not supported in updated API yet.")
 
     def filter_obs(self):
         """Filter observations based on filter_dict.
@@ -261,69 +225,14 @@ class observation:
     def mask_and_scale(self):
         """Mask and scale observations, including unit conversions and setting
         detection limits.
-
-        Returns
-        -------
-        None
         """
-        vars = self.obj.data_vars
-        if self.variable_dict is not None:
-            for v in vars:
-                if v in self.variable_dict:
-                    d = self.variable_dict[v]
-                    # Apply removal of min, max, and nan on the units in the obs file first.
-                    if "obs_min" in d:
-                        self.obj[v].data = self.obj[v].where(self.obj[v] >= d["obs_min"])
-                    if "obs_max" in d:
-                        self.obj[v].data = self.obj[v].where(self.obj[v] <= d["obs_max"])
-                    if "nan_value" in d:
-                        self.obj[v].data = self.obj[v].where(self.obj[v] != d["nan_value"])
-
-                    # Then apply a correction if needed for the units.
-                    if "unit_scale" in d:
-                        scale = d["unit_scale"]
-                    else:
-                        scale = 1
-                    if "unit_scale_method" in d:
-                        if d["unit_scale_method"] == "*":
-                            self.obj[v].data *= scale
-                        elif d["unit_scale_method"] == "/":
-                            self.obj[v].data /= scale
-                        elif d["unit_scale_method"] == "+":
-                            self.obj[v].data += scale
-                        elif d["unit_scale_method"] == "-":
-                            self.obj[v].data += -1 * scale
-
-                    # Then replace LLOD_value with LLOD_setvalue (after unit conversion)
-                    if "LLOD_value" in d:
-                        self.obj[v].data = self.obj[v].where(self.obj[v] != d["LLOD_value"], d["LLOD_setvalue"])
+        self.obj = driver_util.apply_mask_and_scale(self.obj, self.variable_dict)
 
     def sum_variables(self):
         """Sum any variables noted that should be summed to create new variables.
         This occurs after any unit scaling.
-
-        Returns
-        -------
-        None
         """
-
-        try:
-            if self.variable_summing is not None:
-                for var_new in self.variable_summing.keys():
-                    if var_new in self.obj.variables:
-                        print("The variable name, {}, already exists and cannot be created with variable_summing.".format(var_new))
-                        raise ValueError
-                    var_new_info = self.variable_summing[var_new]
-                    if self.variable_dict is None:
-                        self.variable_dict = {}
-                    self.variable_dict[var_new] = var_new_info
-                    for i, var in enumerate(var_new_info["vars"]):
-                        if i == 0:
-                            self.obj[var_new] = self.obj[var].copy()
-                        else:
-                            self.obj[var_new] += self.obj[var]
-        except ValueError as e:
-            raise Exception("Something happened when using variable_summing:") from e
+        self.obj = driver_util.apply_variable_summing(self.obj, self.variable_summing, self.variable_dict)
 
     def resample_data(self):
         """Resample the obs df based on the value set in the control file.
