@@ -3,6 +3,7 @@
 """
 Check for consistency with the tutorial datasets and that options work.
 """
+
 import os
 import subprocess
 
@@ -37,13 +38,17 @@ def test_get_aeronet_no_data_err():
     cmd = [
         "melodies-monet",
         "get-aeronet",
-        "-s", "2100-01-01",  # future
-        "-e", "2100-01-02",
+        "-s",
+        "2100-01-01",  # future
+        "-e",
+        "2100-01-02",
     ]
     cp = subprocess.run(cmd, capture_output=True)
     assert cp.returncode != 0
-    assert cp.stdout.decode().splitlines()[-2].startswith(
-        "Error message (type: Exception): loading from URL 'https://aeronet.gsfc.nasa.gov/"
+    assert (
+        cp.stdout.decode()
+        .splitlines()[-2]
+        .startswith("Error message (type: Exception): loading from URL 'https://aeronet.gsfc.nasa.gov/")
     )
 
 
@@ -51,22 +56,29 @@ def test_get_aeronet_empty_date_range_err():
     cmd = [
         "melodies-monet",
         "get-aeronet",
-        "-s", "2019-09-01",
-        "-e", "2019-08-31",
+        "-s",
+        "2019-09-01",
+        "-e",
+        "2019-08-31",
     ]
     cp = subprocess.run(cmd, capture_output=True)
     assert cp.returncode != 0
-    assert cp.stdout.decode().splitlines()[-2] == (
-        "Error message (type: ValueError): Neither `start` nor `end` can be NaT"
-    )
+    assert cp.stdout.decode().splitlines()[-2] == ("Error message (type: ValueError): Neither `start` nor `end` can be NaT")
 
 
 def test_get_aeronet(tmp_path):
     fn = "x.nc"
     cmd = [
-        "melodies-monet", "get-aeronet",
-        "-s", "2019-09-01", "-e", "2019-09-02",
-        "--dst", tmp_path.as_posix(), "-o", fn,
+        "melodies-monet",
+        "get-aeronet",
+        "-s",
+        "2019-09-01",
+        "-e",
+        "2019-09-02",
+        "--dst",
+        tmp_path.as_posix(),
+        "-o",
+        fn,
         "--no-compress",
     ]
     subprocess.run(cmd, check=True)
@@ -76,7 +88,7 @@ def test_get_aeronet(tmp_path):
     ds = xr.open_dataset(tmp_path / fn).squeeze().swap_dims(x="siteid")
     ds0 = ds0_aeronet.sel(time=ds.time).squeeze().swap_dims(x="siteid")
     # NOTE: -1 in ds0 indicates missing value, due to compress routine
-    
+
     assert not ds.identical(ds0)
     assert ds.time.equals(ds0.time)
     ds0["aod_551nm"] = ds0["aod_551nm"].where(ds0["aod_551nm"] != -1)
@@ -88,9 +100,16 @@ def test_get_aeronet(tmp_path):
 def test_get_airnow(tmp_path):
     fn = "x.nc"
     cmd = [
-        "melodies-monet", "get-airnow",
-        "-s", "2019-09-01", "-e", "2019-09-02",
-        "--dst", tmp_path.as_posix(), "-o", fn,
+        "melodies-monet",
+        "get-airnow",
+        "-s",
+        "2019-09-01",
+        "-e",
+        "2019-09-02",
+        "--dst",
+        tmp_path.as_posix(),
+        "-o",
+        fn,
         "--no-compress",
     ]
     subprocess.run(cmd, check=True)
@@ -102,7 +121,7 @@ def test_get_airnow(tmp_path):
 
     for vn in ["NO2", "OZONE", "PM2.5"]:
         ds0[vn] = ds0[vn].where(ds0[vn] != -1)
-        ds[vn] = ds[vn].where(~ ((ds[vn] == 0) & (ds0[vn] != 0)))
+        ds[vn] = ds[vn].where(~((ds[vn] == 0) & (ds0[vn] != 0)))
         assert (np.abs((ds[vn] - ds0[vn]) / ds0[vn]).to_series().dropna() < 2e-6).all()
         assert (np.abs(ds[vn] - ds0[vn]).to_series().dropna() < 3e-7).all()
 
@@ -110,9 +129,16 @@ def test_get_airnow(tmp_path):
 def test_get_airnow_comp(tmp_path):
     fn = "x.nc"
     cmd = [
-        "melodies-monet", "get-airnow",
-        "-s", "2019-09-01", "-e", "2019-09-02",
-        "--dst", tmp_path.as_posix(), "-o", fn,
+        "melodies-monet",
+        "get-airnow",
+        "-s",
+        "2019-09-01",
+        "-e",
+        "2019-09-02",
+        "--dst",
+        tmp_path.as_posix(),
+        "-o",
+        fn,
         "--compress",
     ]
     subprocess.run(cmd, check=True)
@@ -125,7 +151,7 @@ def test_get_airnow_comp(tmp_path):
     for vn in ["NO2", "OZONE", "PM2.5"]:
         ds0[vn] = ds0[vn].where(ds0[vn] != -1)
         ds[vn] = ds[vn].where(ds[vn] != -1)
-        ds[vn] = ds[vn].where(~ ((ds[vn] == 0) & (ds0[vn] != 0)))
+        ds[vn] = ds[vn].where(~((ds[vn] == 0) & (ds0[vn] != 0)))
         # assert (np.abs((ds[vn] - ds0[vn]) / ds0[vn]).to_series().dropna() < 2e-6).all()
         assert (np.abs(ds[vn] - ds0[vn]).to_series().dropna() < 3e-7).all()
 
@@ -134,10 +160,21 @@ def test_get_airnow_comp(tmp_path):
 def test_get_ish_lite_box(tmp_path):
     fn = "x.nc"
     cmd = [
-        "melodies-monet", "get-ish-lite",
-        "-s", "2023-01-01", "-e", "2023-01-01 23:00",
-        "--box", "39.5", "-105.75", "40.5", "-104.75",
-        "--dst", tmp_path.as_posix(), "-o", fn,
+        "melodies-monet",
+        "get-ish-lite",
+        "-s",
+        "2023-01-01",
+        "-e",
+        "2023-01-01 23:00",
+        "--box",
+        "39.5",
+        "-105.75",
+        "40.5",
+        "-104.75",
+        "--dst",
+        tmp_path.as_posix(),
+        "-o",
+        fn,
     ]
     subprocess.run(cmd, check=True)
 
@@ -151,10 +188,21 @@ def test_get_ish_lite_box(tmp_path):
 def test_get_ish_box(tmp_path):
     fn = "x.nc"
     cmd = [
-        "melodies-monet", "get-ish",
-        "-s", "2023-01-01", "-e", "2023-01-01 23:00",
-        "--box", "39.5", "-105.75", "40.5", "-104.75",
-        "--dst", tmp_path.as_posix(), "-o", fn,
+        "melodies-monet",
+        "get-ish",
+        "-s",
+        "2023-01-01",
+        "-e",
+        "2023-01-01 23:00",
+        "--box",
+        "39.5",
+        "-105.75",
+        "40.5",
+        "-104.75",
+        "--dst",
+        tmp_path.as_posix(),
+        "-o",
+        fn,
     ]
     subprocess.run(cmd, check=True)
 
@@ -167,64 +215,84 @@ def test_get_ish_box(tmp_path):
 def test_get_aqs_daily(tmp_path):
     fn = "x.nc"
     cmd = [
-        "melodies-monet", "get-aqs",
-        "-s", "2019-08-01", "-e", "2019-08-02",
-        "-p", "O3",
+        "melodies-monet",
+        "get-aqs",
+        "-s",
+        "2019-08-01",
+        "-e",
+        "2019-08-02",
+        "-p",
+        "O3",
         "--daily",
-        "--dst", tmp_path.as_posix(), "-o", fn,
+        "--dst",
+        tmp_path.as_posix(),
+        "-o",
+        fn,
     ]
     subprocess.run(cmd, check=True)
 
     ds = xr.open_dataset(tmp_path / fn)
 
     assert ds.time.size == 2, "two days"
-    assert {
-        v
-        for v in ds.data_vars
-        if ds[v].dims == ("time", "y", "x")
-    } == {"OZONE"}
+    assert {v for v in ds.data_vars if ds[v].dims == ("time", "y", "x")} == {"OZONE"}
 
 
 def test_get_aqs_hourly(tmp_path):
     fn = "x.nc"
     cmd = [
-        "melodies-monet", "get-aqs",
-        "-s", "1980-08-01", "-e", "1980-08-01 23:00",
-        "-p", "O3",
-        "--dst", tmp_path.as_posix(), "-o", fn,
+        "melodies-monet",
+        "get-aqs",
+        "-s",
+        "1980-08-01",
+        "-e",
+        "1980-08-01 23:00",
+        "-p",
+        "O3",
+        "--dst",
+        tmp_path.as_posix(),
+        "-o",
+        fn,
     ]
     subprocess.run(cmd, check=True)
 
     ds = xr.open_dataset(tmp_path / fn)
 
     assert ds.time.size == 24, "one day"
-    assert {
-        v
-        for v in ds.data_vars
-        if ds[v].dims == ("time", "y", "x")
-    } == {"OZONE", "time_local"}
+    assert {v for v in ds.data_vars if ds[v].dims == ("time", "y", "x")} == {
+        "OZONE",
+        "time_local",
+    }
 
 
 @pytest.mark.skipif(not have_openaq_api_key, reason="OPENAQ_API_KEY not set")
 def test_get_openaq(tmp_path):
     fn = "x.nc"
     cmd = [
-        "melodies-monet", "get-openaq",
-        "-s", "2024-09-10", "-e" "2024-09-10 00:59",
-        "--sensor-limit", "50",
-        "-n", "2",
-        "--dst", tmp_path.as_posix(), "-o", fn,
+        "melodies-monet",
+        "get-openaq",
+        "-s",
+        "2024-09-10",
+        "-e2024-09-10 00:59",
+        "--sensor-limit",
+        "50",
+        "-n",
+        "2",
+        "--dst",
+        tmp_path.as_posix(),
+        "-o",
+        fn,
     ]
     subprocess.run(cmd, check=True)
 
     ds = xr.open_dataset(tmp_path / fn)
 
     assert ds.time.size == 1
-    assert {
-        v
-        for v in ds.data_vars
-        if ds[v].dims == ("time", "y", "x")
-    } == {"o3", "pm25", "pm10", "time_local"}
+    assert {v for v in ds.data_vars if ds[v].dims == ("time", "y", "x")} == {
+        "o3",
+        "pm25",
+        "pm10",
+        "time_local",
+    }
     assert ds.is_monitor.all()
 
 
@@ -232,21 +300,29 @@ def test_get_openaq(tmp_path):
 def test_get_openaq_lowcost(tmp_path):
     fn = "x.nc"
     cmd = [
-        "melodies-monet", "get-openaq",
-        "-s", "2024-09-10", "-e" "2024-09-10 00:59",
-        "-p", "pm25",
-        "--sensor-limit", "10",
-        "--no-reference-grade", "--low-cost",
-        "--dst", tmp_path.as_posix(), "-o", fn,
+        "melodies-monet",
+        "get-openaq",
+        "-s",
+        "2024-09-10",
+        "-e2024-09-10 00:59",
+        "-p",
+        "pm25",
+        "--sensor-limit",
+        "10",
+        "--no-reference-grade",
+        "--low-cost",
+        "--dst",
+        tmp_path.as_posix(),
+        "-o",
+        fn,
     ]
     subprocess.run(cmd, check=True)
 
     ds = xr.open_dataset(tmp_path / fn)
 
     assert ds.time.size == 1
-    assert {
-        v
-        for v in ds.data_vars
-        if ds[v].dims == ("time", "y", "x")
-    } == {"pm25", "time_local"}
+    assert {v for v in ds.data_vars if ds[v].dims == ("time", "y", "x")} == {
+        "pm25",
+        "time_local",
+    }
     assert (~ds.is_monitor).all()

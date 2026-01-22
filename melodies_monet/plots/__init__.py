@@ -3,6 +3,7 @@
 """
 Plotting routines.
 """
+
 from functools import partial
 from pathlib import Path
 

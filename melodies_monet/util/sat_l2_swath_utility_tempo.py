@@ -232,9 +232,7 @@ def calc_dz_m_from_altitude(altitude):
     """
     dz_m = xr.zeros_like(altitude)
     dz_m[{"z": 0}] = altitude[{"z": 0}]
-    dz_m[{"z": slice(1, None)}] = (
-        altitude[{"z": slice(1, None)}].values - altitude[{"z": slice(0, -1)}].values
-    )
+    dz_m[{"z": slice(1, None)}] = altitude[{"z": slice(1, None)}].values - altitude[{"z": slice(0, -1)}].values
     dz_m.attrs = {
         "description": "Layer thickness in m",
         "units": "m",
@@ -276,9 +274,7 @@ def interp_vertical_mod2swath(obsobj, modobj, variables="NO2_col"):
     }
     for var in list(variables):
         interpolated = _interp_vert(p_orig, p_mid_tempo, modobj[var].values)
-        modsatlayers[var] = xr.DataArray(
-            data=interpolated, dims=dimensions, coords=coords, attrs=modobj[var].attrs
-        )
+        modsatlayers[var] = xr.DataArray(data=interpolated, dims=dimensions, coords=coords, attrs=modobj[var].attrs)
     modsatlayers["pres_pa_mid"] = xr.DataArray(
         data=p_mid_tempo,
         dims=dimensions,
@@ -310,13 +306,7 @@ def calc_partialcolumn(modobj, var="NO2"):
     ppbv2molmol = 1e-9
     m2_to_cm2 = 1e4
     fac_units = ppbv2molmol * NA / m2_to_cm2
-    partial_col = (
-        modobj[var]
-        * modobj["pres_pa_mid"]
-        * modobj["dz_m"]
-        * fac_units
-        / (R * modobj["temperature_k"])
-    )
+    partial_col = modobj[var] * modobj["pres_pa_mid"] * modobj["dz_m"] * fac_units / (R * modobj["temperature_k"])
     return partial_col
 
 
@@ -491,9 +481,7 @@ def is_nonpairable(obsobj, k, modobj):
     return False
 
 
-def _regrid_and_apply_weights(
-    obsobj, modobj, method="conservative", weights=None, species=["NO2"], tempo_sp="NO2"
-):
+def _regrid_and_apply_weights(obsobj, modobj, method="conservative", weights=None, species=["NO2"], tempo_sp="NO2"):
     """Does the complete process of regridding and
     applying scattering weights. Assumes that obsobj is a Dataset
 
@@ -532,16 +520,13 @@ def _regrid_and_apply_weights(
     modobj_hs = tempo_interp_mod2swath(obsobj, modobj, method=method, weights=weights)
     if "dz_m" in modobj.keys():
         modobj_hs["altitude"] = calc_altitude_from_thickness(modobj_hs["dz_m"])
-        modobj_swath = interp_vertical_mod2swath(
-            obsobj, modobj_hs, [f"{species[0]}", "altitude", "temperature_k"]
-        )
+        modobj_swath = interp_vertical_mod2swath(obsobj, modobj_hs, [f"{species[0]}", "altitude", "temperature_k"])
         modobj_swath["dz_m"] = calc_dz_m_from_altitude(modobj_swath["altitude"])
         modobj_swath[f"{species[0]}_col"] = calc_partialcolumn(modobj_swath, var=species[0])
         da_out = apply_weights(obsobj, modobj_swath, species=f"{species[0]}")
     else:
         warnings.warn(
-            "There is no dz_m variable, and the partial column"
-            + "cannot be directly calculated. Assuming hydrostatic equation."
+            "There is no dz_m variable, and the partial column" + "cannot be directly calculated. Assuming hydrostatic equation."
         )
         modobj_swath = interp_vertical_mod2swath(obsobj, modobj_hs, species)
         da_out = apply_weights_hydrostatic(obsobj, modobj_swath, species=species[0])
@@ -597,7 +582,12 @@ def regrid_and_apply_weights(
 
     if isinstance(obsobj, xr.Dataset):
         regridded = _regrid_and_apply_weights(
-            obsobj, modobj, method=method, weights=weights, species=species, tempo_sp=tempo_sp
+            obsobj,
+            modobj,
+            method=method,
+            weights=weights,
+            species=species,
+            tempo_sp=tempo_sp,
         )
         output = regridded.to_dataset(name=species[0])
         output.attrs["reference_time_string"] = obsobj.attrs["reference_time_string"]
@@ -627,12 +617,8 @@ def regrid_and_apply_weights(
             ).to_dataset(name=species[0])
             output_multiple[ref_time].attrs["reference_time_string"] = ref_time
             output_multiple[ref_time].attrs["scan_num"] = obsobj[ref_time].attrs["scan_num"]
-            output_multiple[ref_time].attrs["granule_number"] = obsobj[ref_time].attrs[
-                "granule_number"
-            ]
-            output_multiple[ref_time].attrs["final_time_string"] = obsobj[ref_time]["time"][
-                -1
-            ].values.astype(str)
+            output_multiple[ref_time].attrs["granule_number"] = obsobj[ref_time].attrs["granule_number"]
+            output_multiple[ref_time].attrs["final_time_string"] = obsobj[ref_time]["time"][-1].values.astype(str)
             if pair:
                 output_multiple[ref_time] = xr.merge(
                     [
@@ -641,9 +627,7 @@ def regrid_and_apply_weights(
                     ]
                 )
             if "lat" in output_multiple[ref_time].variables:
-                output_multiple[ref_time] = output_multiple[ref_time].rename(
-                    {"lat": "latitude", "lon": "longitude"}
-                )
+                output_multiple[ref_time] = output_multiple[ref_time].rename({"lat": "latitude", "lon": "longitude"})
         return output_multiple
     raise TypeError("Obsobj must be xr.Dataset or dict")
 
@@ -711,9 +695,7 @@ def back_to_modgrid(
             granules.append(paireddict[k].attrs["granule_number"])
             ref_times.append(paireddict[k].attrs["reference_time_string"][:-1])
 
-    end_time = np.array(
-        paireddict[ordered_keys[-1]].attrs["final_time_string"], dtype="datetime64[ns]"
-    )
+    end_time = np.array(paireddict[ordered_keys[-1]].attrs["final_time_string"], dtype="datetime64[ns]")
     if grid_path is not None:
         grid = xr.open_dataset(grid_path)
         regridder = xe.Regridder(concatenated, grid, method=method, unmapped_to_nan=True)
@@ -741,9 +723,7 @@ def back_to_modgrid(
         )
         out_regridded = out_regridded.expand_dims(time=da_time)
         out_regridded["end_time"] = (("time",), [end_time])
-        out_regridded["end_time"].attrs = {
-            "description": "time at which the last swath of the scan starts"
-        }
+        out_regridded["end_time"].attrs = {"description": "time at which the last swath of the scan starts"}
     if to_netcdf:
         if "XYZ" in path:
             scan_num = out_regridded.attrs["scan_num"]
@@ -801,14 +781,17 @@ def back_to_modgrid_multiscan(
             if paireddict[k].attrs["scan_num"] == scan_num:
                 keys_in_scan.append(k)
             else:
-                regridded_scan = back_to_modgrid(
-                    paireddict, modobj, keys_in_scan, method=method, grid_path=grid_path
-                )
+                regridded_scan = back_to_modgrid(paireddict, modobj, keys_in_scan, method=method, grid_path=grid_path)
                 out_regridded = xr.merge([out_regridded, regridded_scan])
                 scan_num = paireddict[k].attrs["scan_num"]
                 keys_in_scan = [k]
     regridded_scan = back_to_modgrid(
-        paireddict, modobj, keys_in_scan, add_time=True, method=method, grid_path=grid_path
+        paireddict,
+        modobj,
+        keys_in_scan,
+        add_time=True,
+        method=method,
+        grid_path=grid_path,
     )
     out_regridded = xr.merge([out_regridded, regridded_scan])
 

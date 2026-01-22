@@ -351,9 +351,7 @@ def make_taylor(
                 **plot_dict,
             )
         elif scale_factor != 1:
-            dset_forplot[varname_m].attrs[
-                "units"
-            ] = f"{scale_factor} {dset_forplot[varname_m].attrs['units']}"
+            dset_forplot[varname_m].attrs["units"] = f"{scale_factor} {dset_forplot[varname_m].attrs['units']}"
 
         else:
             dia = td(refstd, scale=ty_scale, fig=f, rect=111, label=label_o)
@@ -562,9 +560,7 @@ def make_boxplot(
         "whiskerprops": lineprops,
         "capprops": lineprops,
         "fliersize": 2.0,
-        "flierprops": dict(
-            marker="*", markerfacecolor="blue", markeredgecolor="none", markersize=6.0
-        ),
+        "flierprops": dict(marker="*", markerfacecolor="blue", markeredgecolor="none", markersize=6.0),
         "width": 0.75,
         "palette": pal,
         "order": order_box,
@@ -711,16 +707,17 @@ def make_spatial_dist(
     states = fig_dict.get("states", True)
     counties = fig_dict.get("counties", False)
     ax = monet.plots.mapgen.draw_map(
-        crs=map_kwargs["crs"], extent=map_kwargs["extent"], states=states, counties=counties
+        crs=map_kwargs["crs"],
+        extent=map_kwargs["extent"],
+        states=states,
+        counties=counties,
     )
     # draw scatter plot of model and satellite differences
     # c = ax.axes.scatter(dset.longitude, dset.latitude, c=var2plot, cmap=cmap, s=2, norm=norm)
     c = ax.axes.pcolormesh(dset.longitude, dset.latitude, var2plot, cmap=cmap, norm=norm)
     plt.gcf().canvas.draw()
     plt.tight_layout(pad=0)
-    timestamps = (
-        f" {dset['time'][0].values.astype(str)[:16]}$-${dset['time'][-1].values.astype(str)[:16]}"
-    )
+    timestamps = f" {dset['time'][0].values.astype(str)[:16]}$-${dset['time'][-1].values.astype(str)[:16]}"
     plt.title(title_add + label + timestamps, fontweight="bold", **text_kwargs)
     ax.axes.set_extent(map_kwargs["extent"], crs=ccrs.PlateCarree())
 
@@ -783,7 +780,7 @@ def make_spatial_bias_gridded(
     fig_dict=None,
     text_dict=None,
     debug=False,
-    **kwargs
+    **kwargs,
 ):
     """Creates difference plot for satellite and model data.
     For data in swath format, overplots all differences
@@ -898,7 +895,10 @@ def make_spatial_bias_gridded(
     states = fig_dict.get("states", True)
     counties = fig_dict.get("counties", False)
     ax = monet.plots.mapgen.draw_map(
-        crs=map_kwargs["crs"], extent=map_kwargs["extent"], states=states, counties=counties
+        crs=map_kwargs["crs"],
+        extent=map_kwargs["extent"],
+        states=states,
+        counties=counties,
     )
     # draw scatter plot of model and satellite differences
     # c = ax.axes.scatter(
@@ -907,10 +907,12 @@ def make_spatial_bias_gridded(
     c = ax.axes.pcolormesh(dset.longitude, dset.latitude, diff_mod_min_obs, cmap=cmap, norm=norm)
     plt.gcf().canvas.draw()
     plt.tight_layout(pad=0)
-    timestamps = (
-        f" {dset['time'][0].values.astype(str)[:16]}$-${dset['time'][-1].values.astype(str)[:16]}"
+    timestamps = f" {dset['time'][0].values.astype(str)[:16]}$-${dset['time'][-1].values.astype(str)[:16]}"
+    plt.title(
+        title_add + label_m + " - " + label_o + timestamps,
+        fontweight="bold",
+        **text_kwargs,
     )
-    plt.title(title_add + label_m + " - " + label_o + timestamps, fontweight="bold", **text_kwargs)
     ax.axes.set_extent(map_kwargs["extent"], crs=ccrs.PlateCarree())
 
     # Uncomment these lines if you update above just to verify colorbars are identical.
@@ -1053,9 +1055,7 @@ def make_multi_boxplot(
     to_concat.append(data_obs[["Value", "model", "Regions"]])
 
     for i in range(1, len_combx):
-        data_model = (
-            comb_bx[comb_bx.columns[i]].to_frame().rename({comb_bx.columns[i]: "Value"}, axis=1)
-        )
+        data_model = comb_bx[comb_bx.columns[i]].to_frame().rename({comb_bx.columns[i]: "Value"}, axis=1)
         data_model["model"] = model_name_list[i]
         data_model["Regions"] = region_bx["set_regions"].values
         to_concat.append(data_model[["Value", "model", "Regions"]])
@@ -1154,7 +1154,12 @@ def make_diurnal_cycle(dset, varname, ax=None, **kwargs):
 
     # Set some defaults
     text_kwargs = {"fontsize": 14}
-    style_dict = {"linestyle": "-", "marker": "*", "linewidth": "1.2", "markersize": "6.0"}
+    style_dict = {
+        "linestyle": "-",
+        "marker": "*",
+        "linewidth": "1.2",
+        "markersize": "6.0",
+    }
     if ax is None:
         style_dict["color"] = "k"
         fig_dict = kwargs.get("fig_dict", {"figsize": (10, 6)})
@@ -1185,10 +1190,7 @@ def make_diurnal_cycle(dset, varname, ax=None, **kwargs):
     if range_shading == "no":
         pass
     elif (range_shading not in ["total", "std", "IQR"]) and ("pct:" not in range_shading):
-        warnings.warn(
-            f"range_shading is {range_shading}, not in ['no', 'total', 'std', 'IQR'] nor 'pct:'."
-            + " Ignoring."
-        )
+        warnings.warn(f"range_shading is {range_shading}, not in ['no', 'total', 'std', 'IQR'] nor 'pct:'." + " Ignoring.")
     else:
         if range_shading == "total":
             range_max = dset_diurnal_group.max()[varname]
