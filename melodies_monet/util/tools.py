@@ -6,6 +6,7 @@ from builtins import range
 
 import numpy as np
 import xarray as xr
+from monetio import util as mio_util
 
 __author__ = "barry"
 
@@ -13,25 +14,27 @@ __author__ = "barry"
 R = 8.31446261815324  # m3 * Pa / K / mol
 N_A = 6.02214076e23
 
+# Import utilities from monetio if available, otherwise keep local
+search_listinlist = getattr(mio_util, "search_listinlist", None)
+if search_listinlist is None:
+    def search_listinlist(array1, array2):
+        # find intersections
 
-def search_listinlist(array1, array2):
-    # find intersections
+        s1 = set(array1.flatten())
+        s2 = set(array2.flatten())
 
-    s1 = set(array1.flatten())
-    s2 = set(array2.flatten())
+        inter = s1.intersection(s2)
 
-    inter = s1.intersection(s2)
+        index1 = np.array([])
+        index2 = np.array([])
+        # find the indexes in array1
+        for i in inter:
+            index11 = np.where(array1 == i)
+            index22 = np.where(array2 == i)
+            index1 = np.concatenate([index1[:], index11[0]])
+            index2 = np.concatenate([index2[:], index22[0]])
 
-    index1 = np.array([])
-    index2 = np.array([])
-    # find the indexes in array1
-    for i in inter:
-        index11 = np.where(array1 == i)
-        index22 = np.where(array2 == i)
-        index1 = np.concatenate([index1[:], index11[0]])
-        index2 = np.concatenate([index2[:], index22[0]])
-
-    return np.sort(np.int32(index1)), np.sort(np.int32(index2))
+        return np.sort(np.int32(index1)), np.sort(np.int32(index2))
 
 
 def list_contains(list1, list2):
@@ -44,19 +47,23 @@ def list_contains(list1, list2):
     return False
 
 
-def linregress(x, y):
-    import statsmodels.api as sm
+linregress = getattr(mio_util, "linregress", None)
+if linregress is None:
+    def linregress(x, y):
+        import statsmodels.api as sm
 
-    xx = sm.add_constant(x)
-    model = sm.OLS(y, xx)
-    fit = model.fit()
-    b, a = fit.params[0], fit.params[1]
-    rsquared = fit.rsquared
-    std_err = np.sqrt(fit.mse_resid)
-    return a, b, rsquared, std_err
+        xx = sm.add_constant(x)
+        model = sm.OLS(y, xx)
+        fit = model.fit()
+        b, a = fit.params[0], fit.params[1]
+        rsquared = fit.rsquared
+        std_err = np.sqrt(fit.mse_resid)
+        return a, b, rsquared, std_err
 
 
-def findclosest(list, value):
+findclosest = getattr(mio_util, "findclosest", None)
+if findclosest is None:
+    def findclosest(list, value):
     """Return (index, value) of the closest value in `list` to `value`."""
     a = min((abs(x - value), x, i) for i, x in enumerate(list))
     return a[2], a[1]
@@ -73,22 +80,26 @@ def _force_forder(x):
         return (x, False)
 
 
-def kolmogorov_zurbenko_filter(df, col, window, iterations):
-    """KZ filter implementation
-    series is a pandas series
-    window is the filter window m in the units of the data (m = 2q+1)
-    iterations is the number of times the moving average is evaluated
-    """
-    df.index = df.time_local
-    z = df.copy()
-    for i in range(iterations):
-        z.index = z.time_local
-        z = z.groupby("siteid")[col].rolling(window, center=True, min_periods=1).mean(numeric_only=True).reset_index().dropna()
-    df = df.reset_index(drop=True)
-    return df.merge(z, on=["siteid", "time_local"])
+kolmogorov_zurbenko_filter = getattr(mio_util, "kolmogorov_zurbenko_filter", None)
+if kolmogorov_zurbenko_filter is None:
+    def kolmogorov_zurbenko_filter(df, col, window, iterations):
+        """KZ filter implementation
+        series is a pandas series
+        window is the filter window m in the units of the data (m = 2q+1)
+        iterations is the number of times the moving average is evaluated
+        """
+        df.index = df.time_local
+        z = df.copy()
+        for i in range(iterations):
+            z.index = z.time_local
+            z = z.groupby("siteid")[col].rolling(window, center=True, min_periods=1).mean(numeric_only=True).reset_index().dropna()
+        df = df.reset_index(drop=True)
+        return df.merge(z, on=["siteid", "time_local"])
 
 
-def wsdir2uv(ws, wdir):
+wsdir2uv = getattr(mio_util, "wsdir2uv", None)
+if wsdir2uv is None:
+    def wsdir2uv(ws, wdir):
     from numpy import pi, sin, cos
 
     u = -ws * sin(wdir * pi / 180.0)
@@ -107,50 +118,62 @@ def get_relhum(temp, press, vap):
     return relhum
 
 
-def long_to_wide(df):
-    from pandas import merge
+long_to_wide = getattr(mio_util, "long_to_wide", None)
+if long_to_wide is None:
+    def long_to_wide(df):
+        from pandas import merge
 
-    w = df.pivot_table(values="obs", index=["time", "siteid"], columns="variable").reset_index()
-    # cols = df.columns
-    g = df.groupby("variable")
-    for name, group in g:
-        w[name + "_unit"] = group.units.unique()[0]
-    # mergeon = hstack((index.values, df.variable.unique()))
-    return merge(w, df, on=["siteid", "time"])
-
-
-def calc_8hr_rolling_max(df, col=None, window=None):
-    df.index = df.time_local
-    df_rolling = (
-        df.groupby("siteid")[col].rolling(window, center=True, win_type="boxcar").mean(numeric_only=True).reset_index().dropna()
-    )
-    df_rolling_max = df_rolling.groupby("siteid").resample("D", on="time_local").max(numeric_only=True).reset_index(drop=True)
-    df = df.reset_index(drop=True)
-    return df.merge(df_rolling_max, on=["siteid", "time_local"])
+        w = df.pivot_table(values="obs", index=["time", "siteid"], columns="variable").reset_index()
+        # cols = df.columns
+        g = df.groupby("variable")
+        for name, group in g:
+            w[name + "_unit"] = group.units.unique()[0]
+        # mergeon = hstack((index.values, df.variable.unique()))
+        return merge(w, df, on=["siteid", "time"])
 
 
-def calc_24hr_ave(df, col=None):
-    df.index = df.time_local
-    df_24hr_ave = df.groupby("siteid")[col].resample("D").mean(numeric_only=True).reset_index()
-    df = df.reset_index(drop=True)
-    return df.merge(df_24hr_ave, on=["siteid", "time_local"])
+calc_8hr_rolling_max = getattr(mio_util, "calc_8hr_rolling_max", None)
+if calc_8hr_rolling_max is None:
+    def calc_8hr_rolling_max(df, col=None, window=None):
+        df.index = df.time_local
+        df_rolling = (
+            df.groupby("siteid")[col].rolling(window, center=True, win_type="boxcar").mean(numeric_only=True).reset_index().dropna()
+        )
+        df_rolling_max = df_rolling.groupby("siteid").resample("D", on="time_local").max(numeric_only=True).reset_index(drop=True)
+        df = df.reset_index(drop=True)
+        return df.merge(df_rolling_max, on=["siteid", "time_local"])
 
 
-def calc_3hr_ave(df, col=None):
-    df.index = df.time_local
-    df_3hr_ave = df.groupby("siteid")[col].resample("3h").mean(numeric_only=True).reset_index()
-    df = df.reset_index(drop=True)
-    return df.merge(df_3hr_ave, on=["siteid", "time_local"])
+calc_24hr_ave = getattr(mio_util, "calc_24hr_ave", None)
+if calc_24hr_ave is None:
+    def calc_24hr_ave(df, col=None):
+        df.index = df.time_local
+        df_24hr_ave = df.groupby("siteid")[col].resample("D").mean(numeric_only=True).reset_index()
+        df = df.reset_index(drop=True)
+        return df.merge(df_24hr_ave, on=["siteid", "time_local"])
 
 
-def calc_annual_ave(df, col=None):
-    df.index = df.time_local
-    df_annual_ave = df.groupby("siteid")[col].resample("A").mean(numeric_only=True).reset_index()
-    df = df.reset_index(drop=True)
-    return df.merge(df_annual_ave, on=["siteid", "time_local"])
+calc_3hr_ave = getattr(mio_util, "calc_3hr_ave", None)
+if calc_3hr_ave is None:
+    def calc_3hr_ave(df, col=None):
+        df.index = df.time_local
+        df_3hr_ave = df.groupby("siteid")[col].resample("3h").mean(numeric_only=True).reset_index()
+        df = df.reset_index(drop=True)
+        return df.merge(df_3hr_ave, on=["siteid", "time_local"])
 
 
-def get_giorgi_region_bounds(index=None, acronym=None):
+calc_annual_ave = getattr(mio_util, "calc_annual_ave", None)
+if calc_annual_ave is None:
+    def calc_annual_ave(df, col=None):
+        df.index = df.time_local
+        df_annual_ave = df.groupby("siteid")[col].resample("A").mean(numeric_only=True).reset_index()
+        df = df.reset_index(drop=True)
+        return df.merge(df_annual_ave, on=["siteid", "time_local"])
+
+
+get_giorgi_region_bounds = getattr(mio_util, "get_giorgi_region_bounds", None)
+if get_giorgi_region_bounds is None:
+    def get_giorgi_region_bounds(index=None, acronym=None):
     import pandas as pd
 
     i = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
@@ -297,7 +320,9 @@ def get_giorgi_region_bounds(index=None, acronym=None):
         exit
 
 
-def get_giorgi_region_df(df):
+get_giorgi_region_df = getattr(mio_util, "get_giorgi_region_df", None)
+if get_giorgi_region_df is None:
+    def get_giorgi_region_df(df):
     df.loc[:, "GIORGI_INDEX"] = None
     df.loc[:, "GIORGI_ACRO"] = None
     for i in range(22):
