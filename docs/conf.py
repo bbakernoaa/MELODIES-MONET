@@ -48,7 +48,7 @@ autosummary_generate = True  # default in Sphinx v4
 
 autodoc_default_options = {
     "members": True,
-    "special-members": "__init__",
+    # "special-members": "__init__",
     # "undoc-members": True,
 }
 autodoc_member_order = "groupwise"
