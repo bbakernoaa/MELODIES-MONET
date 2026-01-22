@@ -31,11 +31,12 @@ jobs:
             pytest
 
       - if: ${{ matrix.monet == 'dev' }}
-        name: Install development versions of monet and monetio
+        name: Install development versions of monet, monetio, and monet-stats
         run: |
           python -m pip list | grep monet
           python -m pip install --force-reinstall --no-deps https://github.com/noaa-oar-arl/monetio/archive/develop.zip
           python -m pip install --force-reinstall --no-deps https://github.com/noaa-oar-arl/monet/archive/develop.zip
+          python -m pip install --force-reinstall --no-deps https://github.com/noaa-oar-arl/monet-stats/archive/main.zip
 
       - name: Versions
         run: |

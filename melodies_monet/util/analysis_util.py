@@ -18,19 +18,12 @@ def fill_date_template(template_str, date_str):
         template_str (str): filled template string
     """
 
-    yyyy_str, mm_str, m_abbr_str, dd_str, ddd_str \
-        = tuple(date_str.split('-'))
+    yyyy_str, mm_str, m_abbr_str, dd_str, ddd_str = tuple(date_str.split("-"))
 
-    if 'DDD' in template_str:
-        return template_str.replace(
-            'YYYY', yyyy_str).replace(
-            'DDD', ddd_str)
+    if "DDD" in template_str:
+        return template_str.replace("YYYY", yyyy_str).replace("DDD", ddd_str)
     else:
-        return template_str.replace(
-            'YYYY', yyyy_str).replace(
-            'MM', mm_str).replace(
-            'M_ABBR', m_abbr_str).replace(
-            'DD', dd_str)
+        return template_str.replace("YYYY", yyyy_str).replace("MM", mm_str).replace("M_ABBR", m_abbr_str).replace("DD", dd_str)
 
 
 def find_file(datadir, filestr):
@@ -48,9 +41,9 @@ def find_file(datadir, filestr):
     files = glob(pattern)
 
     if len(files) == 0:
-        raise Exception('no file matches for %s' % pattern)
+        raise Exception("no file matches for %s" % pattern)
     if len(files) > 1:
-        raise Exception('more than one file match %s' % pattern)
+        raise Exception("more than one file match %s" % pattern)
 
     filename = files[0]
     logger.info(filename)
@@ -71,12 +64,11 @@ def get_obs_vars(config):
     """
     obs_vars_subset = dict()
 
-    for model_name in config['model']:
-
-        mapping = config['model'][model_name]['mapping']
+    for model_name in config["model"]:
+        mapping = config["model"][model_name]["mapping"]
 
         for obs_name in mapping:
-            obs_vars = config['obs'][obs_name]['variables']
+            obs_vars = config["obs"][obs_name]["variables"]
             obs_vars_subset[obs_name] = dict()
 
             for model_var in mapping[obs_name]:

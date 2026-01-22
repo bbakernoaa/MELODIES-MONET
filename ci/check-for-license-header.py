@@ -1,6 +1,7 @@
 """
 Check that all .py files in melodies_monet have the license header.
 """
+
 from pathlib import Path
 
 here = Path(__file__).parent

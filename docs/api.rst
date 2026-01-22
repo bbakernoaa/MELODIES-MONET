@@ -11,7 +11,10 @@ API
    :toctree: api/
    :recursive:
 
-   driver
+   driver.analysis
+   driver.model
+   driver.observation
+   driver.pair
    plots
    stats
    tutorial
