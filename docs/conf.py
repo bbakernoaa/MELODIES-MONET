@@ -197,8 +197,12 @@ texinfo_documents = [
 
 linkcheck_ignore = [
     # Auth required:
-    "https://rdhpcs-common-docs.rdhpcs.noaa.gov/wiki/index.php/Anaconda#Installation",
+    "https://rdhpcs-common-docs.rdhpcs.noaa.gov/wiki/index.php/Anaconda",
     "https://www2.cisl.ucar.edu/resources/conda-environments",
+    # Moved or broken:
+    "https://foundations.projectpythia.org/foundations/conda.html",
+    "https://foundations.projectpythia.org/foundations/getting-started-github.html",
+    "https://www3.epa.gov/ttn/naaqs/standards/ozone/data/20140131healthrea4a.pdf",
     # Sphinx 4.5 linkcheck having problem:
     "https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account",
     "https://doi.org/10.3390/atmos8110210",
@@ -213,3 +217,5 @@ user_agent = "Mozilla/5.0 (X11; Linux x86_64; rv:25.0) Gecko/20100101 Firefox/25
 
 autosectionlabel_prefix_document = True
 autosectionlabel_maxdepth = 2
+
+autodoc_mock_imports = ["ESMF"]

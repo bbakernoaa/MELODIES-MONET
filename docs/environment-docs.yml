@@ -37,5 +37,6 @@ dependencies:
   #
   - pip
   - pip:
+    - git+https://github.com/noaa-oar-arl/monet-stats.git
     # melodies_monet itself
     - '-e ../'
