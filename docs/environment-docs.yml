@@ -9,7 +9,6 @@ dependencies:
   # melodies_monet deps
   - matplotlib-base<3.9  # for pandas v1 compat
   - monet
-  - monet-stats
   - monetio
   - netcdf4
   - numpy
@@ -38,5 +37,6 @@ dependencies:
   #
   - pip
   - pip:
+    - monet-stats
     # melodies_monet itself
     - '-e ../'
