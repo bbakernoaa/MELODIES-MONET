@@ -1,0 +1,67 @@
+diff --git a/src/monet_stats/proc_stats.py b/src/monet_stats/proc_stats.py
+new file mode 100644
+index 0000000..a482de8
+--- /dev/null
++++ b/src/monet_stats/proc_stats.py
+@@ -0,0 +1,61 @@
++"""Legacy MM stats interface implementing Paired Data Contract."""
++
++import numpy as np
++import xarray as xr
++from . import error_metrics, correlation_metrics, efficiency_metrics, contingency_metrics
++
++def calc(ds, stat=None, obsvar=None, modvar=None, wind=False):
++    """Calculate statistics from a paired dataset.
++
++    Parameters
++    ----------
++    ds : xarray.Dataset
++        Paired dataset following the Paired Data Contract.
++    stat : str
++        Statistic abbreviation.
++    obsvar : str
++        Observation variable name.
++    modvar : str
++        Model variable name.
++    wind : bool
++        Whether to use wind-specific metrics.
++
++    Returns
++    -------
++    float
++        Calculated statistic.
++    """
++    obs = ds[obsvar]
++    mod = ds[modvar]
++
++    # Map MM abbreviations to monet-stats functions
++    mm_map = {
++        'STDO': error_metrics.STDO,
++        'STDP': error_metrics.STDP,
++        'MNB': error_metrics.MNB,
++        'MNE': error_metrics.MNE,
++        'MdnNB': error_metrics.MdnNB,
++        'MdnNE': error_metrics.MdnNE,
++        'NMdnGE': error_metrics.NMdnGE,
++        'MB': error_metrics.MB,
++        'MAE': error_metrics.MAE,
++        'RMSE': error_metrics.RMSE,
++        'R2': correlation_metrics.R2,
++        'IOA': error_metrics.IOA,
++    }
++
++    if wind:
++        wind_map = {
++            'MB': error_metrics.WDMB,
++            'RMSE': correlation_metrics.WDRMSE,
++            'IOA': correlation_metrics.WDIOA,
++        }
++        func = wind_map.get(stat)
++    else:
++        func = mm_map.get(stat)
++
++    if func:
++        res = func(obs, mod)
++        return float(res.compute() if hasattr(res, 'compute') else res)
++
++    return np.nan

@@ -1,0 +1,168 @@
+diff --git a/monetio/readers/aircraft_csv.py b/monetio/readers/aircraft_csv.py
+new file mode 100644
+index 0000000..a63d073
+--- /dev/null
++++ b/monetio/readers/aircraft_csv.py
+@@ -0,0 +1,65 @@
++"""Aircraft CSV Reader"""
++
++from __future__ import annotations
++
++from typing import TYPE_CHECKING
++
++import pandas as pd
++import xarray as xr
++
++from .base import PointReader, register_reader
++
++if TYPE_CHECKING:
++    import dask.dataframe as dd
++
++
++@register_reader("aircraft_csv")
++class AircraftCSVReader(PointReader):
++    """Reader for aircraft observations in CSV format."""
++
++    fixed_location = False
++
++    def open_dataset(
++        self,
++        files: str | list[str],
++        time_var: str | None = None,
++        as_xarray: bool = True,
++        lazy: bool = False,
++        **kwargs,
++    ) -> xr.Dataset | pd.DataFrame | dd.DataFrame:
++        """Retrieve and load aircraft CSV data.
++
++        Parameters
++        ----------
++        files : Union[str, List[str]]
++            File path, list of paths, or glob pattern.
++        time_var : str, optional
++            The column name for time.
++        as_xarray : bool, optional
++            Whether to return an xarray.Dataset, by default True.
++        lazy : bool, optional
++            Whether to return a dask-backed object, by default False.
++        **kwargs : dict
++            Additional arguments passed to the reader and driver.
++
++        Returns
++        -------
++        Union[pd.DataFrame, xr.Dataset, dd.DataFrame]
++            The loaded data.
++        """
++
++        def read_func(f, **kws):
++            df = pd.read_csv(f)
++            if time_var is not None:
++                df.rename(columns={time_var: "time"}, inplace=True)
++                df["time"] = pd.to_datetime(df["time"])
++            df.sort_values(by="time", inplace=True, ignore_index=True)
++            return df
++
++        df = self.driver.open(files, read_method=read_func, lazy=lazy, **kwargs)
++        df = self.harmonize(df)
++
++        if as_xarray:
++            return self.to_xarray(df, **kwargs)
++
++        return df
+diff --git a/monetio/util.py b/monetio/util.py
+index 5a0eb54..735922e 100644
+--- a/monetio/util.py
++++ b/monetio/util.py
+@@ -745,3 +745,92 @@ def _try_merge_exact(left, right, *, right_name=None):
+             ) from e
+     else:
+         return left
++
++def subset_model_filelist(all_files, timeformat, timestep, timeinterval):
++    """Subset model filelist to within a given time interval.
++    Filename requirements:
++    - individual files for each timestep
++    - time must be in filename
++    """
++    import pandas as pd
++
++    subset_interval = pd.date_range(start=timeinterval[0], end=timeinterval[-1], freq=timestep)
++    interval_files = []
++    for i in subset_interval:
++        flst = [fs for fs in all_files if i.strftime(timeformat) in fs]
++        if len(flst) == 1:
++            interval_files.append(flst[0])
++        elif len(flst) > 1:
++            print("More than 1 file for {} in listing".format(i.strftime(timeformat)))
++    return interval_files
++
++
++def subset_OMPS_l2(file_path, timeinterval):
++    """Dependent on filenaming convention
++    OMPS-satelliteid_NMTO3-L2_version_startingtimestamp_orbitnumber_endingtimestamp.h5
++    """
++    import fnmatch
++    from glob import glob
++
++    import pandas as pd
++
++    all_files = glob(file_path)
++    interval_files = []
++    subset_interval = pd.date_range(start=timeinterval[0], end=timeinterval[-1], freq="D", inclusive="left")
++
++    for i in subset_interval:
++        fst = fnmatch.filter(all_files, "*OMPS-*_NMTO3-L2_v*_{}*_o*".format(i.strftime("%Ym%m%d")))
++        fst.sort()
++        for j in fst:
++            interval_files.append(j)
++    return interval_files
++
++
++def subset_mopitt_l3(file_path, timeinterval):
++    """Dependent on filenaming conventions
++    MOP03J-YYYYMMDD-
++    MOP03JM-201909-
++    """
++    import fnmatch
++    from glob import glob
++
++    import pandas as pd
++
++    all_files = glob(file_path)
++    interval_files = []
++    if not all_files:
++        return []
++    if "MOP03JM-" in all_files[0]:
++        subset_interval = pd.date_range(start=timeinterval[0], end=timeinterval[-1], freq="M")
++        strfmt = "%Y%m"
++    else:
++        subset_interval = pd.date_range(start=timeinterval[0], end=timeinterval[-1], freq="D")
++        strfmt = "%Y%m%d"
++    for i in subset_interval:
++        fst = fnmatch.filter(all_files, "*MOP*-{}*".format(i.strftime(strfmt)))
++        fst.sort()
++        for j in fst:
++            interval_files.append(j)
++    return interval_files
++
++
++def subset_MODIS_l2(file_path, timeinterval):
++    """Dependent on filenaming convention
++    MOD04_L2.AYYYYDDD.HHMM.collection.timestamp.hdf
++    MYD04_L2.AYYYYDDD.HHMM.collection.timestamp.hdf
++    """
++    import fnmatch
++    from glob import glob
++
++    import pandas as pd
++
++    all_files = glob(file_path)
++    interval_files = []
++    subset_interval = pd.date_range(start=timeinterval[0], end=timeinterval[-1], freq="h", inclusive="left")
++
++    for i in subset_interval:
++        fst = fnmatch.filter(all_files, "*M?D04_L2.A{}*.hdf".format(i.strftime("%Y%j.%H")))
++        fst.sort()
++        for j in fst:
++            interval_files.append(j)
++    return interval_files

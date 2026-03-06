@@ -1,0 +1,101 @@
+diff --git a/monet/util/combinetool.py b/monet/util/combinetool.py
+index 16b12bd..100e2ae 100644
+--- a/monet/util/combinetool.py
++++ b/monet/util/combinetool.py
+@@ -56,6 +56,15 @@ def pair(
+     --------
+     >>> paired_df = pair(model_ds, obs_df, method='bilinear')
+     """
++    # Auto-handle vertical interpolation if 'pressure_obs' is present
++    if isinstance(obs, pd.DataFrame):
++        if "pressure_obs" in obs.columns and "pressure_model" in model.variables:
++            return vert_interp(model, obs, list(model.data_vars), **kwargs)
++        if "latitude" in obs.columns and "longitude" in obs.columns:
++            # Check if it is a mobile/trajectory case
++            if "time" in obs.columns:
++                return mobile_and_ground_pair(model, obs, list(model.data_vars))
++
+     if isinstance(obs, xr.Dataset | xr.DataArray):
+         return _pair_xarray(model, obs, method=method, interp_time=interp_time, suffix=suffix, merge=merge, **kwargs)
+     elif isinstance(obs, pd.DataFrame) or (has_dask_df and isinstance(obs, dd.DataFrame)):
+@@ -533,3 +542,80 @@ def combine_grid_to_point_esmf(grid_data, point_df, method="bilinear", locstream
+     Deprecated as ESMF dependency is removed.
+     """
+     raise NotImplementedError("This function relies on ESMF which has been removed.")
++
++
++def vert_interp(ds_model, df_obs, var_name_list, **kwargs):
++    """Vertical interpolation of model data to observation points.
++    Leverages monet's resample_stratify for performance and Dask support.
++
++    Parameters
++    ----------
++    ds_model : xarray.Dataset
++        Model data with vertical dimension.
++    df_obs : pandas.DataFrame
++        Observation data with 'pressure_obs' and 'time'.
++    var_name_list : list of str
++        List of variables to interpolate.
++
++    Returns
++    -------
++    pandas.DataFrame
++        Observation DataFrame with interpolated model variables.
++    """
++    from .resample import resample_stratify
++
++    # 1. Spatial pairing first using monet.pair logic (nearest neighbor)
++    # Convert obs points to xarray for remap
++    from ..accessors.pandas_accessor import MONETAccessorPandas
++    obs_points = MONETAccessorPandas(df_obs[['latitude', 'longitude']].drop_duplicates())._df_to_da()
++    ds_model_points = obs_points.monet.remap(ds_model, method="nearest")
++
++    # 2. Time interpolation if needed
++    if "time" in ds_model_points.dims:
++        ds_model_points = ds_model_points.interp(time=pd.to_datetime(df_obs.time.unique()))
++
++    # 3. Vertical interpolation
++    ds_model_points["pressure_model_nan"] = ds_model_points["pressure_model"].copy()
++    all_vars = list(var_name_list) + ["pressure_model_nan"]
++
++    var_out_list = []
++    # Target levels from observations
++    levels = sorted(df_obs.pressure_obs.unique(), reverse=True)
++
++    for var_name in all_vars:
++        if var_name not in ds_model_points: continue
++        out = resample_stratify(ds_model_points[var_name], levels, ds_model_points["pressure_model"], axis=1)
++        out.name = var_name
++        var_out_list.append(out)
++
++    df_model = xr.merge(var_out_list).to_dataframe().reset_index()
++    df_model.rename(columns={"pressure_model": "pressure_obs"}, inplace=True)
++
++    return pd.merge_asof(
++        df_obs.sort_values("time"),
++        df_model.sort_values("time"),
++        by=["latitude", "longitude", "pressure_obs"],
++        on="time",
++        direction="nearest",
++    )
++
++
++def mobile_and_ground_pair(ds_model, df_obs, var_name_list):
++    """Pair mobile or ground site data with model surface data using monet.pair.
++
++    Parameters
++    ----------
++    ds_model : xarray.Dataset
++        Model data.
++    df_obs : pandas.DataFrame
++        Observation data.
++    var_name_list : list of str
++        Variables to pair.
++
++    Returns
++    -------
++    pandas.DataFrame
++        Observation DataFrame with paired model variables.
++    """
++    # Simply delegate to the new pair function which handles this case
++    return pair(ds_model[var_name_list], df_obs, method="nearest", merge=True)

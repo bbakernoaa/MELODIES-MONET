@@ -1,0 +1,33 @@
+diff --git a/src/monet_plots/plots/spatial_bias.py b/src/monet_plots/plots/spatial_bias.py
+new file mode 100644
+index 0000000..28e1830
+--- /dev/null
++++ b/src/monet_plots/plots/spatial_bias.py
+@@ -0,0 +1,27 @@
++from __future__ import annotations
++from typing import Any, Optional
++import matplotlib.pyplot as plt
++import cartopy.crs as ccrs
++from .base import BasePlot
++from ..plot_utils import normalize_data
++
++class SpatialBiasPlot(BasePlot):
++    """Spatial Bias Plot implementing Paired Data Contract."""
++
++    def __init__(self, ds: xr.Dataset, **kwargs):
++        super().__init__(**kwargs)
++        self.ds = ds
++
++    def plot(self, col1: str, col2: str, vmin=None, vmax=None, cmap='RdBu_r', **kwargs):
++        """Plot spatial bias."""
++        bias = self.ds[col2] - self.ds[col1]
++
++        if self.ax is None:
++            self.ax = self.fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
++
++        sc = self.ax.scatter(self.ds.longitude, self.ds.latitude, c=bias,
++                             vmin=vmin, vmax=vmax, cmap=cmap, transform=ccrs.PlateCarree(), **kwargs)
++        self.ax.coastlines()
++        self.ax.add_feature(cartopy.feature.STATES)
++        plt.colorbar(sc, ax=self.ax, label='Bias (Model - Obs)')
++        return self.ax

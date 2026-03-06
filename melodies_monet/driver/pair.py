@@ -1,5 +1,6 @@
 import xarray as xr
 import pandas as pd
+import monet
 
 
 class pair:
@@ -10,7 +11,7 @@ class pair:
     """
 
     def __init__(self):
-        """Initialize a :class:`pair` object."""
+        """Initialize a :class: `pair` object."""
         self.type = "pt_sfc"
         self.radius_of_influence = 1e6
         self.obs = None
@@ -31,6 +32,22 @@ class pair:
             f"    filename={self.filename!r},\n"
             ")"
         )
+
+    def pair_data(self, model_obj, obs_obj, **kwargs):
+        """Pair data using monet.pair accessor.
+
+        Parameters
+        ----------
+        model_obj : xarray.Dataset
+        obs_obj : xarray.Dataset or pandas.DataFrame
+
+        Returns
+        -------
+        xarray.Dataset or pandas.DataFrame
+            Paired data.
+        """
+        # Leverage new upstream monet.pair functionality
+        return model_obj.monet.pair(obs_obj, **kwargs)
 
     def fix_paired_xarray(self, dset):
         """Reformat the paired dataset.
