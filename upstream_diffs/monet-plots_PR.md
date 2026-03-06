@@ -1,8 +1,8 @@
-# monet-plots PR: Implement Paired Data Contract
+# PR: [monet-plots] Pure Xarray Visualization
 
-## Description
-This PR refactors `monet-plots` to be a "pure" consumer of aligned data following the Paired Data Contract. It removes redundant internal loading logic and standardizes on Xarray-based visualization.
+## Summary
+Refactors monet-plots to consume Xarray Datasets instead of internal data loading.
+- Implements `SpatialBiasPlot` as a starting point for modular visualization.
 
 ## Changes
-- Refactored all plotting routines to accept `xarray.Dataset` directly.
-- Added `SpatialBiasPlot` and ensured Cartopy projection handling is convention-aware.
+- `src/monet_plots/plots/spatial_bias.py`: Implemented new plot class for spatial bias.

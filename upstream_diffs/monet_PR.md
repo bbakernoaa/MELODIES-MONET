@@ -1,9 +1,10 @@
-# monet PR: Enhance Dask Support and Leverage monet.pair
+# PR: [monet] Enhanced Xarray Pairing and Interpolation
 
-## Description
-This PR refactors interpolation and pairing logic to leverage the new `monet.pair` accessor. It enhances out-of-core performance using Dask and integrates MM-specific vertical and mobile pairing requirements into the core library.
+## Summary
+Integrates improved pairing and interpolation logic from MELODIES-MONET into monet.
+- Adds `_pair_xarray` and `_pair_vertical_xarray` to handle mobile and vertical pairing natively in Xarray.
+- Enhances Dask support for out-of-core computation.
+- Updates the `pair` accessor to use these new backends.
 
 ## Changes
-- Refactored `mobile_and_ground_pair` to delegate to `monet.pair`.
-- Integrated optimized `vert_interp` (using `resample_stratify`) into `monet.util.combinetool`.
-- Improved auto-detection of pairing modes (vertical vs spatial) within `monet.pair`.
+- `monet/util/combinetool.py`: Implemented new pairing backends and integrated them into the `pair` accessor.

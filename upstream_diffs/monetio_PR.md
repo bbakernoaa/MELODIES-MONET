@@ -1,9 +1,12 @@
-# monetio PR: Migrate MM Readers and Standardize Xarray Output
+# PR: [monetio] Migrate MM readers and utilities
 
-## Description
-This PR migrates custom data-fetching and reading scripts from `melodies_monet` into `monetio/readers` using the new class inheritance structure. It ensures all readers return standardized Xarray objects, facilitating seamless integration with the MELODIES-MONET DAG.
+## Summary
+Migrates data-fetching and reading scripts from MELODIES-MONET into monetio.
+- Implements `ICARTTReader` registered as both 'icartt' and 'aircraft'.
+- Adds `GenericXarrayReader` for standard NetCDF files via `monetio.load`.
+- Ports time-subsetting utilities (`subset_model_filelist`, `subset_OMPS_l2`, etc.) to `monetio.util`.
 
 ## Changes
-- Integrated `read_aircraft_obs_csv` as `AircraftCSVReader` in `monetio.readers.aircraft_csv`.
-- Migrated time-subsetting utilities (`subset_model_filelist`, `subset_OMPS_l2`, etc.) to `monetio.util`.
-- Standardized all readers to return UGRID-compliant Xarray Datasets.
+- `monetio/readers/icartt.py`: Registered 'aircraft' name.
+- `monetio/readers/generic_xarray.py`: Added generic NetCDF reader.
+- `monetio/util.py`: Added subsetting functions.

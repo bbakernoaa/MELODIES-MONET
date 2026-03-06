@@ -1,8 +1,9 @@
-# monet-stats PR: Implement Paired Data Contract
+# PR: [monet-stats] Pure Xarray Metrics
 
-## Description
-This PR refactors `monet-stats` to accept the MELODIES-MONET "Paired Data Contract" (standardized Xarray Dataset) as an input, removing internal data-loading logic and ensuring the library functions as a "pure" consumer.
+## Summary
+Refactors monet-stats to accept the Paired Data Contract (Xarray Dataset).
+- Removed internal data-loading logic.
+- Implemented a `calculate_stats` wrapper for legacy support during the transition.
 
 ## Changes
-- Added `monet_stats.proc_stats` for legacy MM interface compatibility.
-- Standardized all metrics to work directly with Xarray Datasets.
+- `src/monet_stats/proc_stats.py`: Refactored to consume Xarray objects directly.
