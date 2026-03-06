@@ -1,0 +1,318 @@
+{
+  "melodies_monet/driver/model.py": {
+    "model.__init__": {
+      "category": "internal",
+      "dependencies": [],
+      "reason": "Initializes model object state."
+    },
+    "model.__repr__": {
+      "category": "internal",
+      "dependencies": [],
+      "reason": "String representation of the object."
+    },
+    "model.glob_files": {
+      "category": "monetio",
+      "dependencies": [
+        "glob",
+        "numpy",
+        "melodies_monet.tutorial"
+      ],
+      "reason": "Pre-ingestion step to resolve file paths and fetch tutorial data."
+    },
+    "model.open_model_files": {
+      "category": "monetio",
+      "dependencies": [
+        "monetio",
+        "xarray",
+        "melodies_monet.util.time_interval_subset"
+      ],
+      "reason": "Core model data ingestion delegating to monetio Unified Reader API."
+    },
+    "model.rename_vars": {
+      "category": "internal",
+      "dependencies": [
+        "xarray"
+      ],
+      "reason": "Internal variable sanitization and renaming logic."
+    },
+    "model.mask_and_scale": {
+      "category": "internal",
+      "dependencies": [
+        "xarray"
+      ],
+      "reason": "Internal logic for applying scaling factors and masks to model data."
+    },
+    "model.sum_variables": {
+      "category": "internal",
+      "dependencies": [
+        "xarray"
+      ],
+      "reason": "Internal logic for deriving new variables through summation."
+    }
+  },
+  "melodies_monet/driver/observation.py": {
+    "observation.__init__": {
+      "category": "internal",
+      "dependencies": [],
+      "reason": "Initializes observation object state."
+    },
+    "observation.__repr__": {
+      "category": "internal",
+      "dependencies": [],
+      "reason": "String representation of the object."
+    },
+    "observation.open_obs": {
+      "category": "monetio",
+      "dependencies": [
+        "monetio",
+        "xarray",
+        "melodies_monet.tutorial",
+        "melodies_monet.util.read_util"
+      ],
+      "reason": "Core observation data ingestion delegating to monetio Unified Reader API."
+    },
+    "observation.add_coordinates_ground": {
+      "category": "internal",
+      "dependencies": [
+        "xarray",
+        "numpy"
+      ],
+      "reason": "Adds spatial coordinates to stationary ground site data."
+    },
+    "observation.rename_vars": {
+      "category": "internal",
+      "dependencies": [
+        "xarray"
+      ],
+      "reason": "Internal variable renaming logic for observations."
+    },
+    "observation.open_sat_obs": {
+      "category": "monetio",
+      "dependencies": [
+        "monetio",
+        "melodies_monet.util.time_interval_subset"
+      ],
+      "reason": "Satellite-specific data ingestion using monetio's satellite readers."
+    },
+    "observation.filter_obs": {
+      "category": "internal",
+      "dependencies": [
+        "xarray"
+      ],
+      "reason": "Applies user-defined filters to observational datasets."
+    },
+    "observation.mask_and_scale": {
+      "category": "internal",
+      "dependencies": [
+        "xarray"
+      ],
+      "reason": "Applies masking and scaling (e.g., unit conversion) to observations."
+    },
+    "observation.sum_variables": {
+      "category": "internal",
+      "dependencies": [
+        "xarray"
+      ],
+      "reason": "Derives new observational variables via summation."
+    },
+    "observation.resample_data": {
+      "category": "internal",
+      "dependencies": [
+        "xarray"
+      ],
+      "reason": "Temporal resampling of observational data."
+    },
+    "observation.obs_to_df": {
+      "category": "internal",
+      "dependencies": [
+        "pandas",
+        "xarray"
+      ],
+      "reason": "Converts observational data objects to pandas DataFrames for pairing."
+    }
+  },
+  "melodies_monet/driver/pair.py": {
+    "pair.__init__": {
+      "category": "internal",
+      "dependencies": [],
+      "reason": "Initializes pair object state."
+    },
+    "pair.__repr__": {
+      "category": "internal",
+      "dependencies": [],
+      "reason": "String representation of the object."
+    },
+    "pair.fix_paired_xarray": {
+      "category": "monet",
+      "dependencies": [
+        "xarray",
+        "pandas"
+      ],
+      "reason": "Reformats paired datasets into standard MELODIES-MONET structure."
+    }
+  },
+  "melodies_monet/driver/analysis.py": {
+    "analysis.__init__": {
+      "category": "internal",
+      "dependencies": [],
+      "reason": "Initializes high-level analysis orchestrator."
+    },
+    "analysis.__repr__": {
+      "category": "internal",
+      "dependencies": [],
+      "reason": "String representation of the object."
+    },
+    "analysis.read_control": {
+      "category": "internal",
+      "dependencies": [
+        "yaml",
+        "pandas",
+        "dask"
+      ],
+      "reason": "Parses YAML orchestrator configuration and sets up analysis environment."
+    },
+    "analysis.save_analysis": {
+      "category": "internal",
+      "dependencies": [
+        "melodies_monet.util.write_util"
+      ],
+      "reason": "Persists analysis results to disk (NetCDF/Pickle)."
+    },
+    "analysis.read_analysis": {
+      "category": "internal",
+      "dependencies": [
+        "melodies_monet.util.read_util"
+      ],
+      "reason": "Loads previously saved analysis state."
+    },
+    "analysis.setup_regridders": {
+      "category": "monet",
+      "dependencies": [
+        "melodies_monet.util.regrid_util"
+      ],
+      "reason": "Initializes spatial regridding tools via MONET-compatible utilities."
+    },
+    "analysis.open_models": {
+      "category": "monetio",
+      "dependencies": [
+        "melodies_monet.driver.model",
+        "cartopy"
+      ],
+      "reason": "Orchestrates the discovery and ingestion of multiple model datasets."
+    },
+    "analysis.open_obs": {
+      "category": "monetio",
+      "dependencies": [
+        "melodies_monet.driver.observation"
+      ],
+      "reason": "Orchestrates the discovery and ingestion of multiple observational datasets."
+    },
+    "analysis.setup_obs_grid": {
+      "category": "monet",
+      "dependencies": [
+        "melodies_monet.util.grid_util",
+        "xarray",
+        "numpy"
+      ],
+      "reason": "Defines a uniform spatial grid for observational analysis."
+    },
+    "analysis.update_obs_gridded_data": {
+      "category": "monet",
+      "dependencies": [
+        "melodies_monet.util.grid_util",
+        "pandas",
+        "numpy"
+      ],
+      "reason": "Maps discrete observations onto the defined spatial grid."
+    },
+    "analysis.normalize_obs_gridded_data": {
+      "category": "monet",
+      "dependencies": [
+        "melodies_monet.util.grid_util",
+        "xarray"
+      ],
+      "reason": "Normalizes gridded data (averaging by counts)."
+    },
+    "analysis.pair_data": {
+      "category": "monet",
+      "dependencies": [
+        "monet",
+        "melodies_monet.util.tools",
+        "melodies_monet.util.satellite_utilities",
+        "melodies_monet.util.sat_l2_swath_utility"
+      ],
+      "reason": "Core orchestrator for pairing models with observations across various data types (point, aircraft, satellite)."
+    },
+    "analysis.concat_pairs": {
+      "category": "internal",
+      "dependencies": [],
+      "reason": "Placeholder for future pair concatenation logic."
+    },
+    "analysis.plotting": {
+      "category": "monet-plots",
+      "dependencies": [
+        "melodies_monet.plots",
+        "melodies_monet.util.tools",
+        "melodies_monet.util.region_select",
+        "matplotlib"
+      ],
+      "reason": "Entry point for generating visualizations across all supported plot types."
+    },
+    "analysis.stats": {
+      "category": "monet-stats",
+      "dependencies": [
+        "melodies_monet.stats",
+        "melodies_monet.util.region_select",
+        "pandas"
+      ],
+      "reason": "Entry point for calculating performance metrics using the monet-stats library."
+    }
+  },
+  "hard_coded_elements": [
+    {
+      "file": "melodies_monet/driver/analysis.py",
+      "element": "self.control = 'control.yaml'",
+      "description": "Default configuration filename."
+    },
+    {
+      "file": "melodies_monet/driver/analysis.py",
+      "element": "radius_of_influence = 1e6",
+      "description": "Default spatial search radius for pairing (meters)."
+    },
+    {
+      "file": "melodies_monet/driver/analysis.py",
+      "element": "p.filename = '{}_{}.nc'.format(p.obs, p.model)",
+      "description": "Fixed output filename pattern for paired data."
+    },
+    {
+      "file": "melodies_monet/driver/analysis.py",
+      "element": "13:30 local overpass time",
+      "description": "Hard-coded TROPOMI overpass time for model sampling."
+    },
+    {
+      "file": "melodies_monet/driver/analysis.py",
+      "element": "10:30 local overpass time",
+      "description": "Hard-coded MOPITT overpass time for model sampling."
+    },
+    {
+      "file": "melodies_monet/driver/analysis.py",
+      "element": "pressure interval = 10000 Pa",
+      "description": "Hard-coded vertical interval for curtain plots."
+    },
+    {
+      "file": "melodies_monet/driver/analysis.py",
+      "element": "num_levels = 100",
+      "description": "Hard-coded vertical resolution for curtain plot interpolation."
+    },
+    {
+      "file": "melodies_monet/driver/analysis.py",
+      "element": "z dimension name = 'z'",
+      "description": "Implicit requirement for model vertical dimension name."
+    },
+    {
+      "file": "melodies_monet/driver/model.py",
+      "element": "vn in ['temperature_k', 'pres_pa_mid']",
+      "description": "Hard-coded removal of specific variables from ingest list."
+    }
+  ]
+}
