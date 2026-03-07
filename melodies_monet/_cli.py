@@ -185,6 +185,41 @@ def run(
             an.stats()
 
 
+@app.command()
+def run_node(
+    node: str = typer.Argument(..., help="The specific DAG node to execute."),
+    control: str = typer.Option("control.yaml", "--config", "-c", help="Path to the control file."),
+    debug: bool = typer.Option(False, "--debug/", help="Print more messages."),
+):
+    """Execute a single node from the Orchestrator DAG."""
+    from melodies_monet.driver.orchestrator import Orchestrator
+
+    global DEBUG
+    DEBUG = debug
+
+    orch = Orchestrator(control)
+    if node not in orch.graph.nodes:
+        typer.secho(f"Error: Node {node!r} not found in DAG.", fg=ERROR_COLOR)
+        raise typer.Exit(1)
+
+    with _timer(f"Executing task: {node}"):
+        # Note: In a real workflow, we might need to load state if
+        # this is running as a separate process.
+        func = orch.graph.nodes[node]["func"]
+        node_params = orch.ana.control_dict.get(node, {})
+        if isinstance(node_params, list):
+            node_params = {}
+
+        # Determine if the function expects parameters
+        import inspect
+        sig = inspect.signature(func)
+        if sig.parameters:
+            valid_params = {k: v for k, v in node_params.items() if k in sig.parameters}
+            func(**valid_params)
+        else:
+            func()
+
+
 _DATE_FMT_NOTE = (
     "Date can be in any format accepted by `pandas.date_range()`, "
     "e.g., 'YYYY-MM-DD', or 'M/D/YYYY'. "

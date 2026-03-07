@@ -2,6 +2,61 @@
 requires = ["setuptools>=39.2.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "melodies-monet"
+dynamic = ["version"]
+description = "MELODIES MONET unified verification package"
+readme = "README.md"
+requires-python = ">=3.6"
+license = {text = "Apache 2.0"}
+authors = [
+    {name = "Rebecca Schwantes", email = "rebecca.schwantes@noaa.gov"}
+]
+maintainers = [
+    {name = "Rebecca Schwantes", email = "rebecca.schwantes@noaa.gov"}
+]
+keywords = ["model", "verification", "air-quality", "atmosphere", "evaluation"]
+dependencies = [
+    "cartopy",
+    "matplotlib",
+    "monet @ git+https://github.com/noaa-oar-arl/monet.git@develop",
+    "monetio @ git+https://github.com/bbakernoaa/monetio.git@develop",
+    "monet-stats @ git+https://github.com/noaa-oar-arl/monet-stats.git@develop",
+    "monet-plots @ git+https://github.com/noaa-oar-arl/monet-plots.git@develop",
+    "netCDF4",
+    "numpy",
+    "pandas < 2.0",
+    "pyyaml",
+    "seaborn",
+    "xarray",
+    "networkx",
+    "jinja2",
+]
+
+[project.optional-dependencies]
+tutorial = ["pooch"]
+workflow = ["ecflow"]
+cli = ["typer[all]"]
+all = [
+    "melodies-monet[tutorial,cli,workflow]"
+]
+
+[project.urls]
+Homepage = "https://github.com/NCAR/MELODIES-MONET"
+
+[project.scripts]
+melodies-monet = "melodies_monet._cli:cli"
+
+[tool.setuptools]
+packages = {find = {}}
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = {attr = "melodies_monet.__version__"}
+
+[tool.setuptools.package-data]
+"*" = ["data/*.csv", "data/*.tsv", "data/*.txt", "data/*.png"]
+
 [tool.black]
 line-length = 100
 

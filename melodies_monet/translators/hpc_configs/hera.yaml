@@ -1,0 +1,10 @@
+standard:
+  memory: 8G
+  cpu: 1
+  walltime: "00:30:00"
+  queue: hera
+high-mem:
+  memory: 64G
+  cpu: 12
+  walltime: "02:00:00"
+  queue: hera

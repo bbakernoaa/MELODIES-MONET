@@ -1,0 +1,10 @@
+standard:
+  memory: 16G
+  cpu: 2
+  walltime: "01:00:00"
+  queue: casper
+high-mem:
+  memory: 128G
+  cpu: 8
+  walltime: "04:00:00"
+  queue: casper
