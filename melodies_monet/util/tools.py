@@ -44,15 +44,9 @@ def list_contains(list1, list2):
 
 
 def linregress(x, y):
-    import statsmodels.api as sm
+    from monet_stats import linregress as sm_linregress
 
-    xx = sm.add_constant(x)
-    model = sm.OLS(y, xx)
-    fit = model.fit()
-    b, a = fit.params[0], fit.params[1]
-    rsquared = fit.rsquared
-    std_err = np.sqrt(fit.mse_resid)
-    return a, b, rsquared, std_err
+    return sm_linregress(x, y)
 
 
 def findclosest(list, value):
