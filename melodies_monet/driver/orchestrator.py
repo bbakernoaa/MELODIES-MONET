@@ -24,12 +24,43 @@ class Orchestrator:
     def _setup_dask(self):
         """
         Initialize Dask client if configured.
+        Supports standard distributed Client and dask-jobqueue Clusters.
         """
         if self.ana.control_dict and "analysis" in self.ana.control_dict:
             dask_config = self.ana.control_dict["analysis"].get("dask", None)
-            if dask_config:
-                from dask.distributed import Client
-                # Pass dask_config as kwargs (e.g., n_workers, threads_per_worker, memory_limit)
+            if not dask_config:
+                return
+
+            from dask.distributed import Client
+
+            # Check if using dask-jobqueue
+            if "jobqueue" in dask_config:
+                jq_config = dask_config["jobqueue"]
+                cluster_type = jq_config.get("type", "slurm").lower()
+                cluster_kwargs = jq_config.get("kwargs", {})
+
+                if cluster_type == "slurm":
+                    from dask_jobqueue import SLURMCluster as Cluster
+                elif cluster_type == "pbs":
+                    from dask_jobqueue import PBSCluster as Cluster
+                elif cluster_type == "lsf":
+                    from dask_jobqueue import LSFCluster as Cluster
+                else:
+                    raise ValueError(f"Unsupported jobqueue type: {cluster_type}")
+
+                self.dask_cluster = Cluster(**cluster_kwargs)
+
+                # Handle scaling
+                scale_config = jq_config.get("scale", {"jobs": 1})
+                if "adaptive" in scale_config:
+                    self.dask_cluster.adapt(**scale_config["adaptive"])
+                else:
+                    self.dask_cluster.scale(**scale_config)
+
+                self.dask_client = Client(self.dask_cluster)
+                print(f"Dask jobqueue cluster ({cluster_type}) initialized: {self.dask_client}")
+            else:
+                # Standard distributed Client (e.g., LocalCluster or existing scheduler)
                 self.dask_client = Client(**dask_config)
                 print(f"Dask client initialized: {self.dask_client}")
 

@@ -75,3 +75,37 @@ When `melodies-monet run-node` is called:
 - **Dask**: Handles **Intra-task parallelism** (e.g., distributing the actual computation of a 100GB regridding operation across 40 cores).
 
 By combining these, MELODIES-MONET achieves massive scalability: the workflow manager manages the cluster's queue and task dependencies, while Dask manages the data-local compute performance.
+
+## Dynamic Scaling with `dask-jobqueue`
+
+For tasks that require more resources than a single compute node can provide, MELODIES-MONET supports **dask-jobqueue**. This allows a single workflow node to dynamically spawn its own "helper" compute nodes.
+
+### Configuration
+
+Add a `jobqueue` section to your `dask` configuration in the control YAML:
+
+```yaml
+analysis:
+  dask:
+    jobqueue:
+      type: "slurm"  # pbs, lsf
+      kwargs:
+        nodes: 1
+        cores: 40
+        memory: "128GB"
+        walltime: "01:00:00"
+        interface: "ib0"
+      scale:
+        jobs: 4  # Static scaling: spawn 4 helper jobs
+      # OR adaptive scaling
+      # scale:
+      #   adaptive:
+      #     minimum_jobs: 1
+      #     maximum_jobs: 10
+```
+
+When `run-node` is executed with this configuration:
+1. It initializes a Cluster object (e.g., `SLURMCluster`) using the provided `kwargs`.
+2. It scales the cluster (statically or adaptively).
+3. It connects the Dask Client to this dynamic cluster.
+4. After the task completes, the dynamic nodes are automatically released.
