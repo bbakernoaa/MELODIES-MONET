@@ -1,0 +1,30 @@
+diff --git a/src/monet_plots/plots/spatial_bias.py b/src/monet_plots/plots/spatial_bias.py
+new file mode 100644
+index 0000000..4f44dd7
+--- /dev/null
++++ b/src/monet_plots/plots/spatial_bias.py
+@@ -0,0 +1,24 @@
++from __future__ import annotations
++import xarray as xr
++import matplotlib.pyplot as plt
++import cartopy.crs as ccrs
++from .base import BasePlot
++
++class SpatialBiasPlot(BasePlot):
++    """Xarray-native spatial bias plot."""
++
++    def __init__(self, ds: xr.Dataset, **kwargs):
++        super().__init__(**kwargs)
++        self.ds = ds
++
++    def plot(self, obs_var: str, mod_var: str, **kwargs):
++        """Plot bias using Xarray and Cartopy."""
++        bias = self.ds[mod_var] - self.ds[obs_var]
++
++        if self.ax is None:
++            self.ax = self.fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
++
++        # Xarray native plot integration
++        bias.plot.scatter(x="longitude", y="latitude", ax=self.ax, transform=ccrs.PlateCarree(), **kwargs)
++        self.ax.coastlines()
++        return self.ax

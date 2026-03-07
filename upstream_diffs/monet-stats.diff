@@ -1,0 +1,33 @@
+diff --git a/src/monet_stats/proc_stats.py b/src/monet_stats/proc_stats.py
+new file mode 100644
+index 0000000..e0f5090
+--- /dev/null
++++ b/src/monet_stats/proc_stats.py
+@@ -0,0 +1,27 @@
++"""Xarray-native statistics interface."""
++
++import numpy as np
++import xarray as xr
++from . import error_metrics, correlation_metrics
++
++def calc(ds, stat=None, obsvar=None, modvar=None, wind=False):
++    """Calculate statistics purely using Xarray operations."""
++    obs = ds[obsvar]
++    mod = ds[modvar]
++
++    # Use monet-stats Xarray-aware metrics
++    metrics = {
++        'MB': error_metrics.MB,
++        'MAE': error_metrics.MAE,
++        'RMSE': error_metrics.RMSE,
++        'R2': correlation_metrics.R2,
++        'IOA': error_metrics.IOA,
++    }
++
++    func = metrics.get(stat)
++    if func:
++        # All monet-stats metrics now return Xarray DataArrays or scalars
++        res = func(obs, mod)
++        return float(res.compute() if hasattr(res, 'compute') else res)
++
++    return np.nan

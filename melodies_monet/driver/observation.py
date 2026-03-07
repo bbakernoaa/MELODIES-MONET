@@ -72,23 +72,22 @@ class observation:
 
         assert len(files) >= 1, "need at least one"
 
-        _, extension = os.path.splitext(files[0])
         try:
-            if extension in {".nc", ".ncf", ".netcdf", ".nc4"}:
-                if len(files) > 1:
-                    self.obj = xr.open_mfdataset(files)
-                else:
-                    self.obj = xr.open_dataset(files[0])
-            elif extension in [".ict", ".icartt"]:
-                assert len(files) == 1, "monetio.icartt.add_data can only read one file"
-                self.obj = mio.icartt.add_data(files[0])
-            elif extension in [".csv"]:
-                from melodies_monet.util.read_util import read_aircraft_obs_csv
+            # Use modular monetio.load API
+            # Map extensions to monetio reader names
+            _, extension = os.path.splitext(files[0])
+            reader_map = {
+                ".nc": "generic_xarray",
+                ".ncf": "generic_xarray",
+                ".netcdf": "generic_xarray",
+                ".nc4": "generic_xarray",
+                ".ict": "aircraft",
+                ".icartt": "aircraft",
+                ".csv": "aircraft",
+            }
+            reader = reader_map.get(extension.lower(), "generic_xarray")
 
-                assert len(files) == 1, "MELODIES-MONET can only read one csv file"
-                self.obj = read_aircraft_obs_csv(filename=files[0], time_var=self.time_var)
-            else:
-                raise ValueError(f"extension {extension!r} currently unsupported")
+            self.obj = mio.load(reader, files=files, time_var=self.time_var, **(self.data_proc or {}))
         except Exception as e:
             print("something happened opening file:", e)
             return
