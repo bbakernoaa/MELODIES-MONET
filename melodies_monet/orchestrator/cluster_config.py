@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class ClusterFactory:
     """
     Factory class to create Dask clusters for different environments.
-    Supports NCAR (Casper, Derecho) and NOAA RDHPCS (Hera, Jet, Orion, Hercules).
+    Supports NCAR (Casper, Derecho) and NOAA RDHPCS (Hera, Jet, Orion, Hercules, Gaea, Ursa).
     """
 
     PLATFORMS = {
@@ -20,7 +20,6 @@ class ClusterFactory:
             'cluster_type': 'slurm',
             'defaults': {
                 'queue': 'casper',
-                'project': os.getenv('PROJECT'),
                 'cores': 1,
                 'memory': '4GB',
                 'walltime': '01:00:00'
@@ -30,7 +29,6 @@ class ClusterFactory:
             'cluster_type': 'pbs',
             'defaults': {
                 'queue': 'main',
-                'project': os.getenv('PROJECT'),
                 'cores': 128,
                 'memory': '256GB',
                 'walltime': '01:00:00'
@@ -63,6 +61,7 @@ class ClusterFactory:
                 'walltime': '01:00:00'
             }
         },
+        'msu': 'orion', # Alias for Orion
         'hercules': {
             'cluster_type': 'slurm',
             'defaults': {
@@ -71,8 +70,37 @@ class ClusterFactory:
                 'memory': '512GB',
                 'walltime': '01:00:00'
             }
+        },
+        'gaea': {
+            'cluster_type': 'slurm',
+            'defaults': {
+                'queue': 'batch',
+                'cores': 32,
+                'memory': '128GB',
+                'walltime': '01:00:00'
+            }
+        },
+        'ursa': {
+            'cluster_type': 'slurm',
+            'defaults': {
+                'queue': 'batch',
+                'cores': 44,
+                'memory': '192GB',
+                'walltime': '01:00:00'
+            }
         }
     }
+
+    @staticmethod
+    def _get_project_code():
+        """
+        Attempt to discover a project or account code from environment variables.
+        """
+        for env in ['PROJECT', 'ACCOUNT', 'ALLOCATION', 'PBS_ACCOUNT', 'SLURM_ACCOUNT']:
+            code = os.getenv(env)
+            if code:
+                return code
+        return None
 
     @staticmethod
     def create_cluster(config):
@@ -85,7 +113,7 @@ class ClusterFactory:
             Dask configuration dictionary.
             Expected keys:
                 - cluster_type: 'local', 'slurm', 'pbs', 'lsf', 'fargate', etc.
-                - platform: Optional, one of 'casper', 'derecho', 'hera', 'jet', 'orion', 'hercules'.
+                - platform: Optional, one of 'casper', 'derecho', 'hera', 'jet', 'orion', 'msu', 'hercules', 'gaea', 'ursa'.
                 - cluster_kwargs: dict of arguments passed to the cluster constructor.
                 - adaptive: dict with 'enabled', 'minimum', 'maximum' for adaptive scaling.
                 - scale: int, number of workers to scale to if adaptive is disabled.
@@ -101,6 +129,10 @@ class ClusterFactory:
         adaptive_config = config.get('adaptive', {})
         scale = config.get('scale', None)
 
+        # Handle platform aliases
+        if platform in ClusterFactory.PLATFORMS and isinstance(ClusterFactory.PLATFORMS[platform], str):
+            platform = ClusterFactory.PLATFORMS[platform]
+
         # Apply platform-specific defaults
         if platform in ClusterFactory.PLATFORMS:
             logger.info(f"Applying defaults for platform: {platform}")
@@ -109,6 +141,14 @@ class ClusterFactory:
 
             # Merge defaults with user-provided kwargs (user overrides defaults)
             defaults = platform_info['defaults'].copy()
+
+            # Try to populate project/account code if not provided
+            project_key = 'project' if cluster_type == 'slurm' or cluster_type == 'pbs' else 'account'
+            if project_key not in cluster_kwargs and project_key not in defaults:
+                project_code = ClusterFactory._get_project_code()
+                if project_code:
+                    defaults[project_key] = project_code
+
             defaults.update(cluster_kwargs)
             cluster_kwargs = defaults
 

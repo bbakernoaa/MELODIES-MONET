@@ -13,6 +13,9 @@ from melodies_monet.orchestrator.cluster_config import ClusterFactory
 def run_mm_node(node_name, func, *args, **kwargs):
     """
     Prefect task to run a single node from the MM Orchestrator's DAG.
+
+    IMPORTANT: All MM tasks MUST remain backend-agnostic and preserve Dask laziness.
+    Never use .compute(), .load(), or .values inside functions being executed.
     """
     logger = get_run_logger()
     logger.info(f"Starting MM task: {node_name}")
@@ -22,6 +25,7 @@ def run_mm_node(node_name, func, *args, **kwargs):
     try:
         with worker_client() as client:
             logger.info(f"Task {node_name} connected to cluster via worker_client.")
+            # Note: client is passed implicitly via global state for dask operations
             result = func(*args, **kwargs)
     except (ValueError, RuntimeError):
         # Fallback if not running within a dask worker context

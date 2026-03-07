@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 import networkx as nx
+import os
 from melodies_monet.orchestrator.cluster_config import ClusterFactory
 from melodies_monet.orchestrator.prefect_engine import mm_prefect_flow
 
@@ -25,26 +26,43 @@ class TestPrefectEngine(unittest.TestCase):
         config = {'platform': 'casper', 'scale': 2}
         with patch('dask_jobqueue.SLURMCluster') as mock_slurm:
             cluster = ClusterFactory.create_cluster(config)
-            # Casper defaults: queue='casper', project=None, cores=1, memory='4GB', walltime='01:00:00'
-            mock_slurm.assert_called_once_with(queue='casper', project=None, cores=1, memory='4GB', walltime='01:00:00')
+            # Casper defaults: queue='casper', cores=1, memory='4GB', walltime='01:00:00'
+            mock_slurm.assert_called_once_with(queue='casper', cores=1, memory='4GB', walltime='01:00:00')
             cluster.scale.assert_called_once_with(2)
 
     def test_cluster_factory_platform_derecho_override(self):
         config = {'platform': 'derecho', 'cluster_kwargs': {'walltime': '02:00:00'}, 'scale': 10}
         with patch('dask_jobqueue.PBSCluster') as mock_pbs:
             cluster = ClusterFactory.create_cluster(config)
-            # Derecho defaults: queue='main', project=None, cores=128, memory='256GB', walltime='01:00:00'
+            # Derecho defaults: queue='main', cores=128, memory='256GB', walltime='01:00:00'
             # Overridden: walltime='02:00:00'
-            mock_pbs.assert_called_once_with(queue='main', project=None, cores=128, memory='256GB', walltime='02:00:00')
+            mock_pbs.assert_called_once_with(queue='main', cores=128, memory='256GB', walltime='02:00:00')
             cluster.scale.assert_called_once_with(10)
 
-    def test_cluster_factory_platform_orion(self):
-        config = {'platform': 'orion', 'scale': 5}
+    def test_cluster_factory_platform_orion_alias(self):
+        config = {'platform': 'msu', 'scale': 5}
         with patch('dask_jobqueue.SLURMCluster') as mock_slurm:
             cluster = ClusterFactory.create_cluster(config)
-            # Orion defaults: queue='batch', cores=40, memory='192GB', walltime='01:00:00'
+            # MSU is alias for Orion: queue='batch', cores=40, memory='192GB', walltime='01:00:00'
             mock_slurm.assert_called_once_with(queue='batch', cores=40, memory='192GB', walltime='01:00:00')
             cluster.scale.assert_called_once_with(5)
+
+    def test_cluster_factory_platform_gaea_project_discovery(self):
+        config = {'platform': 'gaea'}
+        with patch.dict(os.environ, {'PROJECT': 'test_project'}):
+            with patch('dask_jobqueue.SLURMCluster') as mock_slurm:
+                ClusterFactory.create_cluster(config)
+                # Gaea defaults: queue='batch', cores=32, memory='128GB', walltime='01:00:00'
+                # Project discovery: project='test_project'
+                mock_slurm.assert_called_once_with(queue='batch', cores=32, memory='128GB', walltime='01:00:00', project='test_project')
+
+    def test_cluster_factory_platform_ursa(self):
+        config = {'platform': 'ursa', 'scale': 4}
+        with patch('dask_jobqueue.SLURMCluster') as mock_slurm:
+            cluster = ClusterFactory.create_cluster(config)
+            # Ursa defaults: queue='batch', cores=44, memory='192GB', walltime='01:00:00'
+            mock_slurm.assert_called_once_with(queue='batch', cores=44, memory='192GB', walltime='01:00:00')
+            cluster.scale.assert_called_once_with(4)
 
     @patch('melodies_monet.orchestrator.prefect_engine.run_mm_node.submit')
     @patch('melodies_monet.orchestrator.prefect_engine.Client')
