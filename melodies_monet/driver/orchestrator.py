@@ -35,44 +35,57 @@ class Orchestrator:
         self.graph.add_edge("pair_data", "stats")
         self.graph.add_edge("pair_data", "plotting")
 
-        # Support for gridded-to-gridded pairing (e.g. models-to-models)
-        if self.ana.control_dict and "model_to_model" in self.ana.control_dict:
-            self.graph.add_node("pair_models", func=self._pair_models)
-            self.graph.add_edge("open_models", "pair_models")
-            self.graph.add_edge("pair_models", "stats")
-            self.graph.add_edge("pair_models", "plotting")
+        # Support for gridded-to-gridded pairing (e.g. models-to-models or sat-to-models)
+        if self.ana.control_dict and "gridded_pairing" in self.ana.control_dict:
+            self.graph.add_node("pair_gridded", func=self._pair_gridded)
+            self.graph.add_edge("open_models", "pair_gridded")
+            self.graph.add_edge("open_obs", "pair_gridded")
+            self.graph.add_edge("pair_gridded", "stats")
+            self.graph.add_edge("pair_gridded", "plotting")
 
-    def _pair_models(self):
+    def _pair_gridded(self):
         """
-        Implementation for model-to-model pairing.
+        Implementation for gridded-to-gridded pairing.
+        Supports model-to-model and gridded satellite-to-model comparisons.
         Uses MONET's regridding capabilities.
         """
         import monet as m
 
-        print("Executing model-to-model pairing...")
-        model_to_model_config = self.ana.control_dict.get("model_to_model", {})
-        for pairing_name, config in model_to_model_config.items():
-            model1_label = config.get("model1")
-            model2_label = config.get("model2")
+        print("Executing gridded pairing...")
+        gridded_pairing_config = self.ana.control_dict.get("gridded_pairing", {})
+        for pairing_name, config in gridded_pairing_config.items():
+            data1_label = config.get("data1")
+            data2_label = config.get("data2")
+            data1_type = config.get("data1_type", "model")  # 'model' or 'obs'
+            data2_type = config.get("data2_type", "model")  # 'model' or 'obs'
             variables = config.get("variables", "all")
 
-            if model1_label not in self.ana.models or model2_label not in self.ana.models:
-                print(f"Warning: Models {model1_label} or {model2_label} not found.")
+            # Resolve data1
+            if data1_type == "model":
+                obj1 = self.ana.models.get(data1_label)
+            else:
+                obj1 = self.ana.obs.get(data1_label)
+
+            # Resolve data2
+            if data2_type == "model":
+                obj2 = self.ana.models.get(data2_label)
+            else:
+                obj2 = self.ana.obs.get(data2_label)
+
+            if obj1 is None or obj2 is None:
+                print(f"Warning: Data source {data1_label} or {data2_label} not found.")
                 continue
 
-            mod1 = self.ana.models[model1_label]
-            mod2 = self.ana.models[model2_label]
-
-            print(f"Pairing {model1_label} and {model2_label}...")
+            print(f"Pairing {data1_label} and {data2_label}...")
             # Use MONET to combine gridded datasets.
-            # This is a conceptual delegation to MONET's core pairing logic for gridded data.
-            paired_obj = m.combine_gridded(mod1.obj, mod2.obj, variables=variables)
+            # This delegates to MONET's core pairing logic for gridded data (regidding/alignment).
+            paired_obj = m.combine_gridded(obj1.obj, obj2.obj, variables=variables)
 
             from melodies_monet.driver.pair import pair
 
             p = pair()
-            p.model = model1_label
-            p.obs = model2_label  # Treating second model as 'obs' for the pair object
+            p.model = data1_label
+            p.obs = data2_label
             p.obj = paired_obj
             self.ana.paired[pairing_name] = p
 
@@ -107,8 +120,8 @@ class Orchestrator:
                         self.ana.read_analysis()
 
                     if not self.ana.paired:
-                        # Allow continuation if pair_models was executed
-                        if "pair_models" not in self.graph.nodes:
+                        # Allow continuation if gridded pairing was executed
+                        if "pair_gridded" not in self.graph.nodes:
                              raise RuntimeError(f"Paired data must be available before {node}.")
 
             func = self.graph.nodes[node]["func"]
