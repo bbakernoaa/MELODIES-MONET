@@ -31,10 +31,49 @@ def run_mm_node(node_name, func, *args, **kwargs):
     logger.info(f"Completed MM task: {node_name}")
     return result
 
+@flow(name="MM Execution Flow")
+def execute_dag_flow(orchestrator):
+    """
+    Inner flow that maps Orchestrator DAG (NetworkX) to Prefect Tasks.
+    """
+    logger = get_run_logger()
+    task_futures = {}
+
+    # Traverse the graph in topological order to ensure dependencies are met
+    for node in nx.topological_sort(orchestrator.graph):
+        node_data = orchestrator.graph.nodes[node]
+        func = node_data['func']
+
+        # Extract args/kwargs if they exist in the node data
+        node_args = node_data.get('args', [])
+        node_kwargs = node_data.get('kwargs', {})
+
+        # Determine dependencies (predecessors in the DAG)
+        dependencies = [task_futures[dep] for dep in orchestrator.graph.predecessors(node)]
+
+        # Submit the task to Prefect.
+        # Using wait_for to manage dependencies as per the NetworkX structure.
+        future = run_mm_node.submit(
+            node_name=node,
+            func=func,
+            *node_args,
+            **node_kwargs,
+            wait_for=dependencies
+        )
+        task_futures[node] = future
+
+    logger.info("All tasks submitted to Prefect.")
+
+    # Wait for all tasks to finish
+    for node, future in task_futures.items():
+        future.wait()
+
+    return task_futures
+
 @flow(name="MELODIES-MONET Workflow")
 def mm_prefect_flow(orchestrator):
     """
-    Prefect flow that translates and executes the MM Orchestrator's DAG.
+    Wrapper flow that provisions a Dask cluster and launches the execution flow.
     """
     logger = get_run_logger()
 
@@ -42,6 +81,7 @@ def mm_prefect_flow(orchestrator):
     dask_config = orchestrator.ana.control_dict.get('analysis', {}).get('dask', {})
     cluster = None
     client = None
+    task_runner = None
 
     if dask_config:
         cluster = ClusterFactory.create_cluster(dask_config)
@@ -51,7 +91,7 @@ def mm_prefect_flow(orchestrator):
         # Configure the DaskTaskRunner to use our new cluster
         try:
             from prefect_dask import DaskTaskRunner
-            mm_prefect_flow.task_runner = DaskTaskRunner(address=cluster.scheduler_address)
+            task_runner = DaskTaskRunner(address=cluster.scheduler_address)
             logger.info(f"Prefect DaskTaskRunner configured with address: {cluster.scheduler_address}")
         except ImportError:
             logger.warning("prefect-dask is not installed. Tasks will run on the default runner.")
@@ -59,39 +99,13 @@ def mm_prefect_flow(orchestrator):
         logger.info("No Dask configuration found. Running in local mode.")
 
     try:
-        # 2. Map Orchestrator DAG (NetworkX) to Prefect Tasks
-        task_futures = {}
+        # 2. Execute the DAG within a flow configured with the DaskTaskRunner
+        if task_runner:
+            result = execute_dag_flow.with_options(task_runner=task_runner)(orchestrator)
+        else:
+            result = execute_dag_flow(orchestrator)
 
-        # Traverse the graph in topological order to ensure dependencies are met
-        for node in nx.topological_sort(orchestrator.graph):
-            node_data = orchestrator.graph.nodes[node]
-            func = node_data['func']
-
-            # Extract args/kwargs if they exist in the node data
-            node_args = node_data.get('args', [])
-            node_kwargs = node_data.get('kwargs', {})
-
-            # Determine dependencies (predecessors in the DAG)
-            dependencies = [task_futures[dep] for dep in orchestrator.graph.predecessors(node)]
-
-            # Submit the task to Prefect.
-            # Using wait_for to manage dependencies as per the NetworkX structure.
-            future = run_mm_node.submit(
-                node_name=node,
-                func=func,
-                *node_args,
-                **node_kwargs,
-                wait_for=dependencies
-            )
-            task_futures[node] = future
-
-        logger.info("All tasks submitted to Prefect.")
-
-        # Wait for all tasks to finish before exiting the flow to ensure cluster stays up
-        for node, future in task_futures.items():
-            future.wait()
-
-        return task_futures
+        return result
 
     finally:
         # 3. Clean up resources
