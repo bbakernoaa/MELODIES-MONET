@@ -9,11 +9,12 @@ class EcflowExporter:
     Exports a NetworkX DAG to an ecFlow Suite.
     """
 
-    def __init__(self, graph, suite_name="melodies_monet"):
+    def __init__(self, graph, control_file="control.yaml", suite_name="melodies_monet"):
         """
         Initialize the exporter.
         """
         self.graph = graph
+        self.control_file = control_file
         self.suite_name = suite_name
         if ecflow is None:
             print("Warning: ecflow-python not found. Exporter will not function correctly.")
@@ -40,6 +41,9 @@ class EcflowExporter:
             for key, value in node_attrs.items():
                 if key != "func":  # Don't add function object as a variable
                     task.add_variable(key.upper(), str(value))
+
+            # Add the run command as a variable
+            task.add_variable("RUN_COMMAND", f"melodies-monet run-node {self.control_file} {node}")
 
         # Second pass: Add triggers (dependencies)
         for node in self.graph.nodes():

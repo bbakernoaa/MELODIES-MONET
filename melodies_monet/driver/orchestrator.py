@@ -17,6 +17,19 @@ class Orchestrator:
         self.ana.read_control(control_file)
         self.graph = nx.DiGraph()
         self._build_dag()
+        self._setup_dask()
+
+    def _setup_dask(self):
+        """
+        Initialize Dask client if configured.
+        """
+        if self.ana.control_dict and "analysis" in self.ana.control_dict:
+            dask_config = self.ana.control_dict["analysis"].get("dask", None)
+            if dask_config:
+                from dask.distributed import Client
+                # Pass dask_config as kwargs (e.g., n_workers, threads_per_worker, memory_limit)
+                self.dask_client = Client(**dask_config)
+                print(f"Dask client initialized: {self.dask_client}")
 
     def _build_dag(self):
         """

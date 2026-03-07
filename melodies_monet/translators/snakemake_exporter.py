@@ -27,7 +27,7 @@ rule {{ node }}:
         {% endfor %}
     {% endif %}
     shell:
-        "touch {{ node }}.complete"
+        "melodies-monet run-node {{ control_file }} {{ node }} && touch {{ node }}.complete"
 {% endfor %}
 """
 
@@ -36,11 +36,12 @@ class SnakemakeExporter:
     Exports a NetworkX DAG to a Snakemake Snakefile.
     """
 
-    def __init__(self, graph):
+    def __init__(self, graph, control_file="control.yaml"):
         """
         Initialize the exporter.
         """
         self.graph = graph
+        self.control_file = control_file
 
     def generate_snakefile(self, output_file="Snakefile"):
         """
@@ -66,7 +67,8 @@ class SnakemakeExporter:
         rendered_snakefile = template.render(
             leaf_nodes=leaf_nodes,
             nodes_with_deps=nodes_with_deps,
-            node_attrs=node_attrs
+            node_attrs=node_attrs,
+            control_file=self.control_file
         )
 
         with open(output_file, "w") as f:
