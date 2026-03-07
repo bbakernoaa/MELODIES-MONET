@@ -13,8 +13,13 @@ class HPCResourceMapper:
         if config_file:
             self.load_config(config_file)
         elif hpc_type:
-            # Look for default configs if available
-            pass
+            # Look for default configs in the package
+            package_dir = os.path.dirname(__file__)
+            default_config = os.path.join(package_dir, "hpc_configs", f"{hpc_type.lower()}.yaml")
+            if os.path.exists(default_config):
+                self.load_config(default_config)
+            else:
+                print(f"Warning: Default config for {hpc_type} not found at {default_config}")
 
     def load_config(self, config_file):
         """

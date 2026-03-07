@@ -1,0 +1,10 @@
+standard:
+  memory: 250G
+  cpu: 64
+  walltime: "08:00:00"
+  queue: u1-compute
+high-mem:
+  memory: 500G
+  cpu: 192
+  walltime: "24:00:00"
+  queue: u1-compute

@@ -1,0 +1,10 @@
+standard:
+  memory: 512G
+  cpu: 80
+  walltime: "08:00:00"
+  queue: hercules
+high-mem:
+  memory: 512G
+  cpu: 80
+  walltime: "08:00:00"
+  queue: hercules

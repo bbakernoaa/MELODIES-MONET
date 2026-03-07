@@ -1,0 +1,10 @@
+standard:
+  memory: 192G
+  cpu: 40
+  walltime: "08:00:00"
+  queue: orion
+high-mem:
+  memory: 384G
+  cpu: 40
+  walltime: "08:00:00"
+  queue: bigmem

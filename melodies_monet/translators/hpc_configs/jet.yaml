@@ -1,0 +1,10 @@
+standard:
+  memory: 64G
+  cpu: 24
+  walltime: "08:00:00"
+  queue: xjet
+high-mem:
+  memory: 256G
+  cpu: 24
+  walltime: "08:00:00"
+  queue: bigmem
