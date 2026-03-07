@@ -21,7 +21,7 @@ dependencies = [
     "matplotlib",
     "monet @ git+https://github.com/noaa-oar-arl/monet.git@develop",
     "monetio @ git+https://github.com/bbakernoaa/monetio.git@develop",
-    "monet-stats @ git+https://github.com/bbakernoaa/monet-stats.git@main",
+    "monet-stats @ git+https://github.com/noaa-oar-arl/monet-stats.git@develop",
     "monet-plots @ git+https://github.com/noaa-oar-arl/monet-plots.git@develop",
     "netCDF4",
     "numpy",
