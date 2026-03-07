@@ -53,8 +53,8 @@ class TestPrefectEngine(unittest.TestCase):
             with patch('dask_jobqueue.SLURMCluster') as mock_slurm:
                 ClusterFactory.create_cluster(config)
                 # Gaea defaults: queue='batch', cores=32, memory='128GB', walltime='01:00:00'
-                # Project discovery: project='test_project'
-                mock_slurm.assert_called_once_with(queue='batch', cores=32, memory='128GB', walltime='01:00:00', project='test_project')
+                # Project discovery: account='test_project' (Slurm uses 'account')
+                mock_slurm.assert_called_once_with(queue='batch', cores=32, memory='128GB', walltime='01:00:00', account='test_project')
 
     def test_cluster_factory_platform_ursa(self):
         config = {'platform': 'ursa', 'scale': 4}
@@ -63,6 +63,14 @@ class TestPrefectEngine(unittest.TestCase):
             # Ursa defaults: queue='batch', cores=44, memory='192GB', walltime='01:00:00'
             mock_slurm.assert_called_once_with(queue='batch', cores=44, memory='192GB', walltime='01:00:00')
             cluster.scale.assert_called_once_with(4)
+
+    def test_cluster_factory_lsf_project(self):
+        config = {'cluster_type': 'lsf'}
+        with patch.dict(os.environ, {'PROJECT': 'test_project'}):
+            with patch('dask_jobqueue.LSFCluster') as mock_lsf:
+                ClusterFactory.create_cluster(config)
+                # LSF uses 'project'
+                mock_lsf.assert_called_once_with(project='test_project')
 
     @patch('melodies_monet.orchestrator.prefect_engine.run_mm_node.submit')
     @patch('melodies_monet.orchestrator.prefect_engine.Client')

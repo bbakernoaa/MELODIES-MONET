@@ -141,16 +141,17 @@ class ClusterFactory:
 
             # Merge defaults with user-provided kwargs (user overrides defaults)
             defaults = platform_info['defaults'].copy()
-
-            # Try to populate project/account code if not provided
-            project_key = 'project' if cluster_type == 'slurm' or cluster_type == 'pbs' else 'account'
-            if project_key not in cluster_kwargs and project_key not in defaults:
-                project_code = ClusterFactory._get_project_code()
-                if project_code:
-                    defaults[project_key] = project_code
-
             defaults.update(cluster_kwargs)
             cluster_kwargs = defaults
+
+        # Use correct dask-jobqueue keys for project/account
+        # SLURM and PBS use 'account', LSF uses 'project'
+        project_key = 'project' if cluster_type == 'lsf' else 'account'
+
+        if project_key not in cluster_kwargs:
+            project_code = ClusterFactory._get_project_code()
+            if project_code:
+                cluster_kwargs[project_key] = project_code
 
         logger.info(f"Initializing Dask cluster of type: {cluster_type}")
 
