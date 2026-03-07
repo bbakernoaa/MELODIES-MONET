@@ -27,6 +27,14 @@ rule {{ node }}:
         {% for key, value in node_attrs[node].items() %}
         {{ key }}="{{ value }}"{% if not loop.last %},{% endif %}
         {% endfor %}
+    resources:
+        {% for key, value in node_attrs[node].items() %}
+        {% if key in ['memory', 'mem'] %}
+        mem_mb={{ value.replace('GB', '000').replace('G', '000').replace('MB', '').replace('M', '') }}{% if not loop.last %},{% endif %}
+        {% elif key in ['ncpus', 'ntasks', 'threads'] %}
+        threads={{ value }}{% if not loop.last %},{% endif %}
+        {% endif %}
+        {% endfor %}
     {% endif %}
     shell:
         "melodies-monet run-node {{ control_file }} {{ node }} && touch {{ node }}.complete"

@@ -51,6 +51,27 @@ Profiles:
 - `transfer`: Targeted for data staging on service or DTN partitions.
 - `high-mem`: High memory allocation for large grid processing or intensive stats/plotting.
 
-## Dask and HPC Performance
+## Dask and Data Handoff
 
-By using the `run-node` command, each task in the workflow inherits the Orchestrator's ability to initialize a Dask cluster. This ensures that memory-intensive operations (like pairing large Xarray datasets) are automatically distributed across the allocated HPC resources, leveraging the backend-agnostic performance of MELODIES-MONET.
+A common question is how Dask objects (which are in-memory references to potentially massive datasets) are "passed" between workflow managers like ecFlow or Snakemake.
+
+### 1. File-Based Persistence
+
+In a distributed workflow, memory is not shared between tasks running on different compute nodes. Therefore, **Dask objects are not passed directly.** Instead:
+- Each task (node) in the DAG is responsible for **persisting its results to disk** (typically NetCDF or Zarr format).
+- The subsequent task **re-opens these files**, often using `open_mfdataset` to maintain Dask laziness.
+- This creates a **Data Contract** between nodes: the output file naming convention must match what the next node expects to read.
+
+### 2. Distributed Dask Clients
+
+When `melodies-monet run-node` is called:
+1. It initializes a **new Dask Client** specific to that task's execution environment.
+2. If the task is running on an HPC compute node (allocated via Slurm/PBS), the Dask Client can be configured to use the local resources (CPUs/Memory) assigned to that node.
+3. This ensures that while the workflow manager coordinates the *sequence* of tasks, Dask coordinates the *parallelism within* each task.
+
+### 3. Workflow vs. Dask Parallelism
+
+- **Workflow Manager (ecFlow/Snakemake)**: Handles **Inter-task parallelism** (e.g., running `open_models` and `open_obs` at the same time).
+- **Dask**: Handles **Intra-task parallelism** (e.g., distributing the actual computation of a 100GB regridding operation across 40 cores).
+
+By combining these, MELODIES-MONET achieves massive scalability: the workflow manager manages the cluster's queue and task dependencies, while Dask manages the data-local compute performance.

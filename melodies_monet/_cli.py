@@ -210,9 +210,8 @@ def run_node(
             typer.secho(f"Error: node {node!r} not found in DAG", fg=ERROR_COLOR)
             raise typer.Exit(2)
 
-        # Run the specific node's function
-        func = orch.graph.nodes[node]["func"]
-        func()
+        # Run the specific node (Orchestrator handles dependencies and saving)
+        orch.run(node=node)
 
 
 _DATE_FMT_NOTE = (
