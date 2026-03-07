@@ -21,8 +21,10 @@ with open("hpc_resources.yaml", "w") as f:
 
 # Create DAG
 G = nx.DiGraph()
+G.add_node("transfer_data", resource_request="transfer")
 G.add_node("open_models", resource_request="standard")
 G.add_node("pair_data", resource_request="high-mem")
+G.add_edge("transfer_data", "open_models")
 G.add_edge("open_models", "pair_data")
 
 # Export
@@ -37,6 +39,7 @@ print(snakefile_content)
 assert 'resources:' in snakefile_content
 assert 'memory="128G"' in snakefile_content
 assert 'cpu="8"' in snakefile_content
+assert 'rule transfer_data:' in snakefile_content
 
 print("Verification successful!")
 

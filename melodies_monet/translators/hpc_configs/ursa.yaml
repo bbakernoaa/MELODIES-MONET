@@ -8,3 +8,8 @@ high-mem:
   cpu: 192
   walltime: "24:00:00"
   queue: u1-compute
+transfer:
+  memory: 8G
+  cpu: 1
+  walltime: "24:00:00"
+  queue: u1-service

@@ -3,6 +3,11 @@ standard:
   cpu: 80
   walltime: "08:00:00"
   queue: hercules
+transfer:
+  memory: 4G
+  cpu: 1
+  walltime: "24:00:00"
+  queue: service
 high-mem:
   memory: 512G
   cpu: 80

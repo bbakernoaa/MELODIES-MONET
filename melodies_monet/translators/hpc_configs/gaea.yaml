@@ -8,3 +8,8 @@ high-mem:
   cpu: 192
   walltime: "16:00:00"
   queue: novel
+transfer:
+  memory: 8G
+  cpu: 1
+  walltime: "16:00:00"
+  queue: dtn_f5_f6

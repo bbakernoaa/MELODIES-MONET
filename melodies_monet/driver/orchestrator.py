@@ -28,6 +28,12 @@ class Orchestrator:
         self.graph.add_node("stats", func=self.ana.stats)
         self.graph.add_node("plotting", func=self.ana.plotting)
 
+        # Support for data transfer/retrieval
+        if self.ana.control_dict and "data_retrieval" in self.ana.control_dict:
+            self.graph.add_node("transfer_data", func=self._transfer_data, resource_request="transfer")
+            self.graph.add_edge("transfer_data", "open_models")
+            self.graph.add_edge("transfer_data", "open_obs")
+
         # Define edges (dependencies)
         self.graph.add_edge("open_models", "pair_data")
         self.graph.add_edge("open_obs", "pair_data")
@@ -41,6 +47,16 @@ class Orchestrator:
             self.graph.add_edge("open_obs", "pair_gridded")
             self.graph.add_edge("pair_gridded", "stats")
             self.graph.add_edge("pair_gridded", "plotting")
+
+    def _transfer_data(self):
+        """
+        Implementation for data transfer/retrieval.
+        Delegates to MONETIO's retrieval utilities or custom scripts.
+        """
+        print("Executing data transfer...")
+        # Placeholder for actual data retrieval logic.
+        # This would use the 'data_retrieval' section of the YAML.
+        pass
 
     def _pair_gridded(self):
         """

@@ -76,6 +76,13 @@ rule {{ node }}:
                 resources = self.resource_mapper.get_directives(resource_request)
                 directives = self.resource_mapper.translate_to_hpc(resource_request, scheduler=self.scheduler)
 
+
+            # Map node attributes directly (e.g. memory, cpu) if present
+            # This allows overriding default resource mapper behavior
+            for key in ["memory", "cpu", "walltime", "queue"]:
+                if key in node_attrs:
+                    resources[key] = node_attrs[key]
+
             nodes[node] = {"parents": parents, "resources": resources, "directives": directives}
 
         return template.render(nodes=nodes, targets=targets)

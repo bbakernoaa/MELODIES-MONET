@@ -15,7 +15,15 @@ class HPCResourceMapper:
         elif hpc_type:
             # Look for default configs in the package
             package_dir = os.path.dirname(__file__)
-            default_config = os.path.join(package_dir, "hpc_configs", f"{hpc_type.lower()}.yaml")
+
+            # Simple alias mapping
+            hpc_map = {
+                "msu": "orion",
+                "mississippi": "orion"
+            }
+            mapped_hpc = hpc_map.get(hpc_type.lower(), hpc_type.lower())
+
+            default_config = os.path.join(package_dir, "hpc_configs", f"{mapped_hpc}.yaml")
             if os.path.exists(default_config):
                 self.load_config(default_config)
             else:

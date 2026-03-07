@@ -8,3 +8,8 @@ high-mem:
   cpu: 8
   walltime: "04:00:00"
   queue: casper
+transfer:
+  memory: 4G
+  cpu: 1
+  walltime: "24:00:00"
+  queue: casper
