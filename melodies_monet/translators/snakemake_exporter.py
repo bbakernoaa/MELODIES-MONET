@@ -12,16 +12,20 @@ rule all:
 
 {% for node, dependencies in nodes_with_deps %}
 rule {{ node }}:
+    {% if dependencies %}
     input:
         {% for dep in dependencies %}
         "{{ dep }}.complete"{% if not loop.last %},{% endif %}
         {% endfor %}
+    {% endif %}
     output:
         "{{ node }}.complete"
+    {% if node_attrs[node] %}
     params:
         {% for key, value in node_attrs[node].items() %}
         {{ key }}="{{ value }}"{% if not loop.last %},{% endif %}
         {% endfor %}
+    {% endif %}
     shell:
         "touch {{ node }}.complete"
 {% endfor %}

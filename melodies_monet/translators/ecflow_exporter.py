@@ -42,9 +42,11 @@ class EcflowExporter:
                     task.add_variable(key.upper(), str(value))
 
         # Second pass: Add triggers (dependencies)
-        for u, v in self.graph.edges():
-            # v depends on u
-            tasks[v].add_trigger(f"./{u} == complete")
+        for node in self.graph.nodes():
+            preds = list(self.graph.predecessors(node))
+            if preds:
+                expr = " AND ".join([f"./{p} == complete" for p in preds])
+                tasks[node].add_trigger(expr)
 
         # Create suite definition
         defs = ecflow.Defs()

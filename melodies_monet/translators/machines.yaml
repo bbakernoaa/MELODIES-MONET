@@ -105,6 +105,27 @@ orion:
       partition: batch
 msu:
   alias: orion
+ursa:
+  scheduler: slurm
+  profiles:
+    standard:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "01:00:00"
+      partition: u1-compute
+    transfer:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "02:00:00"
+      partition: u1-service
+    high-mem:
+      nodes: 1
+      ntasks: 4
+      mem: 64G
+      time: "04:00:00"
+      partition: u1-compute
 hercules:
   scheduler: slurm
   profiles:
