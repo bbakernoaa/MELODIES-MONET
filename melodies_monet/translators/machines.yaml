@@ -1,0 +1,149 @@
+casper:
+  scheduler: pbs
+  profiles:
+    standard:
+      nodes: 1
+      ncpus: 1
+      mem: 10GB
+      walltime: "01:00:00"
+      q: casper
+    transfer:
+      nodes: 1
+      ncpus: 1
+      mem: 10GB
+      walltime: "02:00:00"
+      q: casper
+    high-mem:
+      nodes: 1
+      ncpus: 4
+      mem: 64GB
+      walltime: "04:00:00"
+      q: casper
+hera:
+  scheduler: slurm
+  profiles:
+    standard:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "01:00:00"
+      partition: batch
+    transfer:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "02:00:00"
+      partition: service
+    high-mem:
+      nodes: 1
+      ntasks: 4
+      mem: 64G
+      time: "04:00:00"
+      partition: batch
+jet:
+  scheduler: slurm
+  profiles:
+    standard:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "01:00:00"
+      partition: batch
+    transfer:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "02:00:00"
+      partition: service
+    high-mem:
+      nodes: 1
+      ntasks: 4
+      mem: 64G
+      time: "04:00:00"
+      partition: batch
+gaea:
+  scheduler: slurm
+  profiles:
+    standard:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "01:00:00"
+      partition: batch
+    transfer:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "02:00:00"
+      partition: dtn
+    high-mem:
+      nodes: 1
+      ntasks: 4
+      mem: 64G
+      time: "04:00:00"
+      partition: batch
+orion:
+  scheduler: slurm
+  profiles:
+    standard:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "01:00:00"
+      partition: batch
+    transfer:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "02:00:00"
+      partition: service
+    high-mem:
+      nodes: 1
+      ntasks: 4
+      mem: 64G
+      time: "04:00:00"
+      partition: batch
+msu:
+  alias: orion
+ursa:
+  scheduler: slurm
+  profiles:
+    standard:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "01:00:00"
+      partition: u1-compute
+    transfer:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "02:00:00"
+      partition: u1-service
+    high-mem:
+      nodes: 1
+      ntasks: 4
+      mem: 64G
+      time: "04:00:00"
+      partition: u1-compute
+hercules:
+  scheduler: slurm
+  profiles:
+    standard:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "01:00:00"
+      partition: batch
+    transfer:
+      nodes: 1
+      ntasks: 1
+      mem: 10G
+      time: "02:00:00"
+      partition: service
+    high-mem:
+      nodes: 1
+      ntasks: 4
+      mem: 64G
+      time: "04:00:00"
+      partition: batch

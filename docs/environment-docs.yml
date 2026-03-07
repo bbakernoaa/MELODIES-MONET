@@ -8,8 +8,11 @@ dependencies:
   #
   # melodies_monet deps
   - matplotlib-base<3.9  # for pandas v1 compat
+  - jinja2
   - monet
   - monetio
+  - networkx
+  - pyyaml
   - netcdf4
   - numpy
   - pandas<2

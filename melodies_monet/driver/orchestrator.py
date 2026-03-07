@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 import networkx as nx
 import pandas as pd
 from melodies_monet.driver import analysis
@@ -17,6 +19,50 @@ class Orchestrator:
         self.ana.read_control(control_file)
         self.graph = nx.DiGraph()
         self._build_dag()
+        self._setup_dask()
+
+    def _setup_dask(self):
+        """
+        Initialize Dask client if configured.
+        Supports standard distributed Client and dask-jobqueue Clusters.
+        """
+        if self.ana.control_dict and "analysis" in self.ana.control_dict:
+            dask_config = self.ana.control_dict["analysis"].get("dask", None)
+            if not dask_config:
+                return
+
+            from dask.distributed import Client
+
+            # Check if using dask-jobqueue
+            if "jobqueue" in dask_config:
+                jq_config = dask_config["jobqueue"]
+                cluster_type = jq_config.get("type", "slurm").lower()
+                cluster_kwargs = jq_config.get("kwargs", {})
+
+                if cluster_type == "slurm":
+                    from dask_jobqueue import SLURMCluster as Cluster
+                elif cluster_type == "pbs":
+                    from dask_jobqueue import PBSCluster as Cluster
+                elif cluster_type == "lsf":
+                    from dask_jobqueue import LSFCluster as Cluster
+                else:
+                    raise ValueError(f"Unsupported jobqueue type: {cluster_type}")
+
+                self.dask_cluster = Cluster(**cluster_kwargs)
+
+                # Handle scaling
+                scale_config = jq_config.get("scale", {"jobs": 1})
+                if "adaptive" in scale_config:
+                    self.dask_cluster.adapt(**scale_config["adaptive"])
+                else:
+                    self.dask_cluster.scale(**scale_config)
+
+                self.dask_client = Client(self.dask_cluster)
+                print(f"Dask jobqueue cluster ({cluster_type}) initialized: {self.dask_client}")
+            else:
+                # Standard distributed Client (e.g., LocalCluster or existing scheduler)
+                self.dask_client = Client(**dask_config)
+                print(f"Dask client initialized: {self.dask_client}")
 
     def _build_dag(self):
         """
@@ -89,45 +135,36 @@ class Orchestrator:
             p.obj = paired_obj
             self.ana.paired[pairing_name] = p
 
-    def run(self):
+    def run(self, node=None):
         """
-        Execute the tasks in the DAG in topological order.
+        Execute the tasks in the DAG.
+        If node is specified, only that node (and its prerequisites if not in standalone) is run.
         """
-        for node in nx.topological_sort(self.graph):
-            print(f"Executing task: {node}")
+        nodes_to_run = [node] if node else nx.topological_sort(self.graph)
 
-            # Execution Check: Verify prerequisites
-            if node == "pair_data":
-                # Check if models have data loaded
-                if not self.ana.models:
-                    raise RuntimeError("Models must be opened before pairing.")
-                for label, mod in self.ana.models.items():
-                    if mod.obj is None:
-                        raise RuntimeError(f"Model data for '{label}' has not been loaded.")
+        for n in nodes_to_run:
+            print(f"Executing task: {n}")
 
-                # Check if observations have data loaded
-                if not self.ana.obs:
-                    raise RuntimeError("Observations must be opened before pairing.")
-                for label, obs in self.ana.obs.items():
-                    if obs.obj is None:
-                        raise RuntimeError(f"Observation data for '{label}' has not been loaded.")
+            # Execution Check: Verify prerequisites and handle standalone loading
+            if n == "pair_data":
+                if not self.ana.models or not self.ana.obs:
+                    print(f"Loading dependencies for {n}...")
+                    self.ana.open_models(load_files=True)
+                    self.ana.open_obs(load_files=True)
 
-            if node == "stats" or node == "plotting":
+            if n == "stats" or n == "plotting":
                 if not self.ana.paired:
-                    # Check if 'read' is enabled, which might populate paired data
-                    if self.ana.read and "paired" in self.ana.read:
-                        print(f"Reading paired data from disk for {node}...")
-                        self.ana.read_analysis()
+                    print(f"Loading paired data for {n}...")
+                    self.ana.read_analysis()
 
-                    if not self.ana.paired:
-                        # Allow continuation if gridded pairing was executed
-                        if "pair_gridded" not in self.graph.nodes:
-                             raise RuntimeError(f"Paired data must be available before {node}.")
-
-            func = self.graph.nodes[node]["func"]
-
-            # Map YAML configuration keys directly to parameters if needed
+            func = self.graph.nodes[n]["func"]
             func()
+
+            # Automatic state persistence for workflow handoff
+            if node:  # If running in standalone (workflow mode)
+                if n == "pair_data" or n == "pair_gridded":
+                    print(f"Saving paired data results from {n}...")
+                    self.ana.save_analysis()
 
 if __name__ == "__main__":
     import sys

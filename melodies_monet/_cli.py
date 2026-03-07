@@ -185,6 +185,35 @@ def run(
             an.stats()
 
 
+@app.command()
+def run_node(
+    control: str = typer.Argument(..., help="Path to the control file to use."),
+    node: str = typer.Argument(..., help="Name of the DAG node to run."),
+    debug: bool = typer.Option(
+        False, "--debug/", help="Print more messages (including full tracebacks)."
+    ),
+):
+    """Run a specific node of the MELODIES MONET Orchestrator DAG."""
+    from melodies_monet.driver.orchestrator import Orchestrator
+
+    global DEBUG
+    DEBUG = debug
+
+    typer.echo(HEADER)
+    typer.secho(f"Using control file: {control!r}", fg=INFO_COLOR)
+    typer.secho(f"Running node: {node!r}", fg=INFO_COLOR)
+
+    with _timer(f"Initializing Orchestrator and running node {node}"):
+        orch = Orchestrator(control)
+        # Check if node exists
+        if node not in orch.graph.nodes:
+            typer.secho(f"Error: node {node!r} not found in DAG", fg=ERROR_COLOR)
+            raise typer.Exit(2)
+
+        # Run the specific node (Orchestrator handles dependencies and saving)
+        orch.run(node=node)
+
+
 _DATE_FMT_NOTE = (
     "Date can be in any format accepted by `pandas.date_range()`, "
     "e.g., 'YYYY-MM-DD', or 'M/D/YYYY'. "
