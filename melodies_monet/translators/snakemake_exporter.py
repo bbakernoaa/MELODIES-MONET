@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 from jinja2 import Template
 import os
 

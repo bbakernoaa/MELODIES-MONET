@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 import networkx as nx
 import pandas as pd
 from melodies_monet.driver import analysis
