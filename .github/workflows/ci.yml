@@ -4,7 +4,6 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
   workflow_dispatch:
 
 jobs:
@@ -22,13 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python (micromamba)
-        uses: mamba-org/setup-micromamba@v1
+      - name: Set up Python (miniconda)
+        uses: conda-incubator/setup-miniconda@v3
         with:
           environment-file: docs/environment-docs.yml
-          cache-environment: true
-          create-args: >-
-            pytest
+          activate-environment: melodies-monet-docs
+          auto-activate-base: false
 
       - if: ${{ matrix.monet == 'dev' }}
         name: Install development versions of monet and monetio
@@ -41,7 +39,7 @@ jobs:
         run: |
           which python
           python -m pip list | grep monet
-          micromamba list | grep monet
+          conda list | grep monet
           python -c "import monetio; print('monetio.__version__', getattr(monetio, '__version__', '?'))"
           python -c "import monet;   print('monet.__version__',   getattr(monet, '__version__', '?'))"
 
@@ -97,11 +95,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python (micromamba)
-        uses: mamba-org/setup-micromamba@v1
+      - name: Set up Python (miniconda)
+        uses: conda-incubator/setup-miniconda@v3
         with:
           environment-file: docs/environment-docs.yml
-          cache-environment: true
+          activate-environment: melodies-monet-docs
+          auto-activate-base: false
 
       - name: linkcheck
         run: sphinx-build -b linkcheck docs docs/_build/linkcheck

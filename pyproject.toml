@@ -17,19 +17,15 @@ maintainers = [
 ]
 keywords = ["model", "verification", "air-quality", "atmosphere", "evaluation"]
 dependencies = [
-    "cartopy",
-    "matplotlib",
     "monet @ git+https://github.com/noaa-oar-arl/monet.git@develop",
     "monetio @ git+https://github.com/bbakernoaa/monetio.git@develop",
-    "monet-stats @ git+https://github.com/noaa-oar-arl/monet-stats.git@develop",
-    "monet-plots @ git+https://github.com/noaa-oar-arl/monet-plots.git@develop",
-    "netCDF4",
-    "numpy",
-    "pandas < 2.0",
-    "pyyaml",
-    "seaborn",
-    "xarray",
+    "monet-stats @ git+https://github.com/bbakernoaa/monet-stats.git",
+    "monet-plots @ git+https://github.com/bbakernoaa/monet-plots.git",
     "networkx",
+    "prefect",
+    "pyyaml",
+    "prefect-dask",
+    "dask-jobqueue",
 ]
 
 [project.optional-dependencies]
