@@ -25,6 +25,8 @@ dependencies:
     - jupytext
     - "myst-nb>=0.14"
     - nbclient
+    - pooch
+    - pytest
     - "sphinx==7.*"
     - sphinx-autobuild
     - sphinx-click

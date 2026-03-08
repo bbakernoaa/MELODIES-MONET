@@ -11,11 +11,18 @@ API
    :toctree: api/
    :recursive:
 
-   driver
    plots
    stats
    tutorial
    util
+
+.. autosummary::
+   :toctree: api/
+
+   driver.analysis
+   driver.model
+   driver.observation
+   driver.pair
 
 A typical workflow involves using an instance of :class:`driver.analysis`.
 See :doc:`the examples <examples/intro_examples>`.
