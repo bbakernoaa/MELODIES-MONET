@@ -8,28 +8,41 @@ dependencies:
   - esmpy
   - pip
   - pip:
-    # Core MM Dependencies (with requested branches)
+    # Guideline: Explicitly list all dependencies in pip section to resolve conflicts
+    - "cartopy"
+    - "matplotlib"
+    - "netcdf4"
+    - "numpy"
+    - "pandas"
+    - "pyyaml"
+    - "seaborn"
+    - "xarray"
+    - "networkx"
+    - "scipy"
+    - "jinja2"
+    - "numba"
+    - "pooch"
+    - "timezonefinder"
+    - "typer"
+    - "prefect"
+    - "prefect-dask"
+    - "dask-jobqueue"
+    # MM Core Components (Pre-install specified branches)
     - "monet @ git+https://github.com/noaa-oar-arl/monet.git@develop"
     - "monetio @ git+https://github.com/bbakernoaa/monetio.git@develop"
     - "monet-stats @ git+https://github.com/bbakernoaa/monet-stats.git@main"
     - "monet-plots @ git+https://github.com/bbakernoaa/monet-plots.git@main"
-    # Other core dependencies
-    - networkx
-    - prefect
-    - pyyaml
-    - prefect-dask
-    - dask-jobqueue
     # Docs tools
-    - ipykernel
-    - jupyterlab=4.*
-    - jupytext
+    - "ipykernel"
+    - "jupyterlab=4.*"
+    - "jupytext"
     - "myst-nb>=0.14"
-    - nbclient
+    - "nbclient"
     - "sphinx=7.*"
-    - sphinx-autobuild
-    - sphinx-click
-    - sphinx-design
-    - sphinx_rtd_theme
-    - sphinx-togglebutton
+    - "sphinx-autobuild"
+    - "sphinx-click"
+    - "sphinx-design"
+    - "sphinx_rtd_theme"
+    - "sphinx-togglebutton"
     # melodies_monet itself
-    - '-e ../'
+    - "-e ../"
