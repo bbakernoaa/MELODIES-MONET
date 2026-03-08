@@ -6,29 +6,21 @@ channels:
 dependencies:
   - python=3.11
   #
-  # Non-python / heavy dependencies
-  - cartopy
+  # melodies_monet deps (core scientific base)
   - matplotlib-base<3.9  # for pandas v1 compat
   - netcdf4
   - numpy
   - pandas<2
   - pillow<10
   #
-  # Common utilities
-  - networkx
-  - jinja2
-  - pyyaml
+  # Extras
   - numba
   - pooch
   - timezonefinder
   - typer
   - wrf-python  # for WRF-Chem reader in monetio
   #
-  # Prefect and Dask
-  - prefect
-  - dask-jobqueue
-  #
-  # Docs tools
+  # Docs
   - ipykernel
   - jupyterlab=4.*
   - jupytext
@@ -43,10 +35,5 @@ dependencies:
   #
   - pip
   - pip:
-    # Pre-install git dependencies to guide the resolver
-    - "monet @ git+https://github.com/noaa-oar-arl/monet.git@develop"
-    - "monetio @ git+https://github.com/bbakernoaa/monetio.git@develop"
-    - "monet-stats @ git+https://github.com/bbakernoaa/monet-stats.git@main"
-    - "monet-plots @ git+https://github.com/bbakernoaa/monet-plots.git@main"
-    # melodies_monet itself
+    # melodies_monet itself (this will install monet, monetio, monet-stats, monet-plots, networkx, prefect, etc. from pyproject.toml)
     - '-e ../'
