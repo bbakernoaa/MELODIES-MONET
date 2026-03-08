@@ -606,8 +606,20 @@ class analysis:
             print(f"Warning: Model {model1_label} or {model2_label} not found.")
             return
 
-        variables = list(mapping.keys())
-        paired_obj = m.combine_gridded(mod1.obj, mod2.obj, variables=variables)
+        # Prepare model 1
+        keys1 = list(mapping.keys())
+        obj1 = mod1.obj[keys1]
+
+        # Prepare model 2
+        keys2 = list(mapping.values())
+        obj2 = mod2.obj[keys2]
+
+        # Rename variables in model 2 to match model 1 for alignment
+        rename_dict = {v2: v1 for v1, v2 in mapping.items() if v1 != v2}
+        if rename_dict:
+            obj2 = obj2.rename(rename_dict)
+
+        paired_obj = m.combine_gridded(obj1, obj2)
 
         p = pair()
         p.model = model1_label
