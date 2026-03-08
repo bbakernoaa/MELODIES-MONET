@@ -27,7 +27,6 @@ jobs:
           environment-file: docs/environment-docs.yml
           activate-environment: melodies-monet-docs
           auto-activate-base: false
-          use-only-tar-bz2: true
 
       - if: ${{ matrix.monet == 'dev' }}
         name: Install development versions of monet and monetio
@@ -102,7 +101,6 @@ jobs:
           environment-file: docs/environment-docs.yml
           activate-environment: melodies-monet-docs
           auto-activate-base: false
-          use-only-tar-bz2: true
 
       - name: linkcheck
         run: sphinx-build -b linkcheck docs docs/_build/linkcheck
