@@ -1,0 +1,82 @@
+# Unified Control File Example
+# This example demonstrates the new 'pairings' section for various comparison types.
+
+analysis:
+  start_time: '2019-08-02-12:00:00'
+  end_time: '2019-08-03-12:00:00'
+  output_dir: './output'
+  debug: True
+
+model:
+  cmaq_v53:
+    mod_type: 'cmaq'
+    files: './data/model/cmaq_output.nc'
+    # mapping is now optional if using the 'pairings' section
+    variables:
+      O3: { unit_scale: 1e9, unit_scale_method: '*' } # ppm to ppb
+  wrfchem_v4:
+    mod_type: 'wrfchem'
+    files: './data/model/wrfout_d01.nc'
+    variables:
+      o3: { unit_scale: 1.0, unit_scale_method: '*' }
+
+obs:
+  airnow:
+    obs_type: pt_sfc
+    filename: './data/obs/airnow_201908.nc'
+    variables:
+      OZONE: { ylabel_plot: 'Ozone (ppb)' }
+  tropomi_no2:
+    obs_type: sat_swath_clm
+    sat_type: tropomi_l2_no2
+    filename: './data/sat/tropomi_no2_20190802.nc'
+    variables:
+      nitrogendioxide_tropospheric_column: { ylabel_plot: 'Tropospheric NO2 Column' }
+
+pairings:
+  # Model to Model Comparison (Gridded)
+  cmaq_vs_wrfchem:
+    data1: cmaq_v53
+    data2: wrfchem_v4
+    data1_type: model
+    data2_type: model
+    mapping:
+      O3: o3
+
+  # Model to Observation Comparison (Point-to-Grid)
+  cmaq_vs_airnow:
+    data1: cmaq_v53
+    data2: airnow
+    data1_type: model
+    data2_type: obs
+    mapping:
+      O3: OZONE
+
+  # Model to Satellite Comparison
+  cmaq_vs_tropomi:
+    data1: cmaq_v53
+    data2: tropomi_no2
+    data1_type: model
+    data2_type: obs
+    mapping:
+      NO2: nitrogendioxide_tropospheric_column
+
+stats:
+  stat_list: ['MB', 'RMSE', 'R2']
+  domain_type: ['all']
+  domain_name: ['CONUS']
+  data: ['cmaq_vs_airnow', 'cmaq_vs_wrfchem']
+
+plots:
+  timeseries_ozone:
+    type: 'timeseries'
+    domain_type: ['all']
+    domain_name: ['CONUS']
+    data: ['cmaq_vs_airnow']
+    data_proc: { ts_select_time: 'time', rem_obs_nan: True }
+  spatial_bias_model_comp:
+    type: 'spatial_bias'
+    domain_type: ['all']
+    domain_name: ['CONUS']
+    data: ['cmaq_vs_wrfchem']
+    data_proc: { rem_obs_nan: True, set_axis: False }
