@@ -23,9 +23,8 @@ def run_mm_node(node_name, func, *args, **kwargs):
     # For tasks that could benefit from spawning their own sub-tasks on the cluster
     # (e.g., heavy pairing or stats calculation), use the worker_client context.
     try:
-        with worker_client() as client:
+        with worker_client():
             logger.info(f"Task {node_name} connected to cluster via worker_client.")
-            # Note: client is passed implicitly via global state for dask operations
             result = func(*args, **kwargs)
     except (ValueError, RuntimeError):
         # Fallback if not running within a dask worker context
