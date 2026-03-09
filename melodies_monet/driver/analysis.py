@@ -227,6 +227,7 @@ class analysis:
             # We'll use a unique identifier for this stats block to ensure they stay grouped in stats()
             # if they were defined together in the legacy YAML.
             import uuid
+
             stats_block_id = str(uuid.uuid4())
 
             for p_label in pair_labels:
