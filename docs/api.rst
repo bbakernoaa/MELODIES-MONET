@@ -18,6 +18,7 @@ API
 
 .. autosummary::
    :toctree: api/
+   :no-index:
 
    driver.analysis
    driver.model

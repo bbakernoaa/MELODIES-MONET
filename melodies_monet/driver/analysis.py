@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-import monet as m
+import monet
 import os
 import xarray as xr
 import pandas as pd
@@ -540,10 +540,13 @@ class analysis:
         -------
         None
         """
-        print("1, in pair data")
+        if self.debug:
+            print("MELODIES-MONET: Starting data pairing...")
 
         # Support for new 'pairings' section
         if "pairings" in self.control_dict:
+            if self.debug:
+                print("MELODIES-MONET: Processing 'pairings' section...")
             for pair_label, config in self.control_dict["pairings"].items():
                 data1_label = config.get("data1")
                 data2_label = config.get("data2")
@@ -596,8 +599,8 @@ class analysis:
 
     def _pair_model_model(self, model1_label, model2_label, mapping, pair_label, config):
         """Pair two models together (gridded-to-gridded)."""
-        import monet as m
-        print(f"Pairing model {model1_label} and model {model2_label}...")
+        if self.debug:
+            print(f"Pairing model {model1_label} and model {model2_label}...")
 
         mod1 = self.models.get(model1_label)
         mod2 = self.models.get(model2_label)
@@ -619,7 +622,7 @@ class analysis:
         if rename_dict:
             obj2 = obj2.rename(rename_dict)
 
-        paired_obj = m.combine_gridded(obj1, obj2)
+        paired_obj = monet.combine_gridded(obj1, obj2)
 
         p = pair()
         p.model = model1_label
@@ -673,6 +676,8 @@ class analysis:
                 obs.obj, radius_of_influence=mod.radius_of_influence, suffix=mod.label
             )
             if self.debug:
+                print(f"Paired data columns: {paired_data.columns}")
+            if self.debug:
                 print("After pairing: ", paired_data)
             # this outputs as a pandas dataframe.  Convert this to xarray obj
             p = pair()
@@ -713,7 +718,7 @@ class analysis:
             )
 
             # Nearest neighbor approach to find closest grid cell to each point.
-            ds_model = m.util.combinetool.combine_da_to_da(
+            ds_model = monet.util.combinetool.combine_da_to_da(
                 model_obj, new_ds_obs, merge=False
             )
             # Interpolate based on time in the observations
@@ -800,7 +805,7 @@ class analysis:
                 .set_coords(["time_obs", "pressure_obs"])
             )
             # Nearest neighbor approach to find closest grid cell to each point.
-            ds_model = m.util.combinetool.combine_da_to_da(
+            ds_model = monet.util.combinetool.combine_da_to_da(
                 model_obj, new_ds_obs, merge=False
             )
             # Interpolate based on time in the observations
@@ -851,7 +856,7 @@ class analysis:
             )
 
             # Nearest neighbor approach to find closest grid cell to each point.
-            ds_model = m.util.combinetool.combine_da_to_da(
+            ds_model = monet.util.combinetool.combine_da_to_da(
                 model_obj, new_ds_obs, merge=False
             )
             # Interpolate based on time in the observations
@@ -1741,7 +1746,7 @@ class analysis:
                             )
 
                             # Nearest neighbor approach to find closest grid cell to each point
-                            ds_model = m.util.combinetool.combine_da_to_da(
+                            ds_model = monet.util.combinetool.combine_da_to_da(
                                 model_obj, new_ds_obs, merge=False
                             )
 

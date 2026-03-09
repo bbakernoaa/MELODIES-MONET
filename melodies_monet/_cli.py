@@ -421,6 +421,9 @@ def get_airnow(
                 daily=daily,
             )
 
+    if hasattr(df, "to_dataframe"):
+        df = df.to_dataframe().reset_index()
+
     with _timer("Forming xarray Dataset"):
         df = df.dropna(subset=["latitude", "longitude"])
 
@@ -465,8 +468,15 @@ def get_airnow(
         # Extract units info so we can add as attrs
         unit_suff = "_unit"
         unit_cols = [n for n in df.columns if n.endswith(unit_suff)]
-        assert (df[unit_cols].nunique() == 1).all()
-        units = df[unit_cols][~df[unit_cols].isnull()].iloc[0].to_dict()
+        if unit_cols:
+            assert (df[unit_cols].nunique() == 1).all()
+            units_df = df[unit_cols].dropna(how="all")
+            if not units_df.empty:
+                units = units_df.iloc[0].to_dict()
+            else:
+                units = {}
+        else:
+            units = {}
 
         cols = [n for n in df.columns if not n.endswith(unit_suff)]
         ds = (
@@ -613,6 +623,9 @@ def get_ish_lite(
                 verbose=verbose,
             )
 
+    if hasattr(df, "to_dataframe"):
+        df = df.to_dataframe().reset_index()
+
     with _timer("Computing UTC offset for selected ISH-Lite sites"):
         import datetime
 
@@ -666,11 +679,12 @@ def get_ish_lite(
             "begin",
             "end",
         ]
+        site_vns = [vn for vn in site_vns if vn in df.columns]
         # NOTE: time_local not included since it varies in time as well as by site
 
         ds_site = (
             df[site_vns]
-            .groupby("siteid")
+            .groupby("siteid", sort=False)
             .first()
             .to_xarray()
             .swap_dims(siteid="x")
@@ -685,9 +699,9 @@ def get_ish_lite(
             .set_index(["time", "siteid"])
             .to_xarray()
             .swap_dims(siteid="x")
-            .drop_vars(site_vns)
+            .drop_vars([vn for vn in site_vns if vn in df.columns])
             .merge(ds_site)
-            .set_coords(["latitude", "longitude"])
+            .set_coords([vn for vn in ["latitude", "longitude"] if vn in site_vns])
             .assign(x=range(ds_site.sizes["x"]))
         )
 
@@ -706,6 +720,22 @@ def get_ish_lite(
             .expand_dims("y")
             .transpose("time", "y", "x")
         )
+
+        # Filter out objects that cause issues with cftime encoding
+        import numpy as np
+        for vn in list(ds.data_vars) + list(ds.coords):
+            if ds[vn].dtype == object:
+                try:
+                    ds[vn] = ds[vn].astype(str)
+                except:
+                    ds = ds.drop_vars(vn)
+            elif ds[vn].dtype.kind == 'M': # Datetime
+                 try:
+                     bad_mask = (ds[vn] < np.datetime64('1900-01-01')) | (ds[vn] > np.datetime64('2100-01-01'))
+                     if bad_mask.any():
+                         ds[vn] = ds[vn].astype(str)
+                 except:
+                     ds[vn] = ds[vn].astype(str)
 
     with _timer("Writing netCDF file"):
         if compress:
@@ -830,6 +860,9 @@ def get_ish(
                 verbose=verbose,
             )
 
+    if hasattr(df, "to_dataframe"):
+        df = df.to_dataframe().reset_index()
+
     with _timer("Computing UTC offset for selected ISH sites"):
         import datetime
 
@@ -888,8 +921,8 @@ def get_ish(
         # NOTE: time_local not included since it varies in time as well as by site
 
         ds_site = (
-            df[site_vns]
-            .groupby("siteid")
+            df[[vn for vn in site_vns if vn in df.columns]]
+            .groupby("siteid", sort=False)
             .first()
             .to_xarray()
             .swap_dims(siteid="x")
@@ -904,9 +937,9 @@ def get_ish(
             .set_index(["time", "siteid"])
             .to_xarray()
             .swap_dims(siteid="x")
-            .drop_vars(site_vns)
+            .drop_vars([vn for vn in site_vns if vn in df.columns])
             .merge(ds_site)
-            .set_coords(["latitude", "longitude"])
+            .set_coords([vn for vn in ["latitude", "longitude"] if vn in site_vns])
             .assign(x=range(ds_site.sizes["x"]))
         )
 
@@ -925,6 +958,22 @@ def get_ish(
             .expand_dims("y")
             .transpose("time", "y", "x")
         )
+
+        # Filter out objects that cause issues with cftime encoding
+        import numpy as np
+        for vn in list(ds.data_vars) + list(ds.coords):
+            if ds[vn].dtype == object:
+                try:
+                    ds[vn] = ds[vn].astype(str)
+                except:
+                    ds = ds.drop_vars(vn)
+            elif ds[vn].dtype.kind == 'M': # Datetime
+                 try:
+                     bad_mask = (ds[vn] < np.datetime64('1900-01-01')) | (ds[vn] > np.datetime64('2100-01-01'))
+                     if bad_mask.any():
+                         ds[vn] = ds[vn].astype(str)
+                 except:
+                     ds[vn] = ds[vn].astype(str)
 
     with _timer("Writing netCDF file"):
         if compress:
@@ -1100,6 +1149,9 @@ def get_aqs(
         if daily:
             meta = meta.drop(columns=["utcoffset"])
 
+    if hasattr(df, "to_dataframe"):
+        df = df.to_dataframe().reset_index()
+
     with _timer("Forming xarray Dataset"):
         # Select requested time period (older monetio doesn't do this)
         df = df[df.time.between(dates[0], dates[-1], inclusive="both")]
@@ -1174,8 +1226,15 @@ def get_aqs(
         # Extract units info so we can add as attrs
         unit_suff = "_unit"
         unit_cols = [n for n in df.columns if n.endswith(unit_suff)]
-        assert (df[unit_cols].nunique() == 1).all()
-        units = df[unit_cols][~df[unit_cols].isnull()].iloc[0].to_dict()
+        if unit_cols:
+            assert (df[unit_cols].nunique() == 1).all()
+            units_df = df[unit_cols].dropna(how="all")
+            if not units_df.empty:
+                units = units_df.iloc[0].to_dict()
+            else:
+                units = {}
+        else:
+            units = {}
 
         cols = [n for n in df.columns if not n.endswith(unit_suff)]
         ds = (
@@ -1211,6 +1270,27 @@ def get_aqs(
         # Can't have `/` in variable name for netCDF
         to_rename = [vn for vn in ds.data_vars if "/" in vn]
         ds = ds.rename_vars({vn: vn.replace("/", "_") for vn in to_rename})
+
+        # Filter out objects that cause issues with cftime encoding
+        for vn in list(ds.data_vars) + list(ds.coords):
+            if ds[vn].dtype == object:
+                # If it's a string, it's fine, but some objects aren't
+                try:
+                    ds[vn] = ds[vn].astype(str)
+                except:
+                    ds = ds.drop_vars(vn)
+            elif ds[vn].dtype.kind == 'M': # Datetime
+                 # Ensure no weird timestamps that cftime can't handle
+                 # These often appear as very old dates from bad metadata
+                 # Check for both extremely old and extremely new (often caused by overflow/garbage)
+                 # Use pd.to_datetime to avoid issues with DataArray comparisons if needed
+                 try:
+                     bad_mask = (ds[vn] < np.datetime64('1900-01-01')) | (ds[vn] > np.datetime64('2100-01-01'))
+                     if bad_mask.any():
+                         ds[vn] = ds[vn].astype(str)
+                 except:
+                     # If comparison fails, it might be due to NaT or other issues, try converting to str
+                     ds[vn] = ds[vn].astype(str)
 
     with _timer("Writing netCDF file"):
         if compress:
@@ -1484,7 +1564,7 @@ def get_openaq(
             .swap_dims(siteid="x")
             .merge(ds_site)
             .set_coords(["latitude", "longitude"])
-            .assign(x=range(ds_site.dims["x"]))
+            .assign(x=range(ds_site.sizes["x"]))
         )
 
         # Rename species vars and add units as attr

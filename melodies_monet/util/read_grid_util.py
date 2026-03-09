@@ -3,7 +3,10 @@
 import os
 import logging
 import xarray as xr
-from monetio.sat._gridded_eos_mm import read_gridded_eos
+try:
+    from monetio.sat._gridded_eos_mm import read_gridded_eos
+except ImportError:
+    read_gridded_eos = None
 
 from melodies_monet.util.analysis_util import fill_date_template, find_file
 
@@ -79,6 +82,8 @@ def read_grid_obs(config, obs_vars, date_str, obs=None):
 
         if data_format == 'gridded_eos':
             if file_extension == '.hdf':
+                if read_gridded_eos is None:
+                    raise ImportError("read_gridded_eos is not available in monetio. Check your monetio version.")
                 ds_obs = read_gridded_eos(
                     filename, obs_vars[obs_name])
                 filename_nc = filename.replace('.hdf', '.nc')
