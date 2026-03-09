@@ -37,59 +37,19 @@ class Orchestrator:
         self.graph.add_edge("pair_data", "stats")
         self.graph.add_edge("pair_data", "plotting")
 
-        # Support for gridded-to-gridded pairing (e.g. models-to-models or sat-to-models)
-        if self.ana.control_dict and "gridded_pairing" in self.ana.control_dict:
-            self.graph.add_node("pair_gridded", func=self._pair_gridded)
-            self.graph.add_edge("open_models", "pair_gridded")
-            self.graph.add_edge("open_obs", "pair_gridded")
-            self.graph.add_edge("pair_gridded", "stats")
-            self.graph.add_edge("pair_gridded", "plotting")
+        # Support for gridded-to-gridded pairing (legacy gridded_pairing or new pairings)
+        has_gridded = self.ana.control_dict and "gridded_pairing" in self.ana.control_dict
+        if not has_gridded and self.ana.control_dict and "pairings" in self.ana.control_dict:
+            for pair_label, config in self.ana.control_dict["pairings"].items():
+                if config.get("data1_type") == "model" and config.get("data2_type") == "model":
+                    has_gridded = True
+                    break
 
-    def _pair_gridded(self):
-        """
-        Implementation for gridded-to-gridded pairing.
-        Supports model-to-model and gridded satellite-to-model comparisons.
-        Uses MONET's regridding capabilities.
-        """
-        import monet as m
-
-        print("Executing gridded pairing...")
-        gridded_pairing_config = self.ana.control_dict.get("gridded_pairing", {})
-        for pairing_name, config in gridded_pairing_config.items():
-            data1_label = config.get("data1")
-            data2_label = config.get("data2")
-            data1_type = config.get("data1_type", "model")  # 'model' or 'obs'
-            data2_type = config.get("data2_type", "model")  # 'model' or 'obs'
-            variables = config.get("variables", "all")
-
-            # Resolve data1
-            if data1_type == "model":
-                obj1 = self.ana.models.get(data1_label)
-            else:
-                obj1 = self.ana.obs.get(data1_label)
-
-            # Resolve data2
-            if data2_type == "model":
-                obj2 = self.ana.models.get(data2_label)
-            else:
-                obj2 = self.ana.obs.get(data2_label)
-
-            if obj1 is None or obj2 is None:
-                print(f"Warning: Data source {data1_label} or {data2_label} not found.")
-                continue
-
-            print(f"Pairing {data1_label} and {data2_label}...")
-            # Use MONET to combine gridded datasets.
-            # This delegates to MONET's core pairing logic for gridded data (regidding/alignment).
-            paired_obj = m.combine_gridded(obj1.obj, obj2.obj, variables=variables)
-
-            from melodies_monet.driver.pair import pair
-
-            p = pair()
-            p.model = data1_label
-            p.obs = data2_label
-            p.obj = paired_obj
-            self.ana.paired[pairing_name] = p
+        if has_gridded:
+            # We don't need a separate node anymore as pair_data handles it,
+            # but we keep the logic here for backward compatibility or explicit gridded step if needed.
+            # Actually, it's better to unify it in pair_data.
+            pass
 
     def run(self):
         """
@@ -102,14 +62,14 @@ class Orchestrator:
             if node == "pair_data":
                 # Check if models have data loaded
                 if not self.ana.models:
-                    raise RuntimeError("Models must be opened before pairing.")
+                    print("Warning: No models defined.")
                 for label, mod in self.ana.models.items():
                     if mod.obj is None:
                         raise RuntimeError(f"Model data for '{label}' has not been loaded.")
 
                 # Check if observations have data loaded
                 if not self.ana.obs:
-                    raise RuntimeError("Observations must be opened before pairing.")
+                    print("Warning: No observations defined.")
                 for label, obs in self.ana.obs.items():
                     if obs.obj is None:
                         raise RuntimeError(f"Observation data for '{label}' has not been loaded.")
@@ -122,9 +82,7 @@ class Orchestrator:
                         self.ana.read_analysis()
 
                     if not self.ana.paired:
-                        # Allow continuation if gridded pairing was executed
-                        if "pair_gridded" not in self.graph.nodes:
-                             raise RuntimeError(f"Paired data must be available before {node}.")
+                        raise RuntimeError(f"Paired data must be available before {node}.")
 
             func = self.graph.nodes[node]["func"]
 
