@@ -38,7 +38,12 @@ class Orchestrator:
         self.graph.add_edge("pair_data", "plotting")
 
         # Support for gridded-to-gridded pairing (e.g. models-to-models or sat-to-models)
-        if self.ana.control_dict and "gridded_pairing" in self.ana.control_dict:
+        # Check evaluations for is_gridded
+        has_gridded = any(
+            self.ana.control_dict.get("evaluations", {}).get(e, {}).get("is_gridded", False)
+            for e in self.ana.control_dict.get("evaluations", {})
+        )
+        if has_gridded:
             self.graph.add_node("pair_gridded", func=self._pair_gridded)
             self.graph.add_edge("open_models", "pair_gridded")
             self.graph.add_edge("open_obs", "pair_gridded")
@@ -54,8 +59,10 @@ class Orchestrator:
         import monet as m
 
         print("Executing gridded pairing...")
-        gridded_pairing_config = self.ana.control_dict.get("gridded_pairing", {})
-        for pairing_name, config in gridded_pairing_config.items():
+        evaluations = self.ana.control_dict.get("evaluations", {})
+        for eval_label, config in evaluations.items():
+            if not config.get("is_gridded", False):
+                continue
             data1_label = config.get("data1")
             data2_label = config.get("data2")
             data1_type = config.get("data1_type", "model")  # 'model' or 'obs'
@@ -89,7 +96,7 @@ class Orchestrator:
             p.model = data1_label
             p.obs = data2_label
             p.obj = paired_obj
-            self.ana.paired[pairing_name] = p
+            self.ana.paired[eval_label] = p
 
     def run(self):
         """

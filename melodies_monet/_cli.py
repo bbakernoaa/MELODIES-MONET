@@ -176,11 +176,13 @@ def run(
         with _timer("Saving paired datasets"):
             an.save_analysis()
 
-    if an.control_dict.get("plots") is not None:
+    if an.control_dict.get("plotting"):
         with _timer("Plotting and saving the figures"), _ignore_pandas_numeric_only_futurewarning():
             an.plotting()
 
-    if an.control_dict.get("stats") is not None:
+    # Check if any evaluation has stats defined
+    has_stats = any("stats" in e_cfg for e_cfg in an.control_dict.get("evaluations", {}).values())
+    if has_stats:
         with _timer("Computing and saving statistics"), _ignore_pandas_numeric_only_futurewarning():
             an.stats()
 

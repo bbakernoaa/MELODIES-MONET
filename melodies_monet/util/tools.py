@@ -451,8 +451,8 @@ def loop_pairing(control,file_pairs_yaml='',file_pairs={},save_types=['paired'])
         an.control=control
         an.read_control()
     
-        for model in an.control_dict['model']:
-            an.control_dict['model'][model]['files'] = file_pairs[file]['model'][model]
+        for model in an.control_dict['models']:
+            an.control_dict['models'][model]['files'] = file_pairs[file]['model'][model]
         for obs in an.control_dict['obs']:
             an.control_dict['obs'][obs]['filename'] = file_pairs[file]['obs'][obs]
         
