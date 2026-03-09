@@ -245,6 +245,9 @@ class analysis:
                     new_dict["evaluations"][p_label]["stats"]["_group_id"] = stats_block_id
 
         self.control_dict = new_dict
+        # Backward compatibility: aliases for common keys
+        self.control_dict["model"] = self.control_dict["models"]
+        self.control_dict["plots"] = self.control_dict["plotting"]
 
     def save_analysis(self):
         """Save all analysis attributes listed in analysis section of input yaml file.

@@ -19,6 +19,8 @@ dependencies:
     - pyyaml
     - prefect-dask
     - dask-jobqueue
+    - pytest
+    - pooch
     # Docs tools
     - ipykernel
     - "jupyterlab==4.*"
