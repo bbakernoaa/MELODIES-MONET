@@ -246,6 +246,7 @@ def get_aeronet(
     import monetio as mio
     import numpy as np
     import pandas as pd
+    import xarray as xr
 
     from melodies_monet.util.write_util import write_ncf
 
@@ -289,6 +290,8 @@ def get_aeronet(
                 n_procs=num_workers,
                 verbose=1 if verbose else 0,
             )
+            if isinstance(df, xr.Dataset):
+                df = df.to_dataframe().reset_index()
         except ValueError:
             if daily and interp_to is not None:
                 typer.echo("Note that using interp with the daily product requires monetio >0.2.2")
@@ -304,7 +307,6 @@ def get_aeronet(
 
     with _timer("Forming xarray Dataset"):
         df = df.dropna(subset=["latitude", "longitude"])
-
         # Site-specific variables should only vary in x.
         # Here we take the first non-NaN value (should all be same).
         ds_site = (
@@ -372,6 +374,7 @@ def get_airnow(
 
     import monetio as mio
     import pandas as pd
+    import xarray as xr
 
     from melodies_monet.util.write_util import write_ncf
 
@@ -422,10 +425,11 @@ def get_airnow(
                 n_procs=num_workers,
                 daily=daily,
             )
+            if isinstance(df, xr.Dataset):
+                df = df.to_dataframe().reset_index()
 
     with _timer("Forming xarray Dataset"):
         df = df.dropna(subset=["latitude", "longitude"])
-
         site_vns = [
             "site",
             "siteid",
@@ -559,6 +563,7 @@ def get_ish_lite(
 
     import monetio as mio
     import pandas as pd
+    import xarray as xr
 
     from melodies_monet.util.write_util import write_ncf
 
@@ -614,6 +619,8 @@ def get_ish_lite(
                 n_procs=num_workers,
                 verbose=verbose,
             )
+            if isinstance(df, xr.Dataset):
+                df = df.to_dataframe().reset_index()
 
     with _timer("Computing UTC offset for selected ISH-Lite sites"):
         import datetime
@@ -775,6 +782,7 @@ def get_ish(
 
     import monetio as mio
     import pandas as pd
+    import xarray as xr
 
     from melodies_monet.util.write_util import write_ncf
 
@@ -831,6 +839,8 @@ def get_ish(
                 n_procs=num_workers,
                 verbose=verbose,
             )
+            if isinstance(df, xr.Dataset):
+                df = df.to_dataframe().reset_index()
 
     with _timer("Computing UTC offset for selected ISH sites"):
         import datetime
@@ -860,8 +870,10 @@ def get_ish(
 
 
     with _timer("Forming xarray Dataset"):
+        df = df.dropna(subset=["latitude", "longitude"])
+
         df = (
-            df.dropna(subset=["latitude", "longitude"])
+            df
             .rename(
                 columns={
                     "station name": "station_name",
@@ -986,6 +998,7 @@ def get_aqs(
 
     import monetio as mio
     import pandas as pd
+    import xarray as xr
 
     from melodies_monet.util.write_util import write_ncf
 
@@ -1043,6 +1056,8 @@ def get_aqs(
                     n_procs=num_workers,
                     meta=False,  # TODO: enable or add option once monetio fixes released
                 )
+                if isinstance(df, xr.Dataset):
+                    df = df.to_dataframe().reset_index()
             except KeyError as e:
                 if daily and str(e) == "'time'":
                     typer.echo("Note that the daily option currently requires monetio >0.2.5")
@@ -1104,7 +1119,7 @@ def get_aqs(
 
     with _timer("Forming xarray Dataset"):
         # Select requested time period (older monetio doesn't do this)
-        df = df[df.time.between(dates[0], dates[-1], inclusive="both")]
+        df = df[(df.time >= dates[0]) & (df.time <= dates[-1])]
 
         df = df.dropna(subset=["latitude", "longitude"])
 
@@ -1280,6 +1295,7 @@ def get_openaq(
 
     import monetio as mio
     import pandas as pd
+    import xarray as xr
 
     from melodies_monet.util.write_util import write_ncf
 
@@ -1361,6 +1377,8 @@ def get_openaq(
                     n_procs=num_workers,
                     # wide_fmt=True,
                 )
+            if isinstance(df, xr.Dataset):
+                df = df.to_dataframe().reset_index()
 
             # Address time-wise non-unique site IDs
             # Some (most?) are just slightly different lat/lon
@@ -1391,6 +1409,8 @@ def get_openaq(
                 dates,
                 **kws,
             )
+            if isinstance(df, xr.Dataset):
+                df = df.to_dataframe().reset_index()
 
             dupes = df[df.duplicated(["time", "siteid"], keep=False)]
             if not dupes.empty:

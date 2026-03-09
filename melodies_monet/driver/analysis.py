@@ -100,22 +100,29 @@ class analysis:
 
         self._migrate_control_dict()
 
-        # set analysis time
-        if "start_time" in self.control_dict["analysis"].keys():
-            self.start_time = pd.Timestamp(self.control_dict["analysis"]["start_time"])
-        if "end_time" in self.control_dict["analysis"].keys():
-            self.end_time = pd.Timestamp(self.control_dict["analysis"]["end_time"])
-        if "output_dir" in self.control_dict["analysis"].keys():
-            self.output_dir = os.path.expandvars(self.control_dict["analysis"]["output_dir"])
+        # set analysis time and global attributes
+        analysis_cfg = self.control_dict["analysis"]
+        if "start_time" in analysis_cfg:
+            self.start_time = pd.Timestamp(analysis_cfg["start_time"])
+        if "end_time" in analysis_cfg:
+            self.end_time = pd.Timestamp(analysis_cfg["end_time"])
+        if "output_dir" in analysis_cfg:
+            self.output_dir = os.path.expandvars(analysis_cfg["output_dir"])
             if not isinstance(self.output_dir, str) or not self.output_dir:
                 raise ValueError(
                     "output_dir must be a non-empty valid path string. "
-                    f"Got: {self.control_dict['analysis']['output_dir']!r}"
+                    f"Got: {analysis_cfg['output_dir']!r}"
                 )
         else:
             raise Exception(
                 "output_dir was not specified and is required. Please set analysis.output_dir in the control file."
             )
+
+        # Assign other migrated attributes
+        self.regrid = analysis_cfg.get("regrid", self.regrid)
+        self.target_grid = analysis_cfg.get("target_grid", self.target_grid)
+        self.obs_grid = analysis_cfg.get("obs_grid", self.obs_grid)
+        self.pairing_kwargs = analysis_cfg.get("pairing_kwargs", self.pairing_kwargs)
         if "output_dir_save" in self.control_dict["analysis"].keys():
             self.output_dir_save = os.path.expandvars(
                 self.control_dict["analysis"]["output_dir_save"]
@@ -372,60 +379,60 @@ class analysis:
             # open each model
             for mod in self.control_dict["models"]:
                 # create a new model instance
-                m = model()
-                # Backwards compatibility: populate m.mapping for model.py
-                m.mapping = {}
+                mod_inst = model()
+                # Backwards compatibility: populate mod_inst.mapping for model.py
+                mod_inst.mapping = {}
                 for eval_cfg in self.control_dict.get("evaluations", {}).values():
                     if eval_cfg.get("model") == mod:
                         obs_label = eval_cfg.get("obs")
                         if obs_label:
-                            m.mapping[obs_label] = eval_cfg.get("mapping")
+                            mod_inst.mapping[obs_label] = eval_cfg.get("mapping")
 
                 # this is the model type (ie cmaq, rapchem, gsdchem etc)
-                m.model = self.control_dict["models"][mod]["mod_type"]
+                mod_inst.model = self.control_dict["models"][mod]["mod_type"]
                 # set the model label in the dictionary and model class instance
                 if "is_global" in self.control_dict["models"][mod].keys():
-                    m.is_global = self.control_dict["models"][mod]["is_global"]
+                    mod_inst.is_global = self.control_dict["models"][mod]["is_global"]
                 if "radius_of_influence" in self.control_dict["models"][mod].keys():
-                    m.radius_of_influence = self.control_dict["models"][mod]["radius_of_influence"]
+                    mod_inst.radius_of_influence = self.control_dict["models"][mod]["radius_of_influence"]
                 else:
-                    m.radius_of_influence = 1e6
+                    mod_inst.radius_of_influence = 1e6
 
                 if "mod_kwargs" in self.control_dict["models"][mod].keys():
-                    m.mod_kwargs = self.control_dict["models"][mod]["mod_kwargs"]
-                m.label = mod
+                    mod_inst.mod_kwargs = self.control_dict["models"][mod]["mod_kwargs"]
+                mod_inst.label = mod
                 # create file string (note this can include hot strings)
                 if isinstance(self.control_dict['models'][mod]['files'], list):
-                    m.file_str = [
+                    mod_inst.file_str = [
                         os.path.expandvars(f) for f in self.control_dict['models'][mod]['files']
                     ]
                 else:
-                    m.file_str = os.path.expandvars(self.control_dict['models'][mod]['files'])
+                    mod_inst.file_str = os.path.expandvars(self.control_dict['models'][mod]['files'])
                 if "files_vert" in self.control_dict["models"][mod].keys():
-                    m.file_vert_str = os.path.expandvars(
+                    mod_inst.file_vert_str = os.path.expandvars(
                         self.control_dict["models"][mod]["files_vert"]
                     )
                 if "files_surf" in self.control_dict["models"][mod].keys():
-                    m.file_surf_str = os.path.expandvars(
+                    mod_inst.file_surf_str = os.path.expandvars(
                         self.control_dict["models"][mod]["files_surf"]
                     )
                 if "files_pm25" in self.control_dict["models"][mod].keys():
-                    m.file_pm25_str = os.path.expandvars(
+                    mod_inst.file_pm25_str = os.path.expandvars(
                         self.control_dict["models"][mod]["files_pm25"]
                     )
 
                 # add variable dict
                 if "variables" in self.control_dict["models"][mod].keys():
-                    m.variable_dict = self.control_dict["models"][mod]["variables"]
+                    mod_inst.variable_dict = self.control_dict["models"][mod]["variables"]
                 if "variable_summing" in self.control_dict["models"][mod].keys():
-                    m.variable_summing = self.control_dict["models"][mod]["variable_summing"]
+                    mod_inst.variable_summing = self.control_dict["models"][mod]["variable_summing"]
                 if "plot_kwargs" in self.control_dict["models"][mod].keys():
-                    m.plot_kwargs = self.control_dict["models"][mod]["plot_kwargs"]
+                    mod_inst.plot_kwargs = self.control_dict["models"][mod]["plot_kwargs"]
 
                 # unstructured grid check
-                if m.model in ["cesm_se"]:
+                if mod_inst.model in ["cesm_se"]:
                     if "scrip_file" in self.control_dict["models"][mod].keys():
-                        m.scrip_file = self.control_dict["models"][mod]["scrip_file"]
+                        mod_inst.scrip_file = self.control_dict["models"][mod]["scrip_file"]
                     else:
                         raise ValueError(
                             '"Scrip_file" must be provided for unstructured grid output!'
@@ -444,23 +451,23 @@ class analysis:
                     proj_in = None
                 if proj_in is not None:
                     if isinstance(proj_in, str) and proj_in.startswith("model:"):
-                        m.proj = proj_in
+                        mod_inst.proj = proj_in
                     elif isinstance(proj_in, str) and proj_in.startswith("ccrs."):
                         import cartopy.crs as ccrs
 
-                        m.proj = eval(proj_in)
+                        mod_inst.proj = eval(proj_in)
                     else:
                         import cartopy.crs as ccrs
 
                         if isinstance(proj_in, ccrs.Projection):
-                            m.proj = proj_in
+                            mod_inst.proj = proj_in
                         else:
-                            m.proj = ccrs.Projection(proj_in)
+                            mod_inst.proj = ccrs.Projection(proj_in)
 
                 # open the model
                 if load_files:
-                    m.open_model_files(time_interval=time_interval, control_dict=self.control_dict)
-                self.models[m.label] = m
+                    mod_inst.open_model_files(time_interval=time_interval, control_dict=self.control_dict)
+                self.models[mod_inst.label] = mod_inst
 
     def open_obs(self, time_interval=None, load_files=True):
         """Open all observations listed in the input yaml file and create an
@@ -1447,7 +1454,7 @@ class analysis:
 
                         # Drop NaNs if using pandas
                         if obs_type in ["pt_sfc", "aircraft", "mobile", "ground", "sonde"]:
-                            if grp_dict["data_proc"]["rem_obs_nan"] is True:
+                            if grp_dict["data_proc"].get("rem_obs_nan", False) is True:
                                 # I removed drop=True in reset_index in order to keep 'time' as a column.
                                 pairdf = pairdf_all.reset_index().dropna(subset=[modvar, obsvar])
                             else:
@@ -3079,6 +3086,26 @@ class analysis:
                                     pairdf_all.query(f"{col} {cond['oper']} {cond['value']}", inplace=True)
                             elif "filter_string" in stat_dict["data_proc"]:
                                 pairdf_all.query(stat_dict["data_proc"]["filter_string"], inplace=True)
+
+                        # Drop sites with greater than X percent NAN values
+                        if "rem_obs_by_nan_pct" in stat_dict.get("data_proc", {}):
+                            rem_cfg = stat_dict["data_proc"]["rem_obs_by_nan_pct"]
+                            grp_var = rem_cfg.get("group_var", "siteid")
+                            pct_cutoff = rem_cfg.get("pct_cutoff", 100)
+
+                            if rem_cfg.get("times") == "hourly":
+                                hourly_pairdf_all = pairdf_all.reset_index().loc[
+                                    pairdf_all.reset_index()["time"].dt.minute == 0, :
+                                ]
+                                grp_fullcount = hourly_pairdf_all[[grp_var, obsvar]].groupby(grp_var).size().rename({0: obsvar})
+                                grp_nonan_count = hourly_pairdf_all[[grp_var, obsvar]].groupby(grp_var).count()
+                            else:
+                                grp_fullcount = pairdf_all[[grp_var, obsvar]].groupby(grp_var).size().rename({0: obsvar})
+                                grp_nonan_count = pairdf_all[[grp_var, obsvar]].groupby(grp_var).count()
+
+                            grp_pct_nan = 100 - grp_nonan_count.div(grp_fullcount, axis=0) * 100
+                            grp_select = grp_pct_nan.query(f"{obsvar} < {pct_cutoff}").reset_index()
+                            pairdf_all = pairdf_all.loc[pairdf_all[grp_var].isin(grp_select[grp_var].values)]
 
                         pairdf = pairdf_all.reset_index().dropna(subset=[modvar, obsvar])
 
