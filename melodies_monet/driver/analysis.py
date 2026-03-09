@@ -212,10 +212,33 @@ class analysis:
                     eval_label = f"{obs_label}_{model_label}"
                     if eval_label not in new_dict["evaluations"]:
                         new_dict["evaluations"][eval_label] = {
-                            "model": model_label,
-                            "obs": obs_label,
+                            "reference": obs_label,
+                            "test_models": [model_label],
                             "mapping": var_mapping,
                         }
+
+        # Standardize existing evaluations block if it uses old keys
+        for eval_label, eval_cfg in new_dict["evaluations"].items():
+            if "obs" in eval_cfg and "reference" not in eval_cfg:
+                eval_cfg["reference"] = eval_cfg.pop("obs")
+            if "model" in eval_cfg and "test_models" not in eval_cfg:
+                eval_cfg["test_models"] = [eval_cfg.pop("model")]
+            elif "models" in eval_cfg and "test_models" not in eval_cfg:
+                eval_cfg["test_models"] = eval_cfg.pop("models")
+            if isinstance(eval_cfg.get("test_models"), str):
+                eval_cfg["test_models"] = [eval_cfg.get("test_models")]
+
+            # Handle variables -> mapping (assumes model_var == obs_var)
+            if "variables" in eval_cfg and "mapping" not in eval_cfg:
+                eval_cfg["mapping"] = {v: v for v in eval_cfg["variables"]}
+
+            # Handle statistics -> stats
+            if "statistics" in eval_cfg and "stats" not in eval_cfg:
+                eval_cfg["stats"] = {"stat_list": eval_cfg["statistics"]}
+                # Copy other relevant keys into stats block if they exist at eval level
+                for k in ["domain_type", "domain_name", "domain_info", "round_output", "output_table", "output_table_kwargs", "data_proc"]:
+                    if k in eval_cfg:
+                        eval_cfg["stats"][k] = eval_cfg[k]
 
         # Migrate gridded_pairing to evaluations
         if "gridded_pairing" in self.control_dict:
@@ -223,6 +246,10 @@ class analysis:
                 if pair_label not in new_dict["evaluations"]:
                     new_dict["evaluations"][pair_label] = pair_cfg.copy()
                     new_dict["evaluations"][pair_label]["is_gridded"] = True
+                    if "obs" in pair_cfg:
+                        new_dict["evaluations"][pair_label]["reference"] = pair_cfg["obs"]
+                    if "model" in pair_cfg:
+                        new_dict["evaluations"][pair_label]["test_models"] = [pair_cfg["model"]]
 
         # Migrate stats to evaluations
         if "stats" in self.control_dict:
@@ -250,11 +277,35 @@ class analysis:
                         "stats": {k: v for k, v in stats_cfg.items() if k != "data"}
                     }
                     new_dict["evaluations"][p_label]["stats"]["_group_id"] = stats_block_id
+                    # Try to infer reference/test_models from p_label if not present
+                    # Legacy p_label was usually obs_model
+                    parts = p_label.split('_')
+                    if len(parts) >= 2:
+                        if "reference" not in new_dict["evaluations"][p_label]:
+                            new_dict["evaluations"][p_label]["reference"] = parts[0]
+                        if "test_models" not in new_dict["evaluations"][p_label]:
+                            new_dict["evaluations"][p_label]["test_models"] = [parts[1]]
 
         self.control_dict = new_dict
         # Backward compatibility: aliases for common keys
         self.control_dict["model"] = self.control_dict["models"]
         self.control_dict["plots"] = self.control_dict["plotting"]
+
+    def _get_pair_labels(self, label):
+        """Expand evaluation group labels into individual pair labels.
+
+        Returns a list of labels that represent individual paired datasets.
+        If the label is an evaluation group, it returns [eval_label_model1, eval_label_model2, ...].
+        Otherwise it returns [label].
+        """
+        if label in self.control_dict.get("evaluations", {}):
+            eval_cfg = self.control_dict["evaluations"][label]
+            test_models = eval_cfg.get("test_models", [])
+            if len(test_models) > 1:
+                return [f"{label}_{mod}" for mod in test_models]
+            else:
+                return [label]
+        return [label]
 
     def save_analysis(self):
         """Save all analysis attributes listed in analysis section of input yaml file.
@@ -383,10 +434,10 @@ class analysis:
                 # Backwards compatibility: populate mod_inst.mapping for model.py
                 mod_inst.mapping = {}
                 for eval_cfg in self.control_dict.get("evaluations", {}).values():
-                    if eval_cfg.get("model") == mod:
-                        obs_label = eval_cfg.get("obs")
-                        if obs_label:
-                            mod_inst.mapping[obs_label] = eval_cfg.get("mapping")
+                    if mod in eval_cfg.get("test_models", []):
+                        ref_label = eval_cfg.get("reference")
+                        if ref_label:
+                            mod_inst.mapping[ref_label] = eval_cfg.get("mapping")
 
                 # this is the model type (ie cmaq, rapchem, gsdchem etc)
                 mod_inst.model = self.control_dict["models"][mod]["mod_type"]
@@ -634,493 +685,527 @@ class analysis:
         -------
         None
         """
-        print("1, in pair data")
         for eval_label, eval_cfg in self.control_dict["evaluations"].items():
             if eval_cfg.get("is_gridded", False):
                 continue
 
-            model_label = eval_cfg.get("model")
-            obs_label = eval_cfg.get("obs")
+            ref_label = eval_cfg.get("reference")
+            test_models = eval_cfg.get("test_models", [])
             mapping = eval_cfg.get("mapping")
+            methods = eval_cfg.get("methods", [])
 
-            if not model_label or not obs_label or not mapping:
+            if not ref_label or not test_models or not mapping:
                 continue
 
-            mod = self.models[model_label]
-            obs = self.obs[obs_label]
+            for mod_label in test_models:
+                mod = self.models[mod_label]
 
-            # get the variables to pair from the model data (ie don't pair all data)
-            keys = [key for key in mapping.keys()]
-            obs_vars = [mapping[key] for key in keys]
+                # Determine unique pair label for self.paired
+                if len(test_models) > 1:
+                    p_label = f"{eval_label}_{mod_label}"
+                else:
+                    p_label = eval_label
 
-            if mod.variable_dict is not None:
-                mod_vars = [key for key in mod.variable_dict.keys()]
-            else:
-                mod_vars = []
+                if ref_label in self.obs:
+                    obs = self.obs[ref_label]
+                    obs_type = obs.obs_type.lower()
+                elif ref_label in self.models:
+                    # Model-to-Model pairing
+                    print(f"Warning: Model-to-Model pairing ({ref_label} vs {mod_label}) is partially implemented.")
+                    obs = self.models[ref_label]
+                    obs_type = 'model'
+                    # Create a dummy observation-like object from the reference model
+                    # For now we'll skip complex M2M logic unless requested
+                else:
+                    print(f"Error: Reference {ref_label} not found in obs or models.")
+                    continue
 
-            # unstructured grid check - lon/lat variables should be explicitly added
-            # in addition to comparison variables
-            if mod.obj.attrs.get("mio_scrip_file", False):
-                lonlat_list = ["lon", "lat", "longitude", "latitude", "Longitude", "Latitude"]
-                for ll in lonlat_list:
-                    if ll in mod.obj.data_vars:
-                        keys += [ll]
+                # get the variables to pair from the model data (ie don't pair all data)
+                keys = [key for key in mapping.keys()]
+                obs_vars = [mapping[key] for key in keys]
 
-            if mod.variable_dict is not None:
-                model_obj = mod.obj[keys + mod_vars]
-            else:
-                model_obj = mod.obj[keys]
+                if mod.variable_dict is not None:
+                    mod_vars = [key for key in mod.variable_dict.keys()]
+                else:
+                    mod_vars = []
 
-            ## TODO:  add in ability for simple addition of variables from
+                # unstructured grid check - lon/lat variables should be explicitly added
+                # in addition to comparison variables
+                if mod.obj.attrs.get("mio_scrip_file", False):
+                    lonlat_list = ["lon", "lat", "longitude", "latitude", "Longitude", "Latitude"]
+                    for ll in lonlat_list:
+                        if ll in mod.obj.data_vars:
+                            keys += [ll]
 
-            # pair the data
-            # if pt_sfc (surface point network or monitor)
-            if obs.obs_type.lower() == "pt_sfc":
-                # convert this to pandas dataframe unless already done because second time paired this obs
-                if not isinstance(obs.obj, pd.DataFrame):
-                    obs.obs_to_df()
-                # Check if z dim is larger than 1. If so select, the first level as all models read through
-                # MONETIO will be reordered such that the first level is the level nearest to the surface.
-                try:
-                    if model_obj.sizes["z"] > 1:
-                        # Select only the surface values to pair with obs.
-                        model_obj = model_obj.isel(z=0).expand_dims("z", axis=1)
-                except KeyError as e:
-                    raise Exception("MONET requires an altitude dimension named 'z'") from e
-                # now combine obs with
-                paired_data = model_obj.monet.combine_point(
-                    obs.obj, radius_of_influence=mod.radius_of_influence, suffix=mod.label
-                )
-                if self.debug:
+                if mod.variable_dict is not None:
+                    model_obj = mod.obj[keys + mod_vars]
+                else:
+                    model_obj = mod.obj[keys]
+
+                ## TODO:  add in ability for simple addition of variables from
+
+                # pair the data
+                # if pt_sfc (surface point network or monitor)
+                if obs_type == "pt_sfc":
+                    # convert this to pandas dataframe unless already done because second time paired this obs
+                    if not isinstance(obs.obj, pd.DataFrame):
+                        obs.obs_to_df()
+                    # Check if z dim is larger than 1. If so select, the first level as all models read through
+                    # MONETIO will be reordered such that the first level is the level nearest to the surface.
+                    try:
+                        if model_obj.sizes["z"] > 1:
+                            # Select only the surface values to pair with obs.
+                            model_obj = model_obj.isel(z=0).expand_dims("z", axis=1)
+                    except KeyError as e:
+                        raise Exception("MONET requires an altitude dimension named 'z'") from e
+                    # now combine obs with
+                    paired_data = model_obj.monet.combine_point(
+                        obs.obj, radius_of_influence=mod.radius_of_influence, suffix=mod.label
+                    )
+                    if self.debug:
+                        print("After pairing: ", paired_data)
+                    # this outputs as a pandas dataframe.  Convert this to xarray obj
+                    p = pair()
+                    print("saving pair")
+                    p.obs = obs.label
+                    p.model = mod.label
+                    p.model_vars = keys
+                    p.obs_vars = obs_vars
+                    p.filename = "{}_{}.nc".format(p.obs, p.model)
+                    p.obj = paired_data.monet._df_to_da()
+                    self.paired[p_label] = p
+                    p.obj = p.fix_paired_xarray(dset=p.obj)
+                    # write_util.write_ncf(p.obj,p.filename) # write out to file
+
+                # if aircraft (aircraft observation)
+                elif obs.obs_type.lower() == "aircraft":
+                    from melodies_monet.util.tools import vert_interp
+
+                    # convert this to pandas dataframe unless already done because second time paired this obs
+                    if not isinstance(obs.obj, pd.DataFrame):
+                        obs.obj = obs.obj.to_dataframe()
+
+                    # drop any variables where coords NaN
+                    obs.obj = (
+                        obs.obj.reset_index()
+                        .dropna(subset=["pressure_obs", "latitude", "longitude"])
+                        .set_index("time")
+                    )
+
+                    # do the facy trick to convert to get something useful for MONET
+                    # this converts to dimensions of x and y
+                    # you may want to make pressure / msl a coordinate too
+                    new_ds_obs = (
+                        obs.obj.rename_axis("time_obs")
+                        .reset_index()
+                        .monet._df_to_da()
+                        .set_coords(["time_obs", "pressure_obs"])
+                    )
+
+                    # Nearest neighbor approach to find closest grid cell to each point.
+                    ds_model = m.util.combinetool.combine_da_to_da(
+                        model_obj, new_ds_obs, merge=False
+                    )
+                    # Interpolate based on time in the observations
+                    ds_model = ds_model.interp(time=ds_model.time_obs.squeeze())
+
+                    # Debugging: Print the variables in ds_model to verify 'pressure_model' is included  ##qzr++
+                    # print("Variables in ds_model after combine_da_to_da and interp:", ds_model.variables)
+
+                    # Ensure 'pressure_model' is included in ds_model (checked it exists)
+                    # if 'pressure_model' not in ds_model:
+                    #   raise KeyError("'pressure_model' is missing in the model dataset")   #qzr++
+
+                    paired_data = vert_interp(ds_model, obs.obj, keys + mod_vars)
                     print("After pairing: ", paired_data)
-                # this outputs as a pandas dataframe.  Convert this to xarray obj
-                p = pair()
-                print("saving pair")
-                p.obs = obs.label
-                p.model = mod.label
-                p.model_vars = keys
-                p.obs_vars = obs_vars
-                p.filename = "{}_{}.nc".format(p.obs, p.model)
-                p.obj = paired_data.monet._df_to_da()
-                self.paired[eval_label] = p
-                p.obj = p.fix_paired_xarray(dset=p.obj)
-                # write_util.write_ncf(p.obj,p.filename) # write out to file
 
-            # if aircraft (aircraft observation)
-            elif obs.obs_type.lower() == "aircraft":
-                from melodies_monet.util.tools import vert_interp
+                    # Ensure 'pressure_model' is included in the DataFrame (pairdf) #qzr++
+                    # if 'pressure_model' not in paired_data.columns:
+                    # raise KeyError("'pressure_model' is missing in the paired_data")   #qzr++
 
-                # convert this to pandas dataframe unless already done because second time paired this obs
-                if not isinstance(obs.obj, pd.DataFrame):
-                    obs.obj = obs.obj.to_dataframe()
+                    # this outputs as a pandas dataframe.  Convert this to xarray obj
+                    p = pair()
+                    p.type = "aircraft"
+                    p.radius_of_influence = None
+                    p.obs = obs.label
+                    p.model = mod.label
+                    p.model_vars = keys
+                    p.obs_vars = obs_vars
+                    p.filename = "{}_{}.nc".format(p.obs, p.model)
+                    p.obj = (
+                        paired_data.set_index("time")
+                        .to_xarray()
+                        .expand_dims("x")
+                        .transpose("time", "x")
+                    )
+                    self.paired[p_label] = p
+                    # write_util.write_ncf(p.obj,p.filename) # write out to file
 
-                # drop any variables where coords NaN
-                obs.obj = (
-                    obs.obj.reset_index()
-                    .dropna(subset=["pressure_obs", "latitude", "longitude"])
-                    .set_index("time")
-                )
+                elif obs.obs_type.lower() == "sonde":
+                    from melodies_monet.util.tools import vert_interp
 
-                # do the facy trick to convert to get something useful for MONET
-                # this converts to dimensions of x and y
-                # you may want to make pressure / msl a coordinate too
-                new_ds_obs = (
-                    obs.obj.rename_axis("time_obs")
-                    .reset_index()
-                    .monet._df_to_da()
-                    .set_coords(["time_obs", "pressure_obs"])
-                )
+                    # convert this to pandas dataframe unless already done because second time paired this obs
+                    if not isinstance(obs.obj, pd.DataFrame):
+                        obs.obj = obs.obj.to_dataframe()
+                    # drop any variables where coords NaN
+                    obs.obj = (
+                        obs.obj.reset_index()
+                        .dropna(subset=["pressure_obs", "latitude", "longitude"])
+                        .set_index("time")
+                    )
 
-                # Nearest neighbor approach to find closest grid cell to each point.
-                ds_model = m.util.combinetool.combine_da_to_da(
-                    model_obj, new_ds_obs, merge=False
-                )
-                # Interpolate based on time in the observations
-                ds_model = ds_model.interp(time=ds_model.time_obs.squeeze())
+                    import datetime
 
-                # Debugging: Print the variables in ds_model to verify 'pressure_model' is included  ##qzr++
-                # print("Variables in ds_model after combine_da_to_da and interp:", ds_model.variables)
-
-                # Ensure 'pressure_model' is included in ds_model (checked it exists)
-                # if 'pressure_model' not in ds_model:
-                #   raise KeyError("'pressure_model' is missing in the model dataset")   #qzr++
-
-                paired_data = vert_interp(ds_model, obs.obj, keys + mod_vars)
-                print("After pairing: ", paired_data)
-
-                # Ensure 'pressure_model' is included in the DataFrame (pairdf) #qzr++
-                # if 'pressure_model' not in paired_data.columns:
-                # raise KeyError("'pressure_model' is missing in the paired_data")   #qzr++
-
-                # this outputs as a pandas dataframe.  Convert this to xarray obj
-                p = pair()
-                p.type = "aircraft"
-                p.radius_of_influence = None
-                p.obs = obs.label
-                p.model = mod.label
-                p.model_vars = keys
-                p.obs_vars = obs_vars
-                p.filename = "{}_{}.nc".format(p.obs, p.model)
-                p.obj = (
-                    paired_data.set_index("time")
-                    .to_xarray()
-                    .expand_dims("x")
-                    .transpose("time", "x")
-                )
-                self.paired[eval_label] = p
-                # write_util.write_ncf(p.obj,p.filename) # write out to file
-
-            elif obs.obs_type.lower() == "sonde":
-                from melodies_monet.util.tools import vert_interp
-
-                # convert this to pandas dataframe unless already done because second time paired this obs
-                if not isinstance(obs.obj, pd.DataFrame):
-                    obs.obj = obs.obj.to_dataframe()
-                # drop any variables where coords NaN
-                obs.obj = (
-                    obs.obj.reset_index()
-                    .dropna(subset=["pressure_obs", "latitude", "longitude"])
-                    .set_index("time")
-                )
-
-                import datetime
-
-                plot_dict_sonde = self.control_dict["plotting"]
-                for grp_sonde, grp_dict_sonde in plot_dict_sonde.items():
-                    plot_type_sonde = grp_dict_sonde["type"]
-                    plot_sonde_type_list_all = [
-                        "vertical_single_date",
-                        "vertical_boxplot_os",
-                        "density_scatter_plot_os",
-                    ]
-                    if plot_type_sonde in plot_sonde_type_list_all:
-                        station_name_sonde = grp_dict_sonde["station_name"]
-                        cds_sonde = grp_dict_sonde["compare_date_single"]
-                        obs.obj = obs.obj.loc[obs.obj["station"] == station_name_sonde[0]]
-                        obs.obj = obs.obj.loc[
-                            datetime.datetime(
-                                cds_sonde[0],
-                                cds_sonde[1],
-                                cds_sonde[2],
-                                cds_sonde[3],
-                                cds_sonde[4],
-                                cds_sonde[5],
-                            )
+                    plot_dict_sonde = self.control_dict["plotting"]
+                    for grp_sonde, grp_dict_sonde in plot_dict_sonde.items():
+                        plot_type_sonde = grp_dict_sonde["type"]
+                        plot_sonde_type_list_all = [
+                            "vertical_single_date",
+                            "vertical_boxplot_os",
+                            "density_scatter_plot_os",
                         ]
-                        break
+                        if plot_type_sonde in plot_sonde_type_list_all:
+                            station_name_sonde = grp_dict_sonde["station_name"]
+                            cds_sonde = grp_dict_sonde["compare_date_single"]
+                            obs.obj = obs.obj.loc[obs.obj["station"] == station_name_sonde[0]]
+                            obs.obj = obs.obj.loc[
+                                datetime.datetime(
+                                    cds_sonde[0],
+                                    cds_sonde[1],
+                                    cds_sonde[2],
+                                    cds_sonde[3],
+                                    cds_sonde[4],
+                                    cds_sonde[5],
+                                )
+                            ]
+                            break
 
-                # do the facy trick to convert to get something useful for MONET
-                # this converts to dimensions of x and y
-                # you may want to make pressure / msl a coordinate too
-                new_ds_obs = (
-                    obs.obj.rename_axis("time_obs")
-                    .reset_index()
-                    .monet._df_to_da()
-                    .set_coords(["time_obs", "pressure_obs"])
-                )
-                # Nearest neighbor approach to find closest grid cell to each point.
-                ds_model = m.util.combinetool.combine_da_to_da(
-                    model_obj, new_ds_obs, merge=False
-                )
-                # Interpolate based on time in the observations
-                ds_model = ds_model.interp(time=ds_model.time_obs.squeeze())
-                paired_data = vert_interp(ds_model, obs.obj, keys + mod_vars)
-                print("In pair function, After pairing: ", paired_data)
-                # this outputs as a pandas dataframe.  Convert this to xarray obj
-                p = pair()
-                p.type = "sonde"
-                p.radius_of_influence = None
-                p.obs = obs.label
-                p.model = mod.label
-                p.model_vars = keys
-                p.obs_vars = obs_vars
-                p.filename = "{}_{}.nc".format(p.obs, p.model)
-                p.obj = (
-                    paired_data.set_index("time")
-                    .to_xarray()
-                    .expand_dims("x")
-                    .transpose("time", "x")
-                )
-                self.paired[eval_label] = p
-
-                # write_util.write_ncf(p.obj,p.filename) # write out to file
-            # If mobile surface data or single ground site surface data
-            elif obs.obs_type.lower() == "mobile" or obs.obs_type.lower() == "ground":
-                from melodies_monet.util.tools import mobile_and_ground_pair
-
-                # convert this to pandas dataframe unless already done because second time paired this obs
-                if not isinstance(obs.obj, pd.DataFrame):
-                    obs.obj = obs.obj.to_dataframe()
-
-                # drop any variables where coords NaN
-                obs.obj = (
-                    obs.obj.reset_index()
-                    .dropna(subset=["latitude", "longitude"])
-                    .set_index("time")
-                )
-
-                # do the facy trick to convert to get something useful for MONET
-                # this converts to dimensions of x and y
-                # you may want to make pressure / msl a coordinate too
-                new_ds_obs = (
-                    obs.obj.rename_axis("time_obs")
-                    .reset_index()
-                    .monet._df_to_da()
-                    .set_coords(["time_obs"])
-                )
-
-                # Nearest neighbor approach to find closest grid cell to each point.
-                ds_model = m.util.combinetool.combine_da_to_da(
-                    model_obj, new_ds_obs, merge=False
-                )
-                # Interpolate based on time in the observations
-                ds_model = ds_model.interp(time=ds_model.time_obs.squeeze())
-
-                paired_data = mobile_and_ground_pair(ds_model, obs.obj, keys + mod_vars)
-                print("After pairing: ", paired_data)
-                # this outputs as a pandas dataframe.  Convert this to xarray obj
-                p = pair()
-                if obs.obs_type.lower() == "mobile":
-                    p.type = "mobile"
-                elif obs.obs_type.lower() == "ground":
-                    p.type = "ground"
-                p.radius_of_influence = None
-                p.obs = obs.label
-                p.model = mod.label
-                p.model_vars = keys
-                p.obs_vars = obs_vars
-                p.filename = "{}_{}.nc".format(p.obs, p.model)
-                p.obj = (
-                    paired_data.set_index("time")
-                    .to_xarray()
-                    .expand_dims("x")
-                    .transpose("time", "x")
-                )
-                self.paired[eval_label] = p
-
-            # TODO: add other network types / data types where (ie flight, satellite etc)
-            # if sat_swath_clm (satellite l2 column products)
-            elif obs.obs_type.lower() == "sat_swath_clm":
-                # grab kwargs for pairing. Use default if not specified
-                pairing_kws = {"apply_ak": True, "mod_to_overpass": False}
-                for key in self.pairing_kwargs.get(obs.obs_type.lower(), {}):
-                    pairing_kws[key] = self.pairing_kwargs[obs.obs_type.lower()][key]
-                if "apply_ak" not in self.pairing_kwargs.get(obs.obs_type.lower(), {}):
-                    print(
-                        "WARNING: The satellite pairing option apply_ak is being set to True because it was not specified in the YAML. Pairing will fail if there is no AK available."
+                    # do the facy trick to convert to get something useful for MONET
+                    # this converts to dimensions of x and y
+                    # you may want to make pressure / msl a coordinate too
+                    new_ds_obs = (
+                        obs.obj.rename_axis("time_obs")
+                        .reset_index()
+                        .monet._df_to_da()
+                        .set_coords(["time_obs", "pressure_obs"])
                     )
-
-                if obs.sat_type == "omps_nm":
-
-                    from melodies_monet.util import satellite_utilities as sutil
-
-                    # necessary observation index things
-                    ## the along track coordinate dim sometimes needs to be time and other times an unassigned 'x'
-                    if "time" in obs.obj.dims:
-                        obs.obj = obs.obj.sel(time=slice(self.start_time, self.end_time))
-                        obs.obj = obs.obj.swap_dims({"time": "x"})
-                    if pairing_kws["apply_ak"] is True:
-                        model_obj = mod.obj[keys + ["pres_pa_mid", "surfpres_pa"]]
-
-                        paired_data = sutil.omps_nm_pairing_apriori(model_obj, obs.obj, keys)
-                    else:
-                        model_obj = mod.obj[keys + ["dp_pa"]]
-                        paired_data = sutil.omps_nm_pairing(model_obj, obs.obj, keys)
-
-                    paired_data = paired_data.where(paired_data.ozone_column.notnull())
+                    # Nearest neighbor approach to find closest grid cell to each point.
+                    ds_model = m.util.combinetool.combine_da_to_da(
+                        model_obj, new_ds_obs, merge=False
+                    )
+                    # Interpolate based on time in the observations
+                    ds_model = ds_model.interp(time=ds_model.time_obs.squeeze())
+                    paired_data = vert_interp(ds_model, obs.obj, keys + mod_vars)
+                    print("In pair function, After pairing: ", paired_data)
+                    # this outputs as a pandas dataframe.  Convert this to xarray obj
                     p = pair()
-                    p.type = obs.obs_type
+                    p.type = "sonde"
+                    p.radius_of_influence = None
                     p.obs = obs.label
                     p.model = mod.label
                     p.model_vars = keys
                     p.obs_vars = obs_vars
-                    p.obj = paired_data
-                    self.paired[eval_label] = p
+                    p.filename = "{}_{}.nc".format(p.obs, p.model)
+                    p.obj = (
+                        paired_data.set_index("time")
+                        .to_xarray()
+                        .expand_dims("x")
+                        .transpose("time", "x")
+                    )
+                    self.paired[p_label] = p
 
-                if obs.sat_type == "tropomi_l2_no2":
-                    from melodies_monet.util import sat_l2_swath_utility as no2util
-                    from melodies_monet.util import satellite_utilities as sutil
+                    # write_util.write_ncf(p.obj,p.filename) # write out to file
+                # If mobile surface data or single ground site surface data
+                elif obs.obs_type.lower() == "mobile" or obs.obs_type.lower() == "ground":
+                    from melodies_monet.util.tools import mobile_and_ground_pair
 
-                    # calculate model no2 trop. columns. M.Li
-                    # to fix the "time" duplicate error
-                    model_obj = mod.obj
-                    i_no2_varname = [
-                        i
-                        for i, x in enumerate(obs_vars)
-                        if x == "nitrogendioxide_tropospheric_column"
-                    ]
-                    if len(i_no2_varname) > 1:
+                    # convert this to pandas dataframe unless already done because second time paired this obs
+                    if not isinstance(obs.obj, pd.DataFrame):
+                        obs.obj = obs.obj.to_dataframe()
+
+                    # drop any variables where coords NaN
+                    obs.obj = (
+                        obs.obj.reset_index()
+                        .dropna(subset=["latitude", "longitude"])
+                        .set_index("time")
+                    )
+
+                    # do the facy trick to convert to get something useful for MONET
+                    # this converts to dimensions of x and y
+                    # you may want to make pressure / msl a coordinate too
+                    new_ds_obs = (
+                        obs.obj.rename_axis("time_obs")
+                        .reset_index()
+                        .monet._df_to_da()
+                        .set_coords(["time_obs"])
+                    )
+
+                    # Nearest neighbor approach to find closest grid cell to each point.
+                    ds_model = m.util.combinetool.combine_da_to_da(
+                        model_obj, new_ds_obs, merge=False
+                    )
+                    # Interpolate based on time in the observations
+                    ds_model = ds_model.interp(time=ds_model.time_obs.squeeze())
+
+                    paired_data = mobile_and_ground_pair(ds_model, obs.obj, keys + mod_vars)
+                    print("After pairing: ", paired_data)
+                    # this outputs as a pandas dataframe.  Convert this to xarray obj
+                    p = pair()
+                    if obs.obs_type.lower() == "mobile":
+                        p.type = "mobile"
+                    elif obs.obs_type.lower() == "ground":
+                        p.type = "ground"
+                    p.radius_of_influence = None
+                    p.obs = obs.label
+                    p.model = mod.label
+                    p.model_vars = keys
+                    p.obs_vars = obs_vars
+                    p.filename = "{}_{}.nc".format(p.obs, p.model)
+                    p.obj = (
+                        paired_data.set_index("time")
+                        .to_xarray()
+                        .expand_dims("x")
+                        .transpose("time", "x")
+                    )
+                    self.paired[p_label] = p
+
+                # TODO: add other network types / data types where (ie flight, satellite etc)
+                # if sat_swath_clm (satellite l2 column products)
+                elif obs_type == "sat_swath_clm":
+                    # grab kwargs for pairing. Use default if not specified
+                    pairing_kws = {"apply_ak": True, "mod_to_overpass": False}
+                    for key in self.pairing_kwargs.get(obs_type, {}):
+                        pairing_kws[key] = self.pairing_kwargs[obs_type][key]
+
+                    # Override with methods if specified
+                    if "apply_ak" in methods:
+                        pairing_kws["apply_ak"] = True
+                    if "no_ak" in methods:
+                        pairing_kws["apply_ak"] = False
+
+                    if "apply_ak" not in self.pairing_kwargs.get(obs_type, {}) and "apply_ak" not in methods and "no_ak" not in methods:
                         print(
-                            "The TROPOMI NO2 variable is matched to more than one model variable."
-                        )
-                        print(
-                            "Pairing is being done for model variable: "
-                            + keys[i_no2_varname[0]]
-                        )
-                    no2_varname = keys[i_no2_varname[0]]
-
-                    if pairing_kws["mod_to_overpass"]:
-                        print("sampling model to 13:30 local overpass time")
-                        overpass_datetime = pd.date_range(
-                            self.start_time.replace(hour=13, minute=30),
-                            self.end_time.replace(hour=13, minute=30),
-                            freq="D",
-                        )
-                        model_obj = sutil.mod_to_overpasstime(
-                            model_obj, overpass_datetime, partial_col=no2_varname
-                        )
-                        # enforce dimension order is time, z, y, x
-                        model_obj = model_obj.transpose("time", "z", "y", "x", ...)
-                    else:
-                        print("Warning: The pairing_kwarg mod_to_overpass is False.")
-                        print(
-                            "Pairing will proceed assuming that the model data is already at overpass time."
-                        )
-                        from melodies_monet.util.tools import calc_partialcolumn
-
-                        model_obj[f"{no2_varname}_col"] = calc_partialcolumn(
-                            model_obj, var=no2_varname
-                        )
-                    if pairing_kws["apply_ak"] is True:
-                        paired_data = no2util.trp_interp_swatogrd_ak(
-                            obs.obj, model_obj, no2varname=no2_varname
-                        )
-                    else:
-                        paired_data = no2util.trp_interp_swatogrd(
-                            obs.obj, model_obj, no2varname=no2_varname
+                            "WARNING: The satellite pairing option apply_ak is being set to True because it was not specified in the YAML. Pairing will fail if there is no AK available."
                         )
 
-                    p = pair()
+                    if obs.sat_type == "omps_nm":
 
-                    paired_data_cp = paired_data.sel(
-                        time=slice(self.start_time.date(), self.end_time.date())
-                    ).copy()
+                        from melodies_monet.util import satellite_utilities as sutil
 
-                    p.type = obs.obs_type
-                    p.obs = obs.label
-                    p.model = mod.label
-                    p.model_vars = keys
-                    p.obs_vars = obs_vars
-                    p.obj = paired_data_cp
-                    self.paired[eval_label] = p
+                        # necessary observation index things
+                        ## the along track coordinate dim sometimes needs to be time and other times an unassigned 'x'
+                        if "time" in obs.obj.dims:
+                            obs.obj = obs.obj.sel(time=slice(self.start_time, self.end_time))
+                            obs.obj = obs.obj.swap_dims({"time": "x"})
+                        if pairing_kws["apply_ak"] is True:
+                            model_obj = mod.obj[keys + ["pres_pa_mid", "surfpres_pa"]]
 
-                if "tempo_l2" in obs.sat_type:
-                    from melodies_monet.util import sat_l2_swath_utility_tempo as sutil
+                            paired_data = sutil.omps_nm_pairing_apriori(model_obj, obs.obj, keys)
+                        else:
+                            model_obj = mod.obj[keys + ["dp_pa"]]
+                            paired_data = sutil.omps_nm_pairing(model_obj, obs.obj, keys)
 
-                    if obs.sat_type == "tempo_l2_no2":
-                        sat_sp = "NO2"
-                        sp = "vertical_column_troposphere"
-                        key = "tempo_l2_no2"
-                    elif obs.sat_type == "tempo_l2_hcho":
-                        sat_sp = "HCHO"
-                        sp = "vertical_column"
-                        key = "tempo_l2_hcho"
-                    else:
-                        raise KeyError(
-                            f" You asked for {obs.sat_type}. "
-                            + "Only NO2 and HCHO L2 data have been implemented"
-                        )
-                    mod_sp = [k_sp for k_sp, v in mapping.items() if v == sp]
-
-                    regrid_method = (
-                        obs.regrid_method if obs.regrid_method is not None else "bilinear"
-                    )
-                    paired_data_atswath = sutil.regrid_and_apply_weights(
-                        obs.obj, mod.obj, species=mod_sp, method=regrid_method, tempo_sp=sat_sp
-                    )
-                    paired_data_atgrid = sutil.back_to_modgrid_multiscan(
-                        paired_data_atswath, model_obj, method=regrid_method
-                    )
-
-                    p = pair()
-
-                    paired_data = paired_data_atgrid.sel(
-                        time=slice(self.start_time, self.end_time)
-                    )
-
-                    p.type = obs.obs_type
-                    p.obs = obs.label
-                    p.model = mod.label
-                    p.model_vars = keys
-                    p.obs_vars = obs_vars
-                    p.obj = paired_data
-                    p.filename = "{}.nc".format(eval_label)
-
-                    self.paired[eval_label] = p
-
-            # if sat_grid_clm (satellite l3 column products)
-            elif obs.obs_type.lower() == "sat_grid_clm":
-                # grab kwargs for pairing. Use default if not specified
-                pairing_kws = {"apply_ak": True, "mod_to_overpass": False}
-                for key in self.pairing_kwargs.get(obs.obs_type.lower(), {}):
-                    pairing_kws[key] = self.pairing_kwargs[obs.obs_type.lower()][key]
-                if "apply_ak" not in self.pairing_kwargs[obs.obs_type.lower()]:
-                    print(
-                        "WARNING: The satellite pairing option apply_ak is being set to True because it was not specified in the YAML. Pairing will fail if there is no AK available."
-                    )
-                if len(keys) > 1:
-                    print("Caution: More than 1 variable is included in mapping keys.")
-                    print("Pairing code is calculating a column for {}".format(keys[0]))
-                if obs.sat_type == "omps_l3":
-                    from melodies_monet.util import satellite_utilities as sutil
-
-                    # trim obs array to only data within analysis window
-                    obs_dat = obs.obj.sel(
-                        time=slice(self.start_time.date(), self.end_time.date())
-                    )  # .copy()
-                    mod_dat = mod.obj.sel(
-                        time=slice(self.start_time.date(), self.end_time.date())
-                    )
-                    paired_obsgrid = sutil.omps_l3_daily_o3_pairing(mod_dat, obs_dat, keys[0])
-
-                    p = pair()
-                    p.type = obs.obs_type
-                    p.obs = obs.label
-                    p.model = mod.label
-                    p.model_vars = keys
-                    p.obs_vars = obs_vars
-                    p.obj = paired_obsgrid
-                    self.paired[eval_label] = p
-
-                elif obs.sat_type == "mopitt_l3":
-                    from melodies_monet.util import satellite_utilities as sutil
-
-                    if pairing_kws["apply_ak"]:
-                        model_obj = mod.obj[keys + ["pres_pa_mid"]]
-
-                        # Sample model to observation overpass time
-                        if pairing_kws["mod_to_overpass"]:
-                            print("sampling model to 10:30 local overpass time")
-                            overpass_datetime = pd.date_range(
-                                self.start_time.replace(hour=10, minute=30),
-                                self.end_time.replace(hour=10, minute=30),
-                                freq="D",
-                            )
-                            model_obj = sutil.mod_to_overpasstime(model_obj, overpass_datetime)
-                        # trim to only data within analysis window, as averaging kernels can't be applied outside it
-                        obs_dat = obs.obj.sel(
-                            time=slice(self.start_time.date(), self.end_time.date())
-                        )
-                        model_obj = model_obj.sel(
-                            time=slice(self.start_time.date(), self.end_time.date())
-                        )
-                        # interpolate model to observation, calculate column with averaging kernels applied
-                        paired = sutil.mopitt_l3_pairing(
-                            model_obj, obs_dat, keys[0], global_model=mod.is_global
-                        )
+                        paired_data = paired_data.where(paired_data.ozone_column.notnull())
                         p = pair()
                         p.type = obs.obs_type
                         p.obs = obs.label
                         p.model = mod.label
                         p.model_vars = keys
-                        p.model_vars[0] += "_column_model"
                         p.obs_vars = obs_vars
-                        p.obj = paired
-                        self.paired[eval_label] = p
-                    else:
-                        print(
-                            "Pairing without averaging kernel has not been enabled for this dataset"
+                        p.obj = paired_data
+                        self.paired[p_label] = p
+
+                    if obs.sat_type == "tropomi_l2_no2":
+                        from melodies_monet.util import sat_l2_swath_utility as no2util
+                        from melodies_monet.util import satellite_utilities as sutil
+
+                        # calculate model no2 trop. columns. M.Li
+                        # to fix the "time" duplicate error
+                        model_obj = mod.obj
+                        i_no2_varname = [
+                            i
+                            for i, x in enumerate(obs_vars)
+                            if x == "nitrogendioxide_tropospheric_column"
+                        ]
+                        if len(i_no2_varname) > 1:
+                            print(
+                                "The TROPOMI NO2 variable is matched to more than one model variable."
+                            )
+                            print(
+                                "Pairing is being done for model variable: "
+                                + keys[i_no2_varname[0]]
+                            )
+                        no2_varname = keys[i_no2_varname[0]]
+
+                        if pairing_kws["mod_to_overpass"]:
+                            print("sampling model to 13:30 local overpass time")
+                            overpass_datetime = pd.date_range(
+                                self.start_time.replace(hour=13, minute=30),
+                                self.end_time.replace(hour=13, minute=30),
+                                freq="D",
+                            )
+                            model_obj = sutil.mod_to_overpasstime(
+                                model_obj, overpass_datetime, partial_col=no2_varname
+                            )
+                            # enforce dimension order is time, z, y, x
+                            model_obj = model_obj.transpose("time", "z", "y", "x", ...)
+                        else:
+                            print("Warning: The pairing_kwarg mod_to_overpass is False.")
+                            print(
+                                "Pairing will proceed assuming that the model data is already at overpass time."
+                            )
+                            from melodies_monet.util.tools import calc_partialcolumn
+
+                            model_obj[f"{no2_varname}_col"] = calc_partialcolumn(
+                                model_obj, var=no2_varname
+                            )
+                        if pairing_kws["apply_ak"] is True:
+                            paired_data = no2util.trp_interp_swatogrd_ak(
+                                obs.obj, model_obj, no2varname=no2_varname
+                            )
+                        else:
+                            paired_data = no2util.trp_interp_swatogrd(
+                                obs.obj, model_obj, no2varname=no2_varname
+                            )
+
+                        p = pair()
+
+                        paired_data_cp = paired_data.sel(
+                            time=slice(self.start_time.date(), self.end_time.date())
+                        ).copy()
+
+                        p.type = obs.obs_type
+                        p.obs = obs.label
+                        p.model = mod.label
+                        p.model_vars = keys
+                        p.obs_vars = obs_vars
+                        p.obj = paired_data_cp
+                        self.paired[p_label] = p
+
+                    if "tempo_l2" in obs.sat_type:
+                        from melodies_monet.util import sat_l2_swath_utility_tempo as sutil
+
+                        if obs.sat_type == "tempo_l2_no2":
+                            sat_sp = "NO2"
+                            sp = "vertical_column_troposphere"
+                            key = "tempo_l2_no2"
+                        elif obs.sat_type == "tempo_l2_hcho":
+                            sat_sp = "HCHO"
+                            sp = "vertical_column"
+                            key = "tempo_l2_hcho"
+                        else:
+                            raise KeyError(
+                                f" You asked for {obs.sat_type}. "
+                                + "Only NO2 and HCHO L2 data have been implemented"
+                            )
+                        mod_sp = [k_sp for k_sp, v in mapping.items() if v == sp]
+
+                        regrid_method = (
+                            obs.regrid_method if obs.regrid_method is not None else "bilinear"
                         )
+                        paired_data_atswath = sutil.regrid_and_apply_weights(
+                            obs.obj, mod.obj, species=mod_sp, method=regrid_method, tempo_sp=sat_sp
+                        )
+                        paired_data_atgrid = sutil.back_to_modgrid_multiscan(
+                            paired_data_atswath, model_obj, method=regrid_method
+                        )
+
+                        p = pair()
+
+                        paired_data = paired_data_atgrid.sel(
+                            time=slice(self.start_time, self.end_time)
+                        )
+
+                        p.type = obs.obs_type
+                        p.obs = obs.label
+                        p.model = mod.label
+                        p.model_vars = keys
+                        p.obs_vars = obs_vars
+                        p.obj = paired_data
+                        p.filename = "{}.nc".format(p_label)
+
+                        self.paired[p_label] = p
+
+                # if sat_grid_clm (satellite l3 column products)
+                elif obs_type == "sat_grid_clm":
+                    # grab kwargs for pairing. Use default if not specified
+                    pairing_kws = {"apply_ak": True, "mod_to_overpass": False}
+                    for key in self.pairing_kwargs.get(obs_type, {}):
+                        pairing_kws[key] = self.pairing_kwargs[obs_type][key]
+
+                    # Override with methods if specified
+                    if "apply_ak" in methods:
+                        pairing_kws["apply_ak"] = True
+                    if "no_ak" in methods:
+                        pairing_kws["apply_ak"] = False
+
+                    if "apply_ak" not in self.pairing_kwargs.get(obs_type, {}) and "apply_ak" not in methods and "no_ak" not in methods:
+                        print(
+                            "WARNING: The satellite pairing option apply_ak is being set to True because it was not specified in the YAML. Pairing will fail if there is no AK available."
+                        )
+                    if len(keys) > 1:
+                        print("Caution: More than 1 variable is included in mapping keys.")
+                        print("Pairing code is calculating a column for {}".format(keys[0]))
+                    if obs.sat_type == "omps_l3":
+                        from melodies_monet.util import satellite_utilities as sutil
+
+                        # trim obs array to only data within analysis window
+                        obs_dat = obs.obj.sel(
+                            time=slice(self.start_time.date(), self.end_time.date())
+                        )  # .copy()
+                        mod_dat = mod.obj.sel(
+                            time=slice(self.start_time.date(), self.end_time.date())
+                        )
+                        paired_obsgrid = sutil.omps_l3_daily_o3_pairing(mod_dat, obs_dat, keys[0])
+
+                        p = pair()
+                        p.type = obs.obs_type
+                        p.obs = obs.label
+                        p.model = mod.label
+                        p.model_vars = keys
+                        p.obs_vars = obs_vars
+                        p.obj = paired_obsgrid
+                        self.paired[p_label] = p
+
+                    elif obs.sat_type == "mopitt_l3":
+                        from melodies_monet.util import satellite_utilities as sutil
+
+                        if pairing_kws["apply_ak"]:
+                            model_obj = mod.obj[keys + ["pres_pa_mid"]]
+
+                            # Sample model to observation overpass time
+                            if pairing_kws["mod_to_overpass"]:
+                                print("sampling model to 10:30 local overpass time")
+                                overpass_datetime = pd.date_range(
+                                    self.start_time.replace(hour=10, minute=30),
+                                    self.end_time.replace(hour=10, minute=30),
+                                    freq="D",
+                                )
+                                model_obj = sutil.mod_to_overpasstime(model_obj, overpass_datetime)
+                            # trim to only data within analysis window, as averaging kernels can't be applied outside it
+                            obs_dat = obs.obj.sel(
+                                time=slice(self.start_time.date(), self.end_time.date())
+                            )
+                            model_obj = model_obj.sel(
+                                time=slice(self.start_time.date(), self.end_time.date())
+                            )
+                            # interpolate model to observation, calculate column with averaging kernels applied
+                            paired = sutil.mopitt_l3_pairing(
+                                model_obj, obs_dat, keys[0], global_model=mod.is_global
+                            )
+                            p = pair()
+                            p.type = obs.obs_type
+                            p.obs = obs.label
+                            p.model = mod.label
+                            p.model_vars = keys
+                            p.model_vars[0] += "_column_model"
+                            p.obs_vars = obs_vars
+                            p.obj = paired
+                            self.paired[p_label] = p
+                        else:
+                            print(
+                                "Pairing without averaging kernel has not been enabled for this dataset"
+                            )
 
     def concat_pairs(self):
         """Read and concatenate all observation and model time interval pair data,
@@ -1197,7 +1282,9 @@ class analysis:
             else:
                 interquartile_style = None
 
-            pair_labels = grp_dict["data"]
+            pair_labels = []
+            for label in grp_dict["data"]:
+                pair_labels.extend(self._get_pair_labels(label))
             # Get the plot type
             plot_type = grp_dict["type"]
 
@@ -3002,7 +3089,9 @@ class analysis:
 
         for group_id, group_info in stat_groups.items():
             stat_dict = group_info["cfg"]
-            pair_labels = group_info["pairs"]
+            pair_labels = []
+            for label in group_info["pairs"]:
+                pair_labels.extend(self._get_pair_labels(label))
             stat_list = stat_dict["stat_list"]
 
             # Determine stat_grp full name
