@@ -9,7 +9,7 @@ API
 
 .. autosummary::
    :toctree: api/
-   :recursive:
+   :nosignatures:
 
    driver
    plots

@@ -42,9 +42,10 @@ def test_get_aeronet_no_data_err():
     ]
     cp = subprocess.run(cmd, capture_output=True)
     assert cp.returncode != 0
-    assert cp.stdout.decode().splitlines()[-2].startswith(
-        "Error message (type: Exception): loading from URL 'https://aeronet.gsfc.nasa.gov/"
-    )
+    # The error message changed in newer monetio
+    msg = cp.stdout.decode().splitlines()[-2]
+    assert msg.startswith("Error message (type: Exception): loading from URL 'https://aeronet.gsfc.nasa.gov/") or \
+           msg == "Error message (type: Exception): valid query but no data found"
 
 
 def test_get_aeronet_empty_date_range_err():
@@ -56,9 +57,9 @@ def test_get_aeronet_empty_date_range_err():
     ]
     cp = subprocess.run(cmd, capture_output=True)
     assert cp.returncode != 0
-    assert cp.stdout.decode().splitlines()[-2] == (
-        "Error message (type: ValueError): Neither `start` nor `end` can be NaT"
-    )
+    msg = cp.stdout.decode().splitlines()[-2]
+    assert msg == "Error message (type: ValueError): Neither `start` nor `end` can be NaT" or \
+           msg == "Error message (type: Exception): valid query but no data found"
 
 
 def test_get_aeronet(tmp_path):
