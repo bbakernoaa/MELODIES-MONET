@@ -31,7 +31,7 @@ GitHub
 ------
 
 We use GitHub to manage our MELODIES MONET code. Please refer to 
-`Getting Started with GitHub on Project Pythia <https://foundations.projectpythia.org/foundations/getting-started-github.html>`__
+`GitHub on Project Pythia <https://foundations.projectpythia.org/core/github.html>`__
 to learn more about GitHub.
 
 If you are planning to contribute code back to our MELODIES MONET code repository,
@@ -43,5 +43,5 @@ Conda
 
 We have created a conda-forge release of MELODIES MONET to make installation very simple.
 Conda is a package manager and environment management system. Please refer to 
-`Installing and Managing Python with Conda on Project Pythia <https://foundations.projectpythia.org/foundations/conda.html>`__
+`Conda on Project Pythia <https://foundations.projectpythia.org/core/conda.html>`__
 to learn more about Conda.

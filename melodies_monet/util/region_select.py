@@ -41,7 +41,9 @@ def _create_custom_mask(data, mask_info):
         masked data
     """
     if not isinstance(mask_info, (list, dict)):
-        raise TypeError(f"mask_info type={type(mask_info)}, not valid for create_custom_mask.")
+        raise TypeError(
+            f"mask_info type={type(mask_info)}, not valid for create_custom_mask."
+        )
     if isinstance(mask_info, list):
         if isinstance(mask_info[0][0], (float, int)):
             poly = Polygon(mask_info)
@@ -57,7 +59,9 @@ def _create_custom_mask(data, mask_info):
         for rname, rpolygon in mask_info.items():
             abbrevs.append(rname)
             all_regions.append(rpolygon)
-        regions = regionmask.Regions(all_regions, abbrevs=abbrevs, name="custom_regions")
+        regions = regionmask.Regions(
+            all_regions, abbrevs=abbrevs, name="custom_regions"
+        )
     # Regionmask requires "lat" and "lon"
     region_mask = regions.mask(data.rename({"latitude": "lat", "longitude": "lon"}))
     # But MM requires "latitude" and "longitude"
@@ -101,7 +105,9 @@ def _create_predefined_mask(data, name_regiontype, region=None):
     return selected_region
 
 
-def _create_shapefile_mask(data, mask_path=None, mask_url=None, region_name=None, **kwargs):
+def _create_shapefile_mask(
+    data, mask_path=None, mask_url=None, region_name=None, **kwargs
+):
     """Creates mask from shapefile using regionmask and geopandas.
 
     Parameters
@@ -182,7 +188,9 @@ def control_custom_mask(data, domain_type, domain_info=None, **kwargs):
     if domain_info is None:
         raise KeyError("If regionmask is used, domain_info must exist.")
     if "custom" not in domain_type:
-        raise ValueError("If regionmask is used, the domain_type should be starting with 'custom'")
+        raise ValueError(
+            "If regionmask is used, the domain_type should be starting with 'custom'"
+        )
     if "polygon" in domain_type:
         masked_data = _create_custom_mask(data, domain_info["mask_info"])
     elif "defined-region" in domain_type:

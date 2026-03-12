@@ -68,7 +68,9 @@ class pair:
 
         # site only xarray obj (no time dependence)
         dfps = (
-            dfpsite.loc[:, columns[columns.isin(site_columns)]].set_index(["x"]).to_xarray()
+            dfpsite.loc[:, columns[columns.isin(site_columns)]]
+            .set_index(["x"])
+            .to_xarray()
         )  # single column index
 
         # now pivot df and convert back to xarray using only non site_columns

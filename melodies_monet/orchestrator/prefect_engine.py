@@ -9,6 +9,7 @@ from prefect import flow, task, get_run_logger
 from dask.distributed import Client, worker_client
 from melodies_monet.orchestrator.cluster_config import ClusterFactory
 
+
 @task
 def run_mm_node(node_name, func, *args, **kwargs):
     """
@@ -34,6 +35,7 @@ def run_mm_node(node_name, func, *args, **kwargs):
     logger.info(f"Completed MM task: {node_name}")
     return result
 
+
 @flow(name="MM Execution Flow")
 def execute_dag_flow(orchestrator):
     """
@@ -45,23 +47,21 @@ def execute_dag_flow(orchestrator):
     # Traverse the graph in topological order to ensure dependencies are met
     for node in nx.topological_sort(orchestrator.graph):
         node_data = orchestrator.graph.nodes[node]
-        func = node_data['func']
+        func = node_data["func"]
 
         # Extract args/kwargs if they exist in the node data
-        node_args = node_data.get('args', [])
-        node_kwargs = node_data.get('kwargs', {})
+        node_args = node_data.get("args", [])
+        node_kwargs = node_data.get("kwargs", {})
 
         # Determine dependencies (predecessors in the DAG)
-        dependencies = [task_futures[dep] for dep in orchestrator.graph.predecessors(node)]
+        dependencies = [
+            task_futures[dep] for dep in orchestrator.graph.predecessors(node)
+        ]
 
         # Submit the task to Prefect.
         # Using wait_for to manage dependencies as per the NetworkX structure.
         future = run_mm_node.submit(
-            node_name=node,
-            func=func,
-            *node_args,
-            **node_kwargs,
-            wait_for=dependencies
+            node_name=node, func=func, *node_args, **node_kwargs, wait_for=dependencies
         )
         task_futures[node] = future
 
@@ -73,6 +73,7 @@ def execute_dag_flow(orchestrator):
 
     return task_futures
 
+
 @flow(name="MELODIES-MONET Workflow")
 def mm_prefect_flow(orchestrator):
     """
@@ -81,7 +82,7 @@ def mm_prefect_flow(orchestrator):
     logger = get_run_logger()
 
     # 1. Initialize Dask Cluster from Config
-    dask_config = orchestrator.ana.control_dict.get('analysis', {}).get('dask', {})
+    dask_config = orchestrator.ana.control_dict.get("analysis", {}).get("dask", {})
     cluster = None
     client = None
     task_runner = None
@@ -94,17 +95,24 @@ def mm_prefect_flow(orchestrator):
         # Configure the DaskTaskRunner to use our new cluster
         try:
             from prefect_dask import DaskTaskRunner
+
             task_runner = DaskTaskRunner(address=cluster.scheduler_address)
-            logger.info(f"Prefect DaskTaskRunner configured with address: {cluster.scheduler_address}")
+            logger.info(
+                f"Prefect DaskTaskRunner configured with address: {cluster.scheduler_address}"
+            )
         except ImportError:
-            logger.warning("prefect-dask is not installed. Tasks will run on the default runner.")
+            logger.warning(
+                "prefect-dask is not installed. Tasks will run on the default runner."
+            )
     else:
         logger.info("No Dask configuration found. Running in local mode.")
 
     try:
         # 2. Execute the DAG within a flow configured with the DaskTaskRunner
         if task_runner:
-            result = execute_dag_flow.with_options(task_runner=task_runner)(orchestrator)
+            result = execute_dag_flow.with_options(task_runner=task_runner)(
+                orchestrator
+            )
         else:
             result = execute_dag_flow(orchestrator)
 

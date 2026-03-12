@@ -10,13 +10,14 @@ from melodies_monet.plots import savefig
 
 mpl.use("Agg")
 
+
 def test_savefig(tmpdir):
     save_dir = Path(tmpdir)
 
     fig = plt.figure()
 
     fp = save_dir / "asdf.png"
-    
+
     # Currently must be str, not Path
     with pytest.raises(AttributeError, match="has no attribute 'split'"):
         savefig(fp)

@@ -75,8 +75,8 @@ class model:
         # add option to read list of files from text file
         if not isinstance(self.file_str, list):
             _, extension = os.path.splitext(self.file_str)
-            if extension.lower() == '.txt':
-                with open(self.file_str,'r') as f:
+            if extension.lower() == ".txt":
+                with open(self.file_str, "r") as f:
                     self.files = f.read().split()
 
         if self.file_vert_str is not None:
@@ -116,7 +116,9 @@ class model:
             vars_for_summing = []
             for var in self.variable_summing.keys():
                 vars_for_summing = vars_for_summing + self.variable_summing[var]["vars"]
-        list_input_var = list(self.variable_dict.keys()) if self.variable_dict is not None else []
+        list_input_var = (
+            list(self.variable_dict.keys()) if self.variable_dict is not None else []
+        )
         for obs_map in self.mapping:
             if self.variable_summing is not None:
                 list_input_var = list_input_var + list(
@@ -149,20 +151,26 @@ class model:
         elif "wrfchem" in self.model.lower():
             print("**** Reading WRF-Chem model output...")
             self.mod_kwargs.update({"var_list": list_input_var})
-            self.obj = mio.models._wrfchem_mm.open_mfdataset(self.files, **self.mod_kwargs)
+            self.obj = mio.models._wrfchem_mm.open_mfdataset(
+                self.files, **self.mod_kwargs
+            )
         elif "chimere" in self.model.lower():
             print("**** Reading Chimere model output...")
             self.mod_kwargs.update(
                 {
                     "var_list": list_input_var,
-                    "surf_only": control_dict["models"][self.label].get("surf_only", False),
+                    "surf_only": control_dict["models"][self.label].get(
+                        "surf_only", False
+                    ),
                 }
             )
             self.obj = mio.models.chimere.open_mfdataset(self.files, **self.mod_kwargs)
         elif any([mod_type in self.model.lower() for mod_type in ("ufs", "rrfs")]):
             print("**** Reading UFS-AQM model output...")
             if "rrfs" in self.model.lower():
-                warnings.warn("mod_type: 'rrfs' is deprecated. use 'ufs'.", DeprecationWarning)
+                warnings.warn(
+                    "mod_type: 'rrfs' is deprecated. use 'ufs'.", DeprecationWarning
+                )
             if self.files_pm25 is not None:
                 self.mod_kwargs.update({"fname_pm25": self.files_pm25})
             self.mod_kwargs.update({"var_list": list_input_var})
@@ -184,7 +192,9 @@ class model:
         elif "cesm_fv" in self.model.lower():
             print("**** Reading CESM FV model output...")
             self.mod_kwargs.update({"var_list": list_input_var})
-            self.obj = mio.models._cesm_fv_mm.open_mfdataset(self.files, **self.mod_kwargs)
+            self.obj = mio.models._cesm_fv_mm.open_mfdataset(
+                self.files, **self.mod_kwargs
+            )
         # CAM-chem-SE grid or MUSICAv0
         elif "cesm_se" in self.model.lower():
             print("**** Reading CESM SE model output...")
@@ -195,19 +205,33 @@ class model:
                 example_id = ":".join(s.strip() for s in self.scrip_file.split(":")[1:])
                 self.scrip_file = tutorial.fetch_example(example_id)
             self.mod_kwargs.update({"scrip_file": self.scrip_file})
-            self.obj = mio.models._cesm_se_mm.open_mfdataset(self.files, **self.mod_kwargs)
+            self.obj = mio.models._cesm_se_mm.open_mfdataset(
+                self.files, **self.mod_kwargs
+            )
             # self.obj, self.obj_scrip = read_cesm_se.open_mfdataset(self.files,**self.mod_kwargs)
             # self.obj.monet.scrip = self.obj_scrip
         elif "camx" in self.model.lower():
             self.mod_kwargs.update({"var_list": list_input_var})
             self.mod_kwargs.update(
-                {"surf_only": control_dict["models"][self.label].get("surf_only", False)}
+                {
+                    "surf_only": control_dict["models"][self.label].get(
+                        "surf_only", False
+                    )
+                }
             )
             self.mod_kwargs.update(
-                {"fname_met_3D": control_dict["models"][self.label].get("files_vert", None)}
+                {
+                    "fname_met_3D": control_dict["models"][self.label].get(
+                        "files_vert", None
+                    )
+                }
             )
             self.mod_kwargs.update(
-                {"fname_met_2D": control_dict["models"][self.label].get("files_met_surf", None)}
+                {
+                    "fname_met_2D": control_dict["models"][self.label].get(
+                        "files_met_surf", None
+                    )
+                }
             )
             self.obj = mio.models._camx_mm.open_mfdataset(self.files, **self.mod_kwargs)
         elif "raqms" in self.model.lower():

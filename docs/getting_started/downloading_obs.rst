@@ -9,40 +9,31 @@ Surface
 
 Surface datasets commonly used for air quality and atmospheric composition applications are all in different 
 formats and occasionally some HPC platforms including the NOAA Hera machine have download restrictions 
-that prevent us from using the automatic download features available in MONET. So for now, 
-MELODIES MONET has separate scripts to preprocess the surface observational datasets and save the output to an 
-intermediate NetCDF file. These preprocess scripts are also useful so that users do not have to re-download 
-observational data over and over again for the same analysis period. We will work on automating this process further 
-in the future.
+that prevent us from using the automatic download features available in MONET. For these reasons,
+it is often useful to download and preprocess the surface observational datasets and save the output to an
+intermediate NetCDF file. These files can then be reused, avoiding the need to re-download
+observational data over and over again for the same analysis period.
 
-The MELODIES MONET tool has a Command Line Interface (CLI) that can be used to download and create 
-MELODIES MONET-ready datasets for: AirNow, AERONET, AQS, ISH, ISH-Lite, and OpenAQ.
+The :mod:`monetio` package provides a Command Line Interface (CLI) that can be used to download and create
+standardized datasets for: AirNow, AERONET, AQS, and OpenAQ.
 
-The Command Line Interface allows users to very easily download datasets with a single command line argument. 
+The Command Line Interface allows users to very easily download datasets with a single command.
 Generally, users only need to select which subcommand to use (i.e., which observational data set you want to download) 
-and then specify the start date and end date like that below to download all US EPA AQS observations in August 2023::
+and then specify the date range like that below to download US EPA AQS observations::
 
-    $ melodies-monet get-aqs -s 2023-08-01 -e 2023-09-01
+    $ monetio aqs -d 2023-08-01:2023-08-31 -p OZONE -p PM2.5 -o epa_data.nc
 
-The other datasets can be downloaded in the same way::
+The other datasets can be downloaded in a similar way::
 
-    $ melodies-monet get-aeronet -s 2023-08-01 -e 2023-09-01
-    $ melodies-monet get-airnow -s 2023-08-01 -e 2023-09-01
-    $ melodies-monet get-ish -s 2023-08-01 -e 2023-09-01
-    $ melodies-monet get-ish-lite -s 2023-08-01 -e 2023-09-01
-    $ melodies-monet get-openaq -s 2023-08-01 -e 2023-09-01
+    $ monetio aeronet -d 2023-08-01:2023-08-31 -o aeronet_data.nc
+    $ monetio airnow -d 2023-08-01:2023-08-31 -o airnow_data.nc --wide-fmt
+    $ monetio openaq -d 2023-08-01:2023-08-31 -o openaq_data.nc
 
-The Command Line Interface will default to compressing the dataset, which can significantly save space. However, this
-compression step also takes time and some users have run into problems. Users can easily turn this compression off 
-by adding ``--no-compress``::
-
-    $ melodies-monet get-aqs -s 2023-08-01 -e 2023-09-01 --no-compress
-
-There are many other optional features available that are fully described in the Appendix :doc:`/cli`.
+For more information and options, please refer to the `MONETIO CLI documentation <https://monetio.readthedocs.io/en/stable/cli.html>`_.
 
 .. note::
    For users using MELODIES MONET on the NOAA Hera machine (or other machines 
-   with download restrictions), you will need to use the MELODIES MONET Command Line Interface on a 
+   with download restrictions), you will need to use the MONETIO Command Line Interface on a
    machine without download restrictions and manually copy the netCDF files produced 
    onto the NOAA Hera machine.
 

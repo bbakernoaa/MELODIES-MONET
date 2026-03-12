@@ -89,7 +89,18 @@ class observation:
             }
             reader = reader_map.get(extension.lower(), "generic_xarray")
 
-            self.obj = mio.load(reader, files=files, time_var=self.time_var, **(self.data_proc or {}))
+            if reader == "generic_xarray":
+                if len(files) > 1:
+                    self.obj = xr.open_mfdataset(files, **(self.data_proc or {}))
+                else:
+                    self.obj = xr.open_dataset(files[0], **(self.data_proc or {}))
+            else:
+                self.obj = mio.load(
+                    reader,
+                    files=files,
+                    time_var=self.time_var,
+                    **(self.data_proc or {}),
+                )
         except Exception as e:
             print("something happened opening file:", e)
             return
@@ -148,8 +159,7 @@ class observation:
 
     def open_sat_obs(self, time_interval=None, control_dict=None):
         """Methods to opens satellite data observations.
-        Uses in-house python code to open and load observations.
-        Alternatively may use the satpy reader.
+        Uses modular monetio.load API to open and load observations.
         Fills the object class associated with the equivalent label (self.label) with satellite observation
         dataset read in from the associated file (self.file) by the satellite file reader
 
@@ -165,78 +175,92 @@ class observation:
         from melodies_monet.util import time_interval_subset as tsub
         from glob import glob
 
+        # Map MM sat_types to monetio reader names
+        sat_map = {
+            "omps_l3": "omps",
+            "omps_nm": "omps_nadir",
+            "mopitt_l3": "mopitt",
+            "modis_l2": "modis_l2",
+            "tropomi_l2_no2": "tropomi",
+            "tempo_l2": "tempo",
+        }
+
+        reader = None
+        for k in sat_map:
+            if k in self.sat_type:
+                reader = sat_map[k]
+                break
+
+        if not reader:
+            print(
+                "file reader not implemented for {} observation".format(self.sat_type)
+            )
+            return
+
+        print(f"Reading {self.sat_type} using monetio.load...")
         try:
-            if self.sat_type == "omps_l3":
-                print("Reading OMPS L3")
-                self.obj = mio.sat._omps_l3_mm.open_dataset(self.file)
-            elif self.sat_type == "omps_nm":
-                print("Reading OMPS_NM")
+            if self.sat_type == "omps_nm":
                 if time_interval is not None:
                     flst = tsub.subset_OMPS_l2(self.file, time_interval)
                 else:
                     flst = self.file
-
-                self.obj = mio.sat._omps_nadir_mm.read_OMPS_nm(flst)
-
-                # couple of changes to move to reader
-                self.obj = self.obj.swap_dims({"x": "time"})  # indexing needs
-                self.obj = self.obj.sortby("time")  # enforce time in order.
-                # restrict observation data to time_interval if using
-                # additional development to deal with files crossing intervals needed (eg situations where orbit start at 23hrs, ends next day).
+                self.obj = mio.load(reader, files=flst)
+                self.obj = self.obj.swap_dims({"x": "time"}).sortby("time")
                 if time_interval is not None:
-                    self.obj = self.obj.sel(time=slice(time_interval[0], time_interval[-1]))
+                    self.obj = self.obj.sel(
+                        time=slice(time_interval[0], time_interval[-1])
+                    )
 
             elif self.sat_type == "mopitt_l3":
-                print("Reading MOPITT")
                 if time_interval is not None:
                     flst = tsub.subset_mopitt_l3(self.file, time_interval)
                 else:
                     flst = self.file
-                self.obj = mio.sat._mopitt_l3_mm.open_dataset(
-                    flst,
-                    [
-                        "column",
-                        "pressure_surf",
-                        "apriori_col",
-                        "apriori_surf",
-                        "apriori_prof",
-                        "ak_col",
-                    ],
-                )
-
-                # Determine if monthly or daily product and set as attribute
-                if any(mtype in glob(self.file)[0] for mtype in ("MOP03JM", "MOP03NM", "MOP03TM")):
+                # MOPITT reader in monetio might need specific var_list if not default
+                self.obj = mio.load(reader, files=flst)
+                if any(
+                    mtype in glob(self.file)[0]
+                    for mtype in ("MOP03JM", "MOP03NM", "MOP03TM")
+                ):
                     self.obj.attrs["monthly"] = True
                 else:
                     self.obj.attrs["monthly"] = False
 
             elif self.sat_type == "modis_l2":
-                # from monetio import modis_l2
-                print("Reading MODIS L2")
                 flst = tsub.subset_MODIS_l2(self.file, time_interval)
-                # self.obj = mio.sat._modis_l2_mm.read_mfdataset(
-                #     self.file, self.variable_dict, debug=self.debug)
-                self.obj = mio.sat._modis_l2_mm.read_mfdataset(
-                    flst, self.variable_dict, debug=self.debug
+                self.obj = mio.load(
+                    reader,
+                    files=flst,
+                    variable_dict=self.variable_dict,
+                    debug=self.debug,
                 )
-                # self.obj = granules, an OrderedDict of Datasets, keyed by datetime_str,
-                #   with variables: Latitude, Longitude, Scan_Start_Time, parameters, ...
+
             elif self.sat_type == "tropomi_l2_no2":
-                # from monetio import tropomi_l2_no2
-                print("Reading TROPOMI L2 NO2")
-                self.obj = mio.sat._tropomi_l2_no2_mm.read_trpdataset(
-                    self.file, self.variable_dict, debug=self.debug
+                self.obj = mio.load(
+                    reader,
+                    files=self.file,
+                    variable_dict=self.variable_dict,
+                    debug=self.debug,
                 )
+
             elif "tempo_l2" in self.sat_type:
-                print("Reading TEMPO L2")
-                self.obj = mio.sat._tempo_l2_no2_mm.open_dataset(
-                    self.file, self.variable_dict, debug=self.debug
+                self.obj = mio.load(
+                    reader,
+                    files=self.file,
+                    variable_dict=self.variable_dict,
+                    debug=self.debug,
                 )
+
             else:
-                print("file reader not implemented for {} observation".format(self.sat_type))
-                raise ValueError
-        except ValueError as e:
-            print("something happened opening file:", e)
+                self.obj = mio.load(
+                    reader,
+                    files=self.file,
+                    variable_dict=self.variable_dict,
+                    debug=self.debug,
+                )
+
+        except Exception as e:
+            print("something happened opening satellite file:", e)
             return
 
     def filter_obs(self):
@@ -253,23 +277,41 @@ class observation:
                     filter_vals = filter_dict[column]["value"]
                     filter_op = filter_dict[column]["oper"]
                     if filter_op == "isin":
-                        self.obj = self.obj.where(self.obj[column].isin(filter_vals), drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column].isin(filter_vals), drop=True
+                        )
                     elif filter_op == "isnotin":
-                        self.obj = self.obj.where(~self.obj[column].isin(filter_vals), drop=True)
+                        self.obj = self.obj.where(
+                            ~self.obj[column].isin(filter_vals), drop=True
+                        )
                     elif filter_op == "==":
-                        self.obj = self.obj.where(self.obj[column] == filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] == filter_vals, drop=True
+                        )
                     elif filter_op == ">":
-                        self.obj = self.obj.where(self.obj[column] > filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] > filter_vals, drop=True
+                        )
                     elif filter_op == "<":
-                        self.obj = self.obj.where(self.obj[column] < filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] < filter_vals, drop=True
+                        )
                     elif filter_op == ">=":
-                        self.obj = self.obj.where(self.obj[column] >= filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] >= filter_vals, drop=True
+                        )
                     elif filter_op == "<=":
-                        self.obj = self.obj.where(self.obj[column] <= filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] <= filter_vals, drop=True
+                        )
                     elif filter_op == "!=":
-                        self.obj = self.obj.where(self.obj[column] != filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] != filter_vals, drop=True
+                        )
                     else:
-                        raise ValueError(f"Filter operation {filter_op!r} is not supported")
+                        raise ValueError(
+                            f"Filter operation {filter_op!r} is not supported"
+                        )
 
     def mask_and_scale(self):
         """Mask and scale observations, including unit conversions and setting
@@ -286,11 +328,17 @@ class observation:
                     d = self.variable_dict[v]
                     # Apply removal of min, max, and nan on the units in the obs file first.
                     if "obs_min" in d:
-                        self.obj[v].data = self.obj[v].where(self.obj[v] >= d["obs_min"])
+                        self.obj[v].data = self.obj[v].where(
+                            self.obj[v] >= d["obs_min"]
+                        )
                     if "obs_max" in d:
-                        self.obj[v].data = self.obj[v].where(self.obj[v] <= d["obs_max"])
+                        self.obj[v].data = self.obj[v].where(
+                            self.obj[v] <= d["obs_max"]
+                        )
                     if "nan_value" in d:
-                        self.obj[v].data = self.obj[v].where(self.obj[v] != d["nan_value"])
+                        self.obj[v].data = self.obj[v].where(
+                            self.obj[v] != d["nan_value"]
+                        )
 
                     # Then apply a correction if needed for the units.
                     if "unit_scale" in d:

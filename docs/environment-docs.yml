@@ -6,6 +6,8 @@ channels:
 dependencies:
   - python=3.10
   - esmpy
+  - hdf5=1.14.3
+  - h5py=3.11.0
   - pip
   - pip:
     # Core MM Dependencies (with requested branches)
@@ -19,6 +21,7 @@ dependencies:
     - pyyaml
     - prefect-dask
     - dask-jobqueue
+    - joblib
     - pytest
     - pooch
     # Docs tools
