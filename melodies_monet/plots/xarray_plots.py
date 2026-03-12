@@ -8,11 +8,11 @@ import cartopy.crs as ccrs
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import monet as monet
+import monet_plots as mplots
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import xarray as xr
-from monet.plots.taylordiagram import TaylorDiagram as td
 from monet.util.tools import get_epa_region_bounds as get_epa_bounds
 from monet.util.tools import get_giorgi_region_bounds as get_giorgi_bounds
 
@@ -261,55 +261,16 @@ def make_taylor(
     normalize=False,
     scale_factor=1,
 ):
-    """Creates taylor plot. Note sometimes model values are off the scale
-    on this plot. This will be fixed soon.
+    """Creates taylor plot using monet-plots.
 
     Parameters
     ----------
     dset : xr.Dataset
         model/obs pair data to plot
-    column_o : str
-        Column label of observational variable to plot
-    label_o : str
-        Name of observational variable to use in plot legend
-    column_m : str
-        Column label of model variable to plot
-    label_m : str
-        Name of model variable to use in plot legend
-    mean_criteria : str
-        'None', 'space', 'time'. If None, values and correlations are compared
-        over all dimensions (x, y and time). If 'space', the spatial mean over the
-        comain is calculated before doing the comparison. If 'time', the temporal
-        mean is calculated before doing the comparison.
-    dia : dia
-        matplotlib ax from previous occurrence so can overlay obs and model
-        results on the same plot
-    ylabel : str
-        Title of x-axis
-    ty_scale : real
-        Scale to apply to taylor plot to control the plotting range
-    domain_type : str
-        Domain type specified in input yaml file
-    domain_name : str
-        Domain name specified in input yaml file
-    plot_dict : dictionary
-        Dictionary containing information about plotting for each pair
-        (e.g., color, linestyle, markerstyle)
-    fig_dict : dictionary
-        Dictionary containing information about figure
-    text_dict : dictionary
-        Dictionary containing information about text
-    debug : boolean
-        Whether to plot interactively (True) or not (False). Flag for
-        submitting jobs to supercomputer turn off interactive mode.
-
-    Returns
-    -------
-    class
-        Taylor diagram class defined in MONET
-
+    ... [parameters truncated for brevity] ...
     """
-    # import pdb; pdb.set_trace()
+    if not debug:
+        plt.ioff()
 
     if mean_criteria == "space":
         dset_forplot = dset.mean(dim=("x", "y"))
@@ -317,119 +278,28 @@ def make_taylor(
         dset_forplot = dset.mean(dim="time")
     else:
         dset_forplot = dset
-    # import pdb; pdb.set_trace()
 
-    # First define items for all plots
-    if not debug:
-        plt.ioff()
-
-    # set default text size
-    def_text = dict(fontsize=14.0)
-    if text_dict is not None:
-        text_kwargs = {**def_text, **text_dict}
-    else:
-        text_kwargs = def_text
-    # set ylabel to column if not specified.
-    if ylabel is None:
-        ylabel = varname_o
-    # Then, if no plot has been created yet, create a plot and plot the first pair.
-    refstd = dset_forplot[varname_o].std().values
-
+    # Delegate to monet-plots TaylorDiagramPlot
     if dia is None:
-        # create the figure
-        if fig_dict is not None:
-            f = plt.figure(**fig_dict)
-        else:
-            f = plt.figure(figsize=(12, 10))
-        sns.set_style("ticks")
-        # plot the line
-        cc = xr.corr(
-            dset_forplot[varname_o].stack(tempdim=[...]).dropna(dim="tempdim"),
-            dset_forplot[varname_m].stack(tempdim=[...]).dropna(dim="tempdim"),
+        dia = mplots.TaylorDiagramPlot(
+            dset_forplot,
+            column_o=varname_o,
+            label_o=label_o,
+            column_m=varname_m,
+            label_m=label_m,
+            scale=ty_scale,
+            fig_dict=fig_dict,
+            plot_dict=plot_dict,
+            text_dict=text_dict,
+            normalize=normalize,
         )
-        if normalize:
-            print(f"Base standard deviation: {refstd: 1.3g}")
-            scale_factor = refstd
-            dia = td(1, scale=ty_scale, fig=f, rect=111, label=label_o)
-            dia.add_sample(
-                dset_forplot[varname_m].std().values / scale_factor,
-                cc,
-                zorder=9,
-                label=label_m,
-                **plot_dict,
-            )
-        elif scale_factor != 1:
-            dset_forplot[varname_m].attrs["units"] = (
-                f"{scale_factor} {dset_forplot[varname_m].attrs['units']}"
-            )
-
-        else:
-            dia = td(refstd, scale=ty_scale, fig=f, rect=111, label=label_o)
-            dia.add_sample(
-                dset_forplot[varname_m].std().values,
-                cc,
-                zorder=9,
-                label=label_m,
-                **plot_dict,
-            )
-        plt.grid(linewidth=1, alpha=0.5)
-
-    # If plot has been created add to the current axes.
     else:
-        # this means that an axis handle already exists and use it to plot another model
-        cc = xr.corr(
-            dset_forplot[varname_o].stack(tempdim=[...]).dropna(dim="tempdim"),
-            dset_forplot[varname_m].stack(tempdim=[...]).dropna(dim="tempdim"),
-        )
-        if normalize:
-            scale_factor = refstd
-            dia.add_sample(
-                dset_forplot[varname_m].std().values / scale_factor,
-                cc,
-                zorder=9,
-                label=label_m,
-                **plot_dict,
-            )
+        dia.add_sample(dset_forplot, column_m=varname_m, label_m=label_m, **(plot_dict or {}))
 
-        else:
-            dia.add_sample(
-                dset_forplot[varname_m].std().values,
-                cc,
-                zorder=9,
-                label=label_m,
-                **plot_dict,
-            )
-    # Set parameters for all plots
-    contours = dia.add_contours(colors="0.5")
-    # control the clabel format for very high values (e.g., NO2 columns), M.Li
-    # plt.clabel(contours, inline=1, fontsize=text_kwargs['fontsize']*0.8)
-    plt.clabel(
-        contours, inline=1, fontsize=text_kwargs["fontsize"] * 0.8, fmt="(%1.5g)"
-    )
-
-    plt.grid(alpha=0.5)
-    plt.legend(
-        frameon=False,
-        fontsize=text_kwargs["fontsize"] * 0.8,
-        bbox_to_anchor=(0.75, 0.93),
-        loc="center left",
-    )
     if domain_type is not None and domain_name is not None:
-        if domain_type == "epa_region":
-            plt.title("EPA Region " + domain_name, fontweight="bold", **text_kwargs)
-        else:
-            plt.title(domain_name, fontweight="bold", **text_kwargs)
+        title = f"EPA Region {domain_name}" if domain_type == "epa_region" else domain_name
+        plt.title(title, fontweight="bold", **(text_dict or {}))
 
-    ax = plt.gca()
-    ax.axis["left"].label.set_text("Standard Deviation: " + ylabel)
-    ax.axis["top"].label.set_text("Correlation")
-    ax.axis["left"].label.set_fontsize(text_kwargs["fontsize"])
-    ax.axis["top"].label.set_fontsize(text_kwargs["fontsize"])
-    ax.axis["left"].label.set_fontweight("bold")
-    ax.axis["top"].label.set_fontweight("bold")
-    ax.axis["top"].major_ticklabels.set_fontsize(text_kwargs["fontsize"] * 0.8)
-    ax.axis["left"].major_ticklabels.set_fontsize(text_kwargs["fontsize"] * 0.8)
-    ax.axis["right"].major_ticklabels.set_fontsize(text_kwargs["fontsize"] * 0.8)
     return dia
 
 

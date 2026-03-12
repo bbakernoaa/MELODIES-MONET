@@ -90,6 +90,7 @@ class observation:
             reader = reader_map.get(extension.lower(), "generic_xarray")
 
             if reader == "generic_xarray":
+                print(f"**** Reading {files[0]} using generic xarray reader...")
                 if len(files) > 1:
                     self.obj = xr.open_mfdataset(files, **(self.data_proc or {}))
                 else:
@@ -328,15 +329,15 @@ class observation:
                     d = self.variable_dict[v]
                     # Apply removal of min, max, and nan on the units in the obs file first.
                     if "obs_min" in d:
-                        self.obj[v].data = self.obj[v].where(
+                        self.obj[v] = self.obj[v].where(
                             self.obj[v] >= d["obs_min"]
                         )
                     if "obs_max" in d:
-                        self.obj[v].data = self.obj[v].where(
+                        self.obj[v] = self.obj[v].where(
                             self.obj[v] <= d["obs_max"]
                         )
                     if "nan_value" in d:
-                        self.obj[v].data = self.obj[v].where(
+                        self.obj[v] = self.obj[v].where(
                             self.obj[v] != d["nan_value"]
                         )
 
@@ -347,17 +348,17 @@ class observation:
                         scale = 1
                     if "unit_scale_method" in d:
                         if d["unit_scale_method"] == "*":
-                            self.obj[v].data *= scale
+                            self.obj[v] *= scale
                         elif d["unit_scale_method"] == "/":
-                            self.obj[v].data /= scale
+                            self.obj[v] /= scale
                         elif d["unit_scale_method"] == "+":
-                            self.obj[v].data += scale
+                            self.obj[v] += scale
                         elif d["unit_scale_method"] == "-":
-                            self.obj[v].data += -1 * scale
+                            self.obj[v] += -1 * scale
 
                     # Then replace LLOD_value with LLOD_setvalue (after unit conversion)
                     if "LLOD_value" in d:
-                        self.obj[v].data = self.obj[v].where(
+                        self.obj[v] = self.obj[v].where(
                             self.obj[v] != d["LLOD_value"], d["LLOD_setvalue"]
                         )
 

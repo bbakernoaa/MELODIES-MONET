@@ -138,119 +138,73 @@ class model:
             if vn in list_input_var:
                 list_input_var.remove(vn)
 
-        if "cmaq" in self.model.lower():
-            print("**** Reading CMAQ model output...")
-            self.mod_kwargs.update({"var_list": list_input_var})
-            if self.files_vert is not None:
-                self.mod_kwargs.update({"fname_vert": self.files_vert})
-            if self.files_surf is not None:
-                self.mod_kwargs.update({"fname_surf": self.files_surf})
-            if len(self.files) > 1:
-                self.mod_kwargs.update({"concatenate_forecasts": True})
-            self.obj = mio.models._cmaq_mm.open_mfdataset(self.files, **self.mod_kwargs)
-        elif "wrfchem" in self.model.lower():
-            print("**** Reading WRF-Chem model output...")
-            self.mod_kwargs.update({"var_list": list_input_var})
-            self.obj = mio.models._wrfchem_mm.open_mfdataset(
-                self.files, **self.mod_kwargs
-            )
-        elif "chimere" in self.model.lower():
-            print("**** Reading Chimere model output...")
-            self.mod_kwargs.update(
-                {
-                    "var_list": list_input_var,
-                    "surf_only": control_dict["models"][self.label].get(
-                        "surf_only", False
-                    ),
-                }
-            )
-            self.obj = mio.models.chimere.open_mfdataset(self.files, **self.mod_kwargs)
-        elif any([mod_type in self.model.lower() for mod_type in ("ufs", "rrfs")]):
-            print("**** Reading UFS-AQM model output...")
-            if "rrfs" in self.model.lower():
-                warnings.warn(
-                    "mod_type: 'rrfs' is deprecated. use 'ufs'.", DeprecationWarning
-                )
-            if self.files_pm25 is not None:
-                self.mod_kwargs.update({"fname_pm25": self.files_pm25})
-            self.mod_kwargs.update({"var_list": list_input_var})
-            if hasattr(mio.models, "ufs"):
-                loader = mio.models.ufs.open_mfdataset
-            else:
-                warnings.warn(
-                    "usage of _rrfs_cmaq_mm is deprecated, use models.ufs.open_mf_dataset",
-                    DeprecationWarning,
-                )
-                loader = mio.models._rrfs_cmaq_mm.open_mfdataset
-            self.obj = loader(self.files, **self.mod_kwargs)
-        elif "gsdchem" in self.model.lower():
-            print("**** Reading GSD-Chem model output...")
-            if len(self.files) > 1:
-                self.obj = mio.fv3chem.open_mfdataset(self.files, **self.mod_kwargs)
-            else:
-                self.obj = mio.fv3chem.open_dataset(self.files, **self.mod_kwargs)
-        elif "cesm_fv" in self.model.lower():
-            print("**** Reading CESM FV model output...")
-            self.mod_kwargs.update({"var_list": list_input_var})
-            self.obj = mio.models._cesm_fv_mm.open_mfdataset(
-                self.files, **self.mod_kwargs
-            )
-        # CAM-chem-SE grid or MUSICAv0
-        elif "cesm_se" in self.model.lower():
-            print("**** Reading CESM SE model output...")
-            self.mod_kwargs.update({"var_list": list_input_var})
-            if self.scrip_file.startswith("example:"):
-                from melodies_monet import tutorial
+        # Delegate to monetio.load for unified data ingestion
+        self.mod_kwargs.update({"var_list": list_input_var})
 
-                example_id = ":".join(s.strip() for s in self.scrip_file.split(":")[1:])
-                self.scrip_file = tutorial.fetch_example(example_id)
-            self.mod_kwargs.update({"scrip_file": self.scrip_file})
-            self.obj = mio.models._cesm_se_mm.open_mfdataset(
-                self.files, **self.mod_kwargs
-            )
-            # self.obj, self.obj_scrip = read_cesm_se.open_mfdataset(self.files,**self.mod_kwargs)
-            # self.obj.monet.scrip = self.obj_scrip
-        elif "camx" in self.model.lower():
-            self.mod_kwargs.update({"var_list": list_input_var})
-            self.mod_kwargs.update(
-                {
-                    "surf_only": control_dict["models"][self.label].get(
-                        "surf_only", False
-                    )
-                }
-            )
-            self.mod_kwargs.update(
-                {
-                    "fname_met_3D": control_dict["models"][self.label].get(
-                        "files_vert", None
-                    )
-                }
-            )
-            self.mod_kwargs.update(
-                {
-                    "fname_met_2D": control_dict["models"][self.label].get(
-                        "files_met_surf", None
-                    )
-                }
-            )
-            self.obj = mio.models._camx_mm.open_mfdataset(self.files, **self.mod_kwargs)
-        elif "raqms" in self.model.lower():
-            self.mod_kwargs.update({"var_list": list_input_var})
-            if time_interval is not None:
-                # fill filelist with subset
-                print("subsetting model files to interval")
-                file_list = tsub.subset_model_filelist(
-                    self.files, "%m_%d_%Y_%HZ", "6H", time_interval
-                )
-            else:
-                file_list = self.files
-            if len(file_list) > 1:
-                self.obj = mio.models.raqms.open_mfdataset(file_list, **self.mod_kwargs)
-            else:
-                self.obj = mio.models.raqms.open_dataset(file_list)
-            if "ptrop" in self.obj and "pres_pa_trop" not in self.obj:
-                self.obj = self.obj.rename({"ptrop": "pres_pa_trop"})
+        # Map MM model types to monetio reader names
+        model_map = {
+            "cmaq": "cmaq",
+            "wrfchem": "wrfchem",
+            "chimere": "chimere",
+            "ufs": "ufs",
+            "rrfs": "ufs",
+            "gsdchem": "fv3chem",
+            "cesm_fv": "cesm_fv",
+            "cesm_se": "cesm_se",
+            "camx": "camx",
+            "raqms": "raqms",
+        }
 
+        reader = None
+        for k, v in model_map.items():
+            if k in self.model.lower():
+                reader = v
+                break
+
+        if reader:
+            print(f"**** Reading {self.model} model output using monetio.load...")
+            # Handle specific model requirements before loading
+            if reader == "cmaq":
+                if self.files_vert is not None:
+                    self.mod_kwargs.update({"fname_vert": self.files_vert})
+                if self.files_surf is not None:
+                    self.mod_kwargs.update({"fname_surf": self.files_surf})
+            elif reader == "chimere":
+                self.mod_kwargs.update(
+                    {"surf_only": control_dict["models"][self.label].get("surf_only", False)}
+                )
+            elif reader == "ufs":
+                if self.files_pm25 is not None:
+                    self.mod_kwargs.update({"fname_pm25": self.files_pm25})
+            elif reader == "cesm_se":
+                if self.scrip_file.startswith("example:"):
+                    from melodies_monet import tutorial
+                    example_id = ":".join(s.strip() for s in self.scrip_file.split(":")[1:])
+                    self.scrip_file = tutorial.fetch_example(example_id)
+                self.mod_kwargs.update({"scrip_file": self.scrip_file})
+            elif reader == "camx":
+                self.mod_kwargs.update(
+                    {"surf_only": control_dict["models"][self.label].get("surf_only", False)}
+                )
+                self.mod_kwargs.update(
+                    {"fname_met_3D": control_dict["models"][self.label].get("files_vert", None)}
+                )
+                self.mod_kwargs.update(
+                    {"fname_met_2D": control_dict["models"][self.label].get("files_met_surf", None)}
+                )
+            elif reader == "raqms":
+                if time_interval is not None:
+                    print("subsetting model files to interval")
+                    self.files = tsub.subset_model_filelist(
+                        self.files, "%m_%d_%Y_%HZ", "6H", time_interval
+                    )
+
+            self.obj = mio.load(reader, files=self.files, **self.mod_kwargs)
+
+            # Post-load fixes
+            if reader == "raqms":
+                if "ptrop" in self.obj and "pres_pa_trop" not in self.obj:
+                    self.obj = self.obj.rename({"ptrop": "pres_pa_trop"})
         else:
             print("**** Reading Unspecified model output. Take Caution...")
             if len(self.files) > 1:
@@ -295,13 +249,13 @@ class model:
                         scale = 1
                     if "unit_scale_method" in d:
                         if d["unit_scale_method"] == "*":
-                            self.obj[v].data *= scale
+                            self.obj[v] *= scale
                         elif d["unit_scale_method"] == "/":
-                            self.obj[v].data /= scale
+                            self.obj[v] /= scale
                         elif d["unit_scale_method"] == "+":
-                            self.obj[v].data += scale
+                            self.obj[v] += scale
                         elif d["unit_scale_method"] == "-":
-                            self.obj[v].data += -1 * scale
+                            self.obj[v] += -1 * scale
 
     def sum_variables(self):
         """Sum any variables noted that should be summed to create new variables.

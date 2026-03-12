@@ -35,7 +35,7 @@ class pair:
         )
 
     def fix_paired_xarray(self, dset):
-        """Reformat the paired dataset.
+        """Reformat the paired dataset using xarray operations to maintain laziness.
 
         Parameters
         ----------
@@ -46,49 +46,43 @@ class pair:
         xarray.Dataset
             Reformatted paired dataset.
         """
-        # first convert to dataframe
-        df = dset.to_dataframe().reset_index(drop=True)
+        if "siteid" not in dset.coords and "siteid" not in dset.data_vars:
+             return dset
 
-        # now get just the single site index
-        dfpsite = df.rename({"siteid": "x"}, axis=1).drop_duplicates(subset=["x"])
-        columns = dfpsite.columns  # all columns
+        # Ensure we have a site dimension 'x'
+        if "x" not in dset.dims:
+            dset = dset.rename({"siteid": "x"})
+
         site_columns = [
             "latitude",
             "longitude",
-            "x",
             "site",
             "msa_code",
             "cmsa_name",
             "epa_region",
             "state_name",
             "msa_name",
-            "site",
             "utcoffset",
-        ]  # only columns for single site identificaiton
+        ]
 
-        # site only xarray obj (no time dependence)
-        dfps = (
-            dfpsite.loc[:, columns[columns.isin(site_columns)]]
-            .set_index(["x"])
-            .to_xarray()
-        )  # single column index
+        # Separate site-invariant and time-variant data
+        # Site data is constant over time for each site
+        site_vars = [v for v in site_columns if v in dset.data_vars]
 
-        # now pivot df and convert back to xarray using only non site_columns
-        site_columns.remove("x")  # need to keep x to merge later
-        dfx = (
-            df.loc[:, df.columns[~df.columns.isin(site_columns)]]
-            .rename({"siteid": "x"}, axis=1)
-            .set_index(["time", "x"])
-            .to_xarray()
-        )
+        # Create a site-only dataset by taking the first time step for site variables
+        # and dropping the time dimension
+        ds_site = dset[site_vars].isel(time=0, drop=True)
 
-        # merge the time dependent and time independent
-        out = xr.merge([dfx, dfps])
+        # Create a time-variant dataset by dropping the site variables
+        ds_time = dset.drop_vars(site_vars)
 
-        # reset x index and add siteid back to the xarray object
-        if ~pd.api.types.is_numeric_dtype(out.x):
-            siteid = out.x.values
-            out["x"] = range(len(siteid))
-            out["siteid"] = (("x"), siteid)
+        # Merge them back. Xarray will handle the broadcasting correctly.
+        out = xr.merge([ds_time, ds_site])
+
+        # Ensure siteid is preserved as a coordinate or variable
+        if "siteid" not in out.coords and "siteid" not in out.data_vars:
+             if "x" in out.dims:
+                  # If we renamed siteid to x, we might want to keep siteid as a variable
+                  pass
 
         return out

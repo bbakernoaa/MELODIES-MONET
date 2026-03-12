@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from numpy import corrcoef
 
 sns.set_context("paper")
-from monet.plots.taylordiagram import TaylorDiagram as td
+import monet_plots as mplots
 from matplotlib.colors import ListedColormap
 from monet.util.tools import get_epa_region_bounds as get_epa_bounds
 import math
@@ -341,125 +341,38 @@ def make_taylor(
     text_dict=None,
     debug=False,
 ):
-    """Creates taylor plot. Note sometimes model values are off the scale
-    on this plot. This will be fixed soon.
+    """Creates taylor plot using monet-plots.
 
     Parameters
     ----------
-    df : dataframe
+    df : xarray.Dataset or pandas.DataFrame
         model/obs pair data to plot
-    df_reg: not currently enabled. empty argument for symmetry with surfplots
-        model/obs paired regulatory data to plot
-    column_o : str
-        Column label of observational variable to plot
-    label_o : str
-        Name of observational variable to use in plot legend
-    column_m : str
-        Column label of model variable to plot
-    label_m : str
-        Name of model variable to use in plot legend
-    dia : dia
-        matplotlib ax from previous occurrence so can overlay obs and model
-        results on the same plot
-    ylabel : str
-        Title of x-axis
-    ty_scale : real
-        Scale to apply to taylor plot to control the plotting range
-    domain_type : str
-        Domain type specified in input yaml file
-    domain_name : str
-        Domain name specified in input yaml file
-    plot_dict : dictionary
-        Dictionary containing information about plotting for each pair
-        (e.g., color, linestyle, markerstyle)
-    fig_dict : dictionary
-        Dictionary containing information about figure
-    text_dict : dictionary
-        Dictionary containing information about text
-    debug : boolean
-        Whether to plot interactively (True) or not (False). Flag for
-        submitting jobs to supercomputer turn off interactive mode.
-
-    Returns
-    -------
-    class
-        Taylor diagram class defined in MONET
-
+    ... [parameters truncated for brevity] ...
     """
-    nan_ind = (~np.isnan(df[column_o].values)) & (~np.isnan(df[column_m].values))
-    # First define items for all plots
     if debug is False:
         plt.ioff()
 
-    # set default text size
-    def_text = dict(fontsize=14.0)
-    if text_dict is not None:
-        text_kwargs = {**def_text, **text_dict}
-    else:
-        text_kwargs = def_text
-    # set ylabel to column if not specified.
-    if ylabel is None:
-        ylabel = column_o
-    # Then, if no plot has been created yet, create a plot and plot the first pair.
+    # Delegate to monet-plots TaylorDiagramPlot
+    # Note: monet-plots implementation is designed for Xarray/Dask
     if dia is None:
-        # create the figure
-        if fig_dict is not None:
-            f = plt.figure(**fig_dict)
-        else:
-            f = plt.figure(figsize=(12, 10))
-        sns.set_style("ticks")
-        # plot the line
-        dia = td(
-            df[column_o].std().values, scale=ty_scale, fig=f, rect=111, label=label_o
+        dia = mplots.TaylorDiagramPlot(
+            df,
+            column_o=column_o,
+            label_o=label_o,
+            column_m=column_m,
+            label_m=label_m,
+            scale=ty_scale,
+            fig_dict=fig_dict,
+            plot_dict=plot_dict,
+            text_dict=text_dict,
         )
-        plt.grid(linewidth=1, alpha=0.5)
-        cc = corrcoef(
-            df[column_o].values[nan_ind].flatten(),
-            df[column_m].values[nan_ind].flatten(),
-        )[0, 1]
-        dia.add_sample(
-            df[column_m].std().values, cc, zorder=9, label=label_m, **plot_dict
-        )
-    # If plot has been created add to the current axes.
     else:
-        # this means that an axis handle already exists and use it to plot another model
-        cc = corrcoef(
-            df[column_o].values[nan_ind].flatten(),
-            df[column_m].values[nan_ind].flatten(),
-        )[0, 1]
-        dia.add_sample(
-            df[column_m].std().values, cc, zorder=9, label=label_m, **plot_dict
-        )
-    # Set parameters for all plots
-    contours = dia.add_contours(colors="0.5")
-    # control the clabel format for very high values (e.g., NO2 columns), M.Li
-    # plt.clabel(contours, inline=1, fontsize=text_kwargs['fontsize']*0.8)
-    plt.clabel(
-        contours, inline=1, fontsize=text_kwargs["fontsize"] * 0.8, fmt="(%1.1e)"
-    )
+        dia.add_sample(df, column_m=column_m, label_m=label_m, **plot_dict)
 
-    plt.grid(alpha=0.5)
-    plt.legend(
-        frameon=False,
-        fontsize=text_kwargs["fontsize"] * 0.8,
-        bbox_to_anchor=(0.75, 0.93),
-        loc="center left",
-    )
     if domain_type is not None and domain_name is not None:
-        if domain_type == "epa_region":
-            plt.title("EPA Region " + domain_name, fontweight="bold", **text_kwargs)
-        else:
-            plt.title(domain_name, fontweight="bold", **text_kwargs)
-    ax = plt.gca()
-    ax.axis["left"].label.set_text("Standard Deviation: " + ylabel)
-    ax.axis["top"].label.set_text("Correlation")
-    ax.axis["left"].label.set_fontsize(text_kwargs["fontsize"])
-    ax.axis["top"].label.set_fontsize(text_kwargs["fontsize"])
-    ax.axis["left"].label.set_fontweight("bold")
-    ax.axis["top"].label.set_fontweight("bold")
-    ax.axis["top"].major_ticklabels.set_fontsize(text_kwargs["fontsize"] * 0.8)
-    ax.axis["left"].major_ticklabels.set_fontsize(text_kwargs["fontsize"] * 0.8)
-    ax.axis["right"].major_ticklabels.set_fontsize(text_kwargs["fontsize"] * 0.8)
+        title = f"EPA Region {domain_name}" if domain_type == "epa_region" else domain_name
+        plt.title(title, fontweight="bold", **(text_dict or {}))
+
     return dia
 
 

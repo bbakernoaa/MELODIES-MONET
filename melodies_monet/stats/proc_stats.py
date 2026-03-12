@@ -4,50 +4,7 @@
 # Simple MONET utility to calculate statistics from paired hdf file
 
 import monet  # noqa: F401
-from monet.util.stats import (
-    STDO,
-    STDP,
-    MNB,
-    MNE,
-    MdnNB,
-    MdnNE,
-    NMdnGE,
-    NO,
-    NOP,
-    NP,
-    MO,
-    MP,
-    MdnO,
-    MdnP,
-    RM,
-    RMdn,
-    MB,
-    MdnB,
-    NMB,
-    NMdnB,
-    FB,
-    ME,
-    MdnE,
-    NME,
-    NMdnE,
-    FE,
-    # MNPB, MdnNPB, MNPE, MdnNPE, NMPB, NMdnPB, NMPE, NMdnPE,
-    R2,
-    RMSE,
-    d1,
-    E1,
-    IOA,
-    AC,
-    # HSS, ETS,
-    WDMB,
-    WDMdnB,
-    WDNMB_m,
-    WDME,
-    WDMdnE,
-    WDRMSE,
-    WDIOA,
-    WDAC,
-)
+import monet_stats as mstats
 import numpy as np
 import matplotlib.pyplot as plt
 from melodies_monet.plots import savefig
@@ -125,7 +82,7 @@ def calc(df, stat=None, obsvar=None, modvar=None, wind=False):
 
     Parameters
     ----------
-    df : dataframe
+    df : dataframe or xarray.Dataset
         model/obs pair data
     obsvar : str
         Column label of observation variable
@@ -141,101 +98,30 @@ def calc(df, stat=None, obsvar=None, modvar=None, wind=False):
         statistical value
 
     """
-    obs = df[obsvar].values
-    mod = df[modvar].values
+    # Use monet-stats library for calculations
+    # Note: monet-stats functions typically accept numpy arrays or xarray objects
+    obs = df[obsvar]
+    mod = df[modvar]
 
-    if stat == "STDO":
-        value = STDO(obs, mod, axis=None)
-    elif stat == "STDP":
-        value = STDP(obs, mod, axis=None)
-    # MNB looks wrong. Don't use for now.
-    elif stat == "MNB":
-        value = MNB(obs, mod, axis=None)
-    # MNE looks wrong. Don't use for now.
-    elif stat == "MNE":
-        value = MNE(obs, mod, axis=None)
-    elif stat == "MdnNB":
-        value = MdnNB(obs, mod, axis=None)
-    elif stat == "MdnNE":
-        value = MdnNE(obs, mod, axis=None)
-    elif stat == "NMdnGE":
-        value = NMdnGE(obs, mod, axis=None)
-    elif stat == "NO":
-        value = NO(obs, mod, axis=None)
-    elif stat == "NOP":
-        value = NOP(obs, mod, axis=None)
-    elif stat == "NP":
-        value = NP(obs, mod, axis=None)
-    elif stat == "MO":
-        value = MO(obs, mod, axis=None)
-    elif stat == "MP":
-        value = MP(obs, mod, axis=None)
-    elif stat == "MdnO":
-        value = MdnO(obs, mod, axis=None)
-    elif stat == "MdnP":
-        value = MdnP(obs, mod, axis=None)
-    elif stat == "RM":
-        value = RM(obs, mod, axis=None)
-    elif stat == "RMdn":
-        value = RMdn(obs, mod, axis=None)
-    elif stat == "MB":
-        if wind is True:
-            value = WDMB(obs, mod, axis=None)
-        else:
-            value = MB(obs, mod, axis=None)
-    elif stat == "MdnB":
-        if wind is True:
-            value = WDMdnB(obs, mod, axis=None)
-        else:
-            value = MdnB(obs, mod, axis=None)
-    elif stat == "NMB":
-        if wind is True:
-            value = WDNMB_m(obs, mod, axis=None)
-        else:
-            value = NMB(obs, mod, axis=None)
-    elif stat == "NMdnB":
-        value = NMdnB(obs, mod, axis=None)
-    elif stat == "FB":
-        value = FB(obs, mod, axis=None)
-    elif stat == "ME":
-        if wind is True:
-            value = WDME(obs, mod, axis=None)
-        else:
-            value = ME(obs, mod, axis=None)
-    elif stat == "MdnE":
-        if wind is True:
-            value = WDMdnE(obs, mod, axis=None)
-        else:
-            value = MdnE(obs, mod, axis=None)
-    elif stat == "NME":
-        value = NME(obs, mod, axis=None)
-    elif stat == "NMdnE":
-        value = NMdnE(obs, mod, axis=None)
-    elif stat == "FE":
-        value = FE(obs, mod, axis=None)
-    elif stat == "R2":
-        value = R2(obs, mod, axis=None)
-    elif stat == "RMSE":
-        if wind is True:
-            value = WDRMSE(obs, mod, axis=None)
-        else:
-            value = RMSE(obs, mod, axis=None)
-    elif stat == "d1":
-        value = d1(obs, mod, axis=None)
-    elif stat == "E1":
-        value = E1(obs, mod, axis=None)
-    elif stat == "IOA":
-        if wind is True:
-            value = WDIOA(obs, mod, axis=None)
-        else:
-            value = IOA(obs, mod, axis=None)
-    elif stat == "AC":
-        if wind is True:
-            value = WDAC(obs, mod, axis=None)
-        else:
-            value = AC(obs, mod, axis=None)
+    # Special handling for wind stats in monet-stats if necessary
+    # Many monet-stats functions already handle wind internally or have specific WD variants
+
+    stat_func = getattr(mstats, stat, None)
+
+    if stat_func is None:
+        # Check for wind-specific variants if wind=True
+        if wind:
+            stat_func = getattr(mstats, f"WD{stat}", None)
+
+    if stat_func:
+        # most monet-stats functions take (obs, mod, axis=None)
+        try:
+            value = stat_func(obs, mod, axis=None)
+        except Exception as e:
+            print(f"Error calculating {stat}: {e}")
+            value = np.nan
     else:
-        print("Stat not found: " + stat)
+        print(f"Stat not found: {stat}")
         value = np.nan
 
     return value

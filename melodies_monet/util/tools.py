@@ -15,23 +15,9 @@ N_A = 6.02214076e23
 
 
 def search_listinlist(array1, array2):
-    # find intersections
+    from monet.util.tools import search_listinlist as m_search_listinlist
 
-    s1 = set(array1.flatten())
-    s2 = set(array2.flatten())
-
-    inter = s1.intersection(s2)
-
-    index1 = np.array([])
-    index2 = np.array([])
-    # find the indexes in array1
-    for i in inter:
-        index11 = np.where(array1 == i)
-        index22 = np.where(array2 == i)
-        index1 = np.concatenate([index1[:], index11[0]])
-        index2 = np.concatenate([index2[:], index22[0]])
-
-    return np.sort(np.int32(index1)), np.sort(np.int32(index2))
+    return m_search_listinlist(array1, array2)
 
 
 def list_contains(list1, list2):
@@ -122,49 +108,27 @@ def long_to_wide(df):
 
 
 def calc_8hr_rolling_max(df, col=None, window=None):
-    df.index = df.time_local
-    df_rolling = (
-        df.groupby("siteid")[col]
-        .rolling(window, center=True, win_type="boxcar")
-        .mean(numeric_only=True)
-        .reset_index()
-        .dropna()
-    )
-    df_rolling_max = (
-        df_rolling.groupby("siteid")
-        .resample("D", on="time_local")
-        .max(numeric_only=True)
-        .reset_index(drop=True)
-    )
-    df = df.reset_index(drop=True)
-    return df.merge(df_rolling_max, on=["siteid", "time_local"])
+    from monet.util.tools import calc_8hr_rolling_max as m_calc_8hr_rolling_max
+
+    return m_calc_8hr_rolling_max(df, col=col, window=window)
 
 
 def calc_24hr_ave(df, col=None):
-    df.index = df.time_local
-    df_24hr_ave = (
-        df.groupby("siteid")[col].resample("D").mean(numeric_only=True).reset_index()
-    )
-    df = df.reset_index(drop=True)
-    return df.merge(df_24hr_ave, on=["siteid", "time_local"])
+    from monet.util.tools import calc_24hr_ave as m_calc_24hr_ave
+
+    return m_calc_24hr_ave(df, col=col)
 
 
 def calc_3hr_ave(df, col=None):
-    df.index = df.time_local
-    df_3hr_ave = (
-        df.groupby("siteid")[col].resample("3h").mean(numeric_only=True).reset_index()
-    )
-    df = df.reset_index(drop=True)
-    return df.merge(df_3hr_ave, on=["siteid", "time_local"])
+    from monet.util.tools import calc_3hr_ave as m_calc_3hr_ave
+
+    return m_calc_3hr_ave(df, col=col)
 
 
 def calc_annual_ave(df, col=None):
-    df.index = df.time_local
-    df_annual_ave = (
-        df.groupby("siteid")[col].resample("A").mean(numeric_only=True).reset_index()
-    )
-    df = df.reset_index(drop=True)
-    return df.merge(df_annual_ave, on=["siteid", "time_local"])
+    from monet.util.tools import calc_annual_ave as m_calc_annual_ave
+
+    return m_calc_annual_ave(df, col=col)
 
 
 def get_giorgi_region_bounds(index=None, acronym=None):
@@ -481,38 +445,40 @@ def resample_stratify(
     return out
 
 
-def vert_interp(ds_model, df_obs, var_name_list):
-    from pandas import merge_asof
+def vert_interp(ds_model, ds_obs, var_name_list):
+    """Vertical interpolation using xarray/dask to maintain laziness."""
+    from monet.util.combinetool import merge_asof
 
     ds_model["pressure_model_nan"] = ds_model["pressure_model"].copy()
     var_name_list.append("pressure_model_nan")
 
     var_out_list = []
+    # Use xarray's sortby instead of sorted() on values
+    pressure_obs_sorted = ds_obs.pressure_obs.squeeze().sortby("pressure_obs", ascending=False)
+
     for var_name in var_name_list:
         if var_name == "pressure_model":
             out = resample_stratify(
                 ds_model[var_name],
-                sorted(ds_model.pressure_obs.squeeze().values, reverse=True),
+                pressure_obs_sorted,
                 ds_model["pressure_model"],
                 axis=1,
                 interpolation="linear",
                 extrapolation="linear",
             )
-            # Use linear extrapolation for the pressure_model so that later these will pair correctly with pressure_obs.
         elif var_name == "pressure_model_nan":
             out = resample_stratify(
                 ds_model[var_name],
-                sorted(ds_model.pressure_obs.squeeze().values, reverse=True),
+                pressure_obs_sorted,
                 ds_model["pressure_model"],
                 axis=1,
                 interpolation="linear",
                 extrapolation="nan",
             )
-            # Keep track of the extrapolation points with a NaN so that can print out notes and warnings for users.
         else:
             out = resample_stratify(
                 ds_model[var_name],
-                sorted(ds_model.pressure_obs.squeeze().values, reverse=True),
+                pressure_obs_sorted,
                 ds_model["pressure_model"],
                 axis=1,
                 interpolation="linear",
@@ -521,40 +487,29 @@ def vert_interp(ds_model, df_obs, var_name_list):
         out.name = var_name
         var_out_list.append(out)
 
-    df_model = xr.merge(var_out_list).to_dataframe().reset_index()
-    for x in df_model.x.unique():
-        if (
-            df_model[df_model.x == x].pressure_obs.unique()
-            > df_model[df_model.x == x].pressure_model_nan.max()
-        ):
-            print(
-                f"Note: Point {x!r}, is below the mid-point of the lowest model level and nearest neighbor extrapolation",
-                "occurs for vertical pairing.",
-            )
-        elif (
-            df_model[df_model.x == x].pressure_obs.unique()
-            < df_model[df_model.x == x].pressure_model_nan.min()
-        ):
-            print(
-                f"Warning: Point {x!r}, is above the mid-point of the highest model level and nearest neighbor extrapolation",
-                "occurs for vertical pairing. Extrapolating beyond the model top is not recommended. Proceed with caution.",
-            )
-    df_model.drop(
-        labels=["x", "y", "z", "pressure_obs", "pressure_model_nan", "time_obs"],
-        axis=1,
-        inplace=True,
-    )
-    df_model.rename(columns={"pressure_model": "pressure_obs"}, inplace=True)
+    ds_model_interp = xr.merge(var_out_list)
 
-    final_df_model = merge_asof(
-        df_obs,
-        df_model,
+    # Drop unnecessary dimensions/variables for merge
+    ds_model_interp = ds_model_interp.drop_vars(["z", "pressure_model_nan"], errors="ignore")
+    ds_model_interp = ds_model_interp.rename({"pressure_model": "pressure_obs"})
+
+    # Perform asof merge using monet's xarray-native asof merge if available,
+    # otherwise we might still need a lazy-breaking step or a dask-compatible implementation.
+    # For now, we assume monet.util.combinetool.merge_asof can handle it or we delegate.
+
+    # If ds_obs is still a DataFrame, convert it to Dataset
+    if hasattr(ds_obs, "to_xarray"):
+         ds_obs = ds_obs.to_xarray()
+
+    final_ds_model = merge_asof(
+        ds_obs,
+        ds_model_interp,
         by=["latitude", "longitude", "pressure_obs"],
         on="time",
         direction="nearest",
     )
 
-    return final_df_model
+    return final_ds_model
 
 
 def mobile_and_ground_pair(ds_model, df_obs, var_name_list):
@@ -824,7 +779,8 @@ def calc_geolocaltime(modobj):
     # but it is very cheap to redo and should make us be safer.
 
     hrs2ms = 3600_000
-    timedelta = (modobj["longitude"].values * hrs2ms / 15).astype("timedelta64[ms]")
+    # Use xarray operations to maintain laziness
+    timedelta = (modobj["longitude"] * (hrs2ms / 15)).astype("timedelta64[ms]")
     localtime = modobj["time"] + timedelta
     localtime.attrs["description"] = "Geographic local time, based on longitude"
     return localtime

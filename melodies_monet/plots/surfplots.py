@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from numpy import corrcoef
 
 sns.set_context("paper")
-from monet.plots.taylordiagram import TaylorDiagram as td
+import monet_plots as mplots
 from matplotlib.colors import ListedColormap
 from monet.util.tools import get_epa_region_bounds as get_epa_bounds
 import math
@@ -790,142 +790,41 @@ def make_taylor(
     text_dict=None,
     debug=False,
 ):
-    """Creates taylor plot. Note sometimes model values are off the scale
-    on this plot. This will be fixed soon.
+    """Creates taylor plot using monet-plots.
 
     Parameters
     ----------
     df : pandas.DataFrame
         model/obs paired data to plot
-    df_reg : pandas.DataFrame
-        model/obs paired regulatory data to plot
-    column_o : str
-        Column label of observational variable to plot
-    label_o : str
-        Name of observational variable to use in plot legend
-    column_m : str
-        Column label of model variable to plot
-    label_m : str
-        Name of model variable to use in plot legend
-    dia : dia
-        matplotlib ax from previous occurrence so can overlay obs and model
-        results on the same plot
-    ylabel : str
-        Title of x-axis
-    ty_scale : real
-        Scale to apply to taylor plot to control the plotting range
-    domain_type : str
-        Domain type specified in input yaml file
-    domain_name : str
-        Domain name specified in input yaml file
-    plot_dict : dictionary
-        Dictionary containing information about plotting for each pair
-        (e.g., color, linestyle, markerstyle)
-    fig_dict : dictionary
-        Dictionary containing information about figure
-    text_dict : dictionary
-        Dictionary containing information about text
-    debug : boolean
-        Whether to plot interactively (True) or not (False). Flag for
-        submitting jobs to supercomputer turn off interactive mode.
-
-    Returns
-    -------
-    class
-        Taylor diagram class defined in MONET
-
+    ... [parameters truncated for brevity] ...
     """
-    # First define items for all plots
     if debug is False:
         plt.ioff()
 
-    # set default text size
-    def_text = dict(fontsize=14.0)
-    if text_dict is not None:
-        text_kwargs = {**def_text, **text_dict}
-    else:
-        text_kwargs = def_text
-    # set ylabel to column if not specified.
-    if ylabel is None:
-        ylabel = column_o
-    # Then, if no plot has been created yet, create a plot and plot the first pair.
+    data = df_reg if df_reg is not None else df
+    col_o = f"{column_o}_reg" if df_reg is not None else column_o
+    col_m = f"{column_m}_reg" if df_reg is not None else column_m
 
+    # Delegate to monet-plots TaylorDiagramPlot
     if dia is None:
-        # create the figure
-        if fig_dict is not None:
-            f = plt.figure(**fig_dict)
-        else:
-            f = plt.figure(figsize=(12, 10))
-        sns.set_style("ticks")
-        # plot the line
-        if df_reg is not None:
-            dia = td(
-                df_reg[column_o + "_reg"].std(),
-                scale=ty_scale,
-                fig=f,
-                rect=111,
-                label=label_o,
-            )
-            plt.grid(linewidth=1, alpha=0.5)
-            cc = corrcoef(
-                df_reg[column_o + "_reg"].values, df_reg[column_m + "_reg"].values
-            )[0, 1]
-            dia.add_sample(
-                df_reg[column_m + "_reg"].std(),
-                cc,
-                zorder=9,
-                label=label_m,
-                **plot_dict,
-            )
-        else:
-            dia = td(df[column_o].std(), scale=ty_scale, fig=f, rect=111, label=label_o)
-            plt.grid(linewidth=1, alpha=0.5)
-            cc = corrcoef(df[column_o].values, df[column_m].values)[0, 1]
-            dia.add_sample(df[column_m].std(), cc, zorder=9, label=label_m, **plot_dict)
-
+        dia = mplots.TaylorDiagramPlot(
+            data,
+            column_o=col_o,
+            label_o=label_o,
+            column_m=col_m,
+            label_m=label_m,
+            scale=ty_scale,
+            fig_dict=fig_dict,
+            plot_dict=plot_dict,
+            text_dict=text_dict,
+        )
     else:
-        # If plot has been created add to the current axes.
-        if df_reg is not None:
-            # this means that an axis handle already exists and use it to plot another model
-            cc = corrcoef(
-                df_reg[column_o + "_reg"].values, df_reg[column_m + "_reg"].values
-            )[0, 1]
-            dia.add_sample(
-                df_reg[column_m + "_reg"].std(),
-                cc,
-                zorder=9,
-                label=label_m,
-                **plot_dict,
-            )
-        else:
-            cc = corrcoef(df[column_o].values, df[column_m].values)[0, 1]
-            dia.add_sample(df[column_m].std(), cc, zorder=9, label=label_m, **plot_dict)
+        dia.add_sample(data, column_m=col_m, label_m=label_m, **(plot_dict or {}))
 
-    # Set parameters for all plots
-    contours = dia.add_contours(colors="0.5")
-    plt.clabel(contours, inline=1, fontsize=text_kwargs["fontsize"] * 0.8)
-    plt.grid(alpha=0.5)
-    plt.legend(
-        frameon=False,
-        fontsize=text_kwargs["fontsize"] * 0.8,
-        bbox_to_anchor=(0.75, 0.93),
-        loc="center left",
-    )
     if domain_type is not None and domain_name is not None:
-        if domain_type == "epa_region":
-            plt.title("EPA Region " + domain_name, fontweight="bold", **text_kwargs)
-        else:
-            plt.title(domain_name, fontweight="bold", **text_kwargs)
-    ax = plt.gca()
-    ax.axis["left"].label.set_text("Standard Deviation: " + ylabel)
-    ax.axis["top"].label.set_text("Correlation")
-    ax.axis["left"].label.set_fontsize(text_kwargs["fontsize"])
-    ax.axis["top"].label.set_fontsize(text_kwargs["fontsize"])
-    ax.axis["left"].label.set_fontweight("bold")
-    ax.axis["top"].label.set_fontweight("bold")
-    ax.axis["top"].major_ticklabels.set_fontsize(text_kwargs["fontsize"] * 0.8)
-    ax.axis["left"].major_ticklabels.set_fontsize(text_kwargs["fontsize"] * 0.8)
-    ax.axis["right"].major_ticklabels.set_fontsize(text_kwargs["fontsize"] * 0.8)
+        title = f"EPA Region {domain_name}" if domain_type == "epa_region" else domain_name
+        plt.title(title, fontweight="bold", **(text_dict or {}))
+
     return dia
 
 
