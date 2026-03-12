@@ -7,10 +7,10 @@ Observations
 Surface
 ^^^^^^^
 
-The MELODIES MONET tool has a :doc:`/cli` that can be used to download and create 
-MELODIES MONET-ready datasets for: AirNow, AERONET, AQS, ISH, ISH-Lite, and OpenAQ. 
-New surface observational datasets formally added to MELODIES MONET should be added 
-to this Command Line Interface.
+The :mod:`monetio` package provides a CLI that can be used to download and create
+standardized datasets for various networks including AirNow, AERONET, AQS, and OpenAQ.
+New surface observational datasets formally added should be added to the
+`MONETIO repository <https://github.com/noaa-oar-arl/monetio>`_.
 
 If you are interested in converting a new observational dataset to our netCDF format
 on your own for testing within MELODIES MONET, please see the notes below.
@@ -66,9 +66,8 @@ demonstrating these qualities:
        time_local  (time, y, x) datetime64[ns] ...
        epa_region  (y, x) <U5 ...
 
-You can examine the ``get_*`` functions in the :doc:`/cli`
-(``melodies_monet/_cli.py``) for examples of converting observational datasets
-in pandas DataFrame format to xarray Dataset format.
+You can examine the reader implementations in the `MONETIO repository <https://github.com/noaa-oar-arl/monetio>`_
+for examples of converting observational datasets in pandas DataFrame format to xarray Dataset format.
 
 Aircraft, Sonde, Mobile, and Ground Campaign Data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -82,19 +81,17 @@ Satellite
 Examples for reading satellite datasets can be
 found in the ``monetio/sat`` folder in the MONETIO repository
 `on GitHub <https://github.com/noaa-oar-arl/monetio>`__.
-While a part of the MONETIO repository,
-the private MELODIES MONET readers are designated with prefix ``_`` 
-and suffix ``_mm``.
+All data ingestion for observations should be delegated to the ``monetio.load``
+Unified Reader API.
 
 Models
 ------
 Examples for reading model datasets can be
 found in the ``monetio/models`` folder in the MONETIO repository
 `on GitHub <https://github.com/noaa-oar-arl/monetio>`__.
-These include e.g., _cesm_fv_mm.py, _cmaq_mm.py, and _wrfchem_mm.py.
-While a part of the MONETIO repository,
-the private MELODIES MONET readers are designated with prefix ``_`` 
-and suffix ``_mm``.
+These include e.g., UFS-AQM, CMAQ, and WRF-Chem.
+All data ingestion for models should be delegated to the ``monetio.load``
+Unified Reader API.
 
 Support for additional models is also under developed.
 

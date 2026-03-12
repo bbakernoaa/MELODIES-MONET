@@ -212,8 +212,8 @@ linkcheck_ignore = [
     # Unstable or restructured links
     "https://rapidrefresh.noaa.gov/monet_rrfs_verif/",
     "https://www3.epa.gov/ttn/naaqs/standards/ozone/data/20140131healthrea4a.pdf",
-    "https://foundations.projectpythia.org/foundations/conda.html",
-    "https://foundations.projectpythia.org/foundations/getting-started-github.html"
+    "https://foundations.projectpythia.org/core/conda.html",
+    "https://foundations.projectpythia.org/core/github.html"
 ]
 user_agent = "Mozilla/5.0 (X11; Linux x86_64; rv:25.0) Gecko/20100101 Firefox/25.0"
 
