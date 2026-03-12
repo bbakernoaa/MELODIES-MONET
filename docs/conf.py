@@ -198,6 +198,7 @@ texinfo_documents = [
 linkcheck_ignore = [
     # Auth required:
     "https://rdhpcs-common-docs.rdhpcs.noaa.gov/wiki/index.php/Anaconda#Installation",
+    "https://rdhpcs-common-docs.rdhpcs.noaa.gov/wiki/index.php/Anaconda",
     "https://www2.cisl.ucar.edu/resources/conda-environments",
     # Sphinx 4.5 linkcheck having problem:
     "https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account",
@@ -207,7 +208,12 @@ linkcheck_ignore = [
     "https://www.ncdc.noaa.gov/crn/",
     "https://www.ncei.noaa.gov/products/land-based-station/integrated-surface-database",
     #PNAS sites having problems:
-    "https://doi.org/10.1093/pnasnexus/pgad483"
+    "https://doi.org/10.1093/pnasnexus/pgad483",
+    # Unstable or restructured links
+    "https://rapidrefresh.noaa.gov/monet_rrfs_verif/",
+    "https://www3.epa.gov/ttn/naaqs/standards/ozone/data/20140131healthrea4a.pdf",
+    "https://foundations.projectpythia.org/foundations/conda.html",
+    "https://foundations.projectpythia.org/foundations/getting-started-github.html"
 ]
 user_agent = "Mozilla/5.0 (X11; Linux x86_64; rv:25.0) Gecko/20100101 Firefox/25.0"
 

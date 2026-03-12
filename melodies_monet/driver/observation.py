@@ -95,7 +95,12 @@ class observation:
                 else:
                     self.obj = xr.open_dataset(files[0], **(self.data_proc or {}))
             else:
-                self.obj = mio.load(reader, files=files, time_var=self.time_var, **(self.data_proc or {}))
+                self.obj = mio.load(
+                    reader,
+                    files=files,
+                    time_var=self.time_var,
+                    **(self.data_proc or {}),
+                )
         except Exception as e:
             print("something happened opening file:", e)
             return
@@ -187,7 +192,9 @@ class observation:
                 break
 
         if not reader:
-            print("file reader not implemented for {} observation".format(self.sat_type))
+            print(
+                "file reader not implemented for {} observation".format(self.sat_type)
+            )
             return
 
         print(f"Reading {self.sat_type} using monetio.load...")
@@ -200,7 +207,9 @@ class observation:
                 self.obj = mio.load(reader, files=flst)
                 self.obj = self.obj.swap_dims({"x": "time"}).sortby("time")
                 if time_interval is not None:
-                    self.obj = self.obj.sel(time=slice(time_interval[0], time_interval[-1]))
+                    self.obj = self.obj.sel(
+                        time=slice(time_interval[0], time_interval[-1])
+                    )
 
             elif self.sat_type == "mopitt_l3":
                 if time_interval is not None:
@@ -209,23 +218,46 @@ class observation:
                     flst = self.file
                 # MOPITT reader in monetio might need specific var_list if not default
                 self.obj = mio.load(reader, files=flst)
-                if any(mtype in glob(self.file)[0] for mtype in ("MOP03JM", "MOP03NM", "MOP03TM")):
+                if any(
+                    mtype in glob(self.file)[0]
+                    for mtype in ("MOP03JM", "MOP03NM", "MOP03TM")
+                ):
                     self.obj.attrs["monthly"] = True
                 else:
                     self.obj.attrs["monthly"] = False
 
             elif self.sat_type == "modis_l2":
                 flst = tsub.subset_MODIS_l2(self.file, time_interval)
-                self.obj = mio.load(reader, files=flst, variable_dict=self.variable_dict, debug=self.debug)
+                self.obj = mio.load(
+                    reader,
+                    files=flst,
+                    variable_dict=self.variable_dict,
+                    debug=self.debug,
+                )
 
             elif self.sat_type == "tropomi_l2_no2":
-                self.obj = mio.load(reader, files=self.file, variable_dict=self.variable_dict, debug=self.debug)
+                self.obj = mio.load(
+                    reader,
+                    files=self.file,
+                    variable_dict=self.variable_dict,
+                    debug=self.debug,
+                )
 
             elif "tempo_l2" in self.sat_type:
-                self.obj = mio.load(reader, files=self.file, variable_dict=self.variable_dict, debug=self.debug)
+                self.obj = mio.load(
+                    reader,
+                    files=self.file,
+                    variable_dict=self.variable_dict,
+                    debug=self.debug,
+                )
 
             else:
-                self.obj = mio.load(reader, files=self.file, variable_dict=self.variable_dict, debug=self.debug)
+                self.obj = mio.load(
+                    reader,
+                    files=self.file,
+                    variable_dict=self.variable_dict,
+                    debug=self.debug,
+                )
 
         except Exception as e:
             print("something happened opening satellite file:", e)
@@ -245,23 +277,41 @@ class observation:
                     filter_vals = filter_dict[column]["value"]
                     filter_op = filter_dict[column]["oper"]
                     if filter_op == "isin":
-                        self.obj = self.obj.where(self.obj[column].isin(filter_vals), drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column].isin(filter_vals), drop=True
+                        )
                     elif filter_op == "isnotin":
-                        self.obj = self.obj.where(~self.obj[column].isin(filter_vals), drop=True)
+                        self.obj = self.obj.where(
+                            ~self.obj[column].isin(filter_vals), drop=True
+                        )
                     elif filter_op == "==":
-                        self.obj = self.obj.where(self.obj[column] == filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] == filter_vals, drop=True
+                        )
                     elif filter_op == ">":
-                        self.obj = self.obj.where(self.obj[column] > filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] > filter_vals, drop=True
+                        )
                     elif filter_op == "<":
-                        self.obj = self.obj.where(self.obj[column] < filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] < filter_vals, drop=True
+                        )
                     elif filter_op == ">=":
-                        self.obj = self.obj.where(self.obj[column] >= filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] >= filter_vals, drop=True
+                        )
                     elif filter_op == "<=":
-                        self.obj = self.obj.where(self.obj[column] <= filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] <= filter_vals, drop=True
+                        )
                     elif filter_op == "!=":
-                        self.obj = self.obj.where(self.obj[column] != filter_vals, drop=True)
+                        self.obj = self.obj.where(
+                            self.obj[column] != filter_vals, drop=True
+                        )
                     else:
-                        raise ValueError(f"Filter operation {filter_op!r} is not supported")
+                        raise ValueError(
+                            f"Filter operation {filter_op!r} is not supported"
+                        )
 
     def mask_and_scale(self):
         """Mask and scale observations, including unit conversions and setting
@@ -278,11 +328,17 @@ class observation:
                     d = self.variable_dict[v]
                     # Apply removal of min, max, and nan on the units in the obs file first.
                     if "obs_min" in d:
-                        self.obj[v].data = self.obj[v].where(self.obj[v] >= d["obs_min"])
+                        self.obj[v].data = self.obj[v].where(
+                            self.obj[v] >= d["obs_min"]
+                        )
                     if "obs_max" in d:
-                        self.obj[v].data = self.obj[v].where(self.obj[v] <= d["obs_max"])
+                        self.obj[v].data = self.obj[v].where(
+                            self.obj[v] <= d["obs_max"]
+                        )
                     if "nan_value" in d:
-                        self.obj[v].data = self.obj[v].where(self.obj[v] != d["nan_value"])
+                        self.obj[v].data = self.obj[v].where(
+                            self.obj[v] != d["nan_value"]
+                        )
 
                     # Then apply a correction if needed for the units.
                     if "unit_scale" in d:

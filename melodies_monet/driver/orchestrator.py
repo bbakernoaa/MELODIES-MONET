@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import networkx as nx
-import pandas as pd
 from melodies_monet.driver import analysis
+
 
 class Orchestrator:
     """
@@ -40,7 +40,9 @@ class Orchestrator:
         # Support for gridded-to-gridded pairing (e.g. models-to-models or sat-to-models)
         # Check evaluations for is_gridded
         has_gridded = any(
-            self.ana.control_dict.get("evaluations", {}).get(e, {}).get("is_gridded", False)
+            self.ana.control_dict.get("evaluations", {})
+            .get(e, {})
+            .get("is_gridded", False)
             for e in self.ana.control_dict.get("evaluations", {})
         )
         if has_gridded:
@@ -112,14 +114,18 @@ class Orchestrator:
                     raise RuntimeError("Models must be opened before pairing.")
                 for label, mod in self.ana.models.items():
                     if mod.obj is None:
-                        raise RuntimeError(f"Model data for '{label}' has not been loaded.")
+                        raise RuntimeError(
+                            f"Model data for '{label}' has not been loaded."
+                        )
 
                 # Check if observations have data loaded
                 if not self.ana.obs:
                     raise RuntimeError("Observations must be opened before pairing.")
                 for label, obs in self.ana.obs.items():
                     if obs.obj is None:
-                        raise RuntimeError(f"Observation data for '{label}' has not been loaded.")
+                        raise RuntimeError(
+                            f"Observation data for '{label}' has not been loaded."
+                        )
 
             if node == "stats" or node == "plotting":
                 if not self.ana.paired:
@@ -131,15 +137,19 @@ class Orchestrator:
                     if not self.ana.paired:
                         # Allow continuation if gridded pairing was executed
                         if "pair_gridded" not in self.graph.nodes:
-                             raise RuntimeError(f"Paired data must be available before {node}.")
+                            raise RuntimeError(
+                                f"Paired data must be available before {node}."
+                            )
 
             func = self.graph.nodes[node]["func"]
 
             # Map YAML configuration keys directly to parameters if needed
             func()
 
+
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) > 1:
         orchestrator = Orchestrator(sys.argv[1])
         orchestrator.run()
