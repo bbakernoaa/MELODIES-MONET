@@ -207,10 +207,14 @@ class model:
                     self.obj = self.obj.rename({"ptrop": "pres_pa_trop"})
         else:
             print("**** Reading Unspecified model output. Take Caution...")
+            # Remove var_list from mod_kwargs before passing to xarray if present,
+            # as standard xarray readers do not accept it.
+            xr_kwargs = self.mod_kwargs.copy()
+            xr_kwargs.pop("var_list", None)
             if len(self.files) > 1:
-                self.obj = xr.open_mfdataset(self.files, **self.mod_kwargs)
+                self.obj = xr.open_mfdataset(self.files, **xr_kwargs)
             else:
-                self.obj = xr.open_dataset(self.files[0], **self.mod_kwargs)
+                self.obj = xr.open_dataset(self.files[0], **xr_kwargs)
         self.mask_and_scale()
         self.rename_vars()  # rename any variables as necessary
         self.sum_variables()
