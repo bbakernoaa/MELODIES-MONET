@@ -6,6 +6,7 @@ channels:
 dependencies:
   - python=3.10
   - esmpy
+  - hdf5<2
   - pip
   - pip:
     # Core MM Dependencies (with requested branches)

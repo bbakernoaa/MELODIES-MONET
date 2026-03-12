@@ -517,6 +517,9 @@ def get_airnow(
 
         # df[site_vn_str] = df[site_vn_str].astype("string")
 
+        # site_vns filtering: only keep columns present in df
+        site_vns = [vn for vn in site_vns if vn in df.columns]
+
         ds_site = (
             df[site_vns]
             # .replace(["", " ", None], pd.NA)  # TODO: monetio should do?
@@ -536,12 +539,22 @@ def get_airnow(
                 units[col] = unique_units[0]
 
         cols = [n for n in df.columns if not n.endswith(unit_suff)]
+        # Ensure siteid is preserved in cols for set_index
+        if "siteid" not in cols:
+            cols.append("siteid")
+        if "time" not in cols:
+            cols.append("time")
+
+        # Remove duplicate columns if any
+        df = df.loc[:, ~df.columns.duplicated()]
+        cols = [c for c in cols if c in df.columns]
+
         ds = (
             df[cols]
             .set_index(["time", "siteid"])
             .to_xarray()
             .swap_dims(siteid="x")
-            .drop_vars(site_vns)
+            .drop_vars(site_vns, errors="ignore")
             .merge(ds_site)
             .set_coords(["latitude", "longitude"])
             .assign(x=range(ds_site.sizes["x"]))
@@ -1324,10 +1337,23 @@ def get_aqs(
                 units[col] = unique_units[0]
 
         cols = [n for n in df.columns if not n.endswith(unit_suff)]
+        # Ensure siteid and time are preserved for indexing
+        if "siteid" not in cols:
+            cols.append("siteid")
+        if "time" not in cols:
+            cols.append("time")
+
+        # Remove duplicate columns if any
+        df = df.loc[:, ~df.columns.duplicated()]
+        cols = [c for c in cols if c in df.columns]
+
         ds = (
             df[cols]
-            .drop(columns=[vn for vn in site_vns if vn != "siteid"])
-            .drop(columns=[col for col in df.columns if col.endswith("_meta")])
+            .drop(columns=[vn for vn in site_vns if vn != "siteid"], errors="ignore")
+            .drop(
+                columns=[col for col in df.columns if col.endswith("_meta")],
+                errors="ignore",
+            )
             .drop_duplicates(["time", "siteid"], keep="first")
             .set_index(["time", "siteid"])
             .to_xarray()
