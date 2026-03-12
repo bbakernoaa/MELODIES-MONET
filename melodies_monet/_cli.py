@@ -290,7 +290,7 @@ def get_aeronet(
                 n_procs=num_workers,
                 verbose=1 if verbose else 0,
             )
-            if isinstance(df, xr.Dataset):
+            if hasattr(df, "to_dataframe"):
                 df = df.to_dataframe().reset_index()
         except ValueError:
             if daily and interp_to is not None:
@@ -309,6 +309,7 @@ def get_aeronet(
         df = df.dropna(subset=["latitude", "longitude"])
         # Site-specific variables should only vary in x.
         # Here we take the first non-NaN value (should all be same).
+        site_vns = [vn for vn in site_vns if vn in df.columns]
         ds_site = (
             df[site_vns]
             .groupby("siteid")
@@ -425,7 +426,7 @@ def get_airnow(
                 n_procs=num_workers,
                 daily=daily,
             )
-            if isinstance(df, xr.Dataset):
+            if hasattr(df, "to_dataframe"):
                 df = df.to_dataframe().reset_index()
 
     with _timer("Forming xarray Dataset"):
@@ -619,7 +620,7 @@ def get_ish_lite(
                 n_procs=num_workers,
                 verbose=verbose,
             )
-            if isinstance(df, xr.Dataset):
+            if hasattr(df, "to_dataframe"):
                 df = df.to_dataframe().reset_index()
 
     with _timer("Computing UTC offset for selected ISH-Lite sites"):
@@ -677,6 +678,7 @@ def get_ish_lite(
         ]
         # NOTE: time_local not included since it varies in time as well as by site
 
+        site_vns = [vn for vn in site_vns if vn in df.columns]
         ds_site = (
             df[site_vns]
             .groupby("siteid")
@@ -839,7 +841,7 @@ def get_ish(
                 n_procs=num_workers,
                 verbose=verbose,
             )
-            if isinstance(df, xr.Dataset):
+            if hasattr(df, "to_dataframe"):
                 df = df.to_dataframe().reset_index()
 
     with _timer("Computing UTC offset for selected ISH sites"):
@@ -901,6 +903,7 @@ def get_ish(
         ]
         # NOTE: time_local not included since it varies in time as well as by site
 
+        site_vns = [vn for vn in site_vns if vn in df.columns]
         ds_site = (
             df[site_vns]
             .groupby("siteid")
@@ -1056,7 +1059,7 @@ def get_aqs(
                     n_procs=num_workers,
                     meta=False,  # TODO: enable or add option once monetio fixes released
                 )
-                if isinstance(df, xr.Dataset):
+                if hasattr(df, "to_dataframe"):
                     df = df.to_dataframe().reset_index()
             except KeyError as e:
                 if daily and str(e) == "'time'":
@@ -1119,7 +1122,8 @@ def get_aqs(
 
     with _timer("Forming xarray Dataset"):
         # Select requested time period (older monetio doesn't do this)
-        df = df[(df.time >= dates[0]) & (df.time <= dates[-1])]
+        if "time" in df.columns:
+            df = df[(df.time >= dates[0]) & (df.time <= dates[-1])]
 
         df = df.dropna(subset=["latitude", "longitude"])
 
@@ -1179,6 +1183,9 @@ def get_aqs(
         # NOTE: time_local not included since it varies in time as well
 
         df = df.merge(meta, on="siteid", how="left", suffixes=(None, "_meta"))
+
+        # site_vns filtering: only keep columns present in df
+        site_vns = [vn for vn in site_vns if vn in df.columns]
 
         ds_site = (
             df[site_vns]
@@ -1377,7 +1384,7 @@ def get_openaq(
                     n_procs=num_workers,
                     # wide_fmt=True,
                 )
-            if isinstance(df, xr.Dataset):
+            if hasattr(df, "to_dataframe"):
                 df = df.to_dataframe().reset_index()
 
             # Address time-wise non-unique site IDs
@@ -1409,7 +1416,7 @@ def get_openaq(
                 dates,
                 **kws,
             )
-            if isinstance(df, xr.Dataset):
+            if hasattr(df, "to_dataframe"):
                 df = df.to_dataframe().reset_index()
 
             dupes = df[df.duplicated(["time", "siteid"], keep=False)]

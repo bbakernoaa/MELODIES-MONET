@@ -207,15 +207,16 @@ class analysis:
         # Migrate mapping from models to evaluations
         for model_label, model_cfg in list(new_dict["models"].items()):
             if isinstance(model_cfg, dict) and "mapping" in model_cfg:
-                mapping = model_cfg.pop("mapping")
-                for obs_label, var_mapping in mapping.items():
-                    eval_label = f"{obs_label}_{model_label}"
-                    if eval_label not in new_dict["evaluations"]:
-                        new_dict["evaluations"][eval_label] = {
-                            "reference": obs_label,
-                            "test_models": [model_label],
-                            "mapping": var_mapping,
-                        }
+                mapping = model_cfg.get("mapping")
+                if mapping:
+                    for obs_label, var_mapping in mapping.items():
+                        eval_label = f"{obs_label}_{model_label}"
+                        if eval_label not in new_dict["evaluations"]:
+                            new_dict["evaluations"][eval_label] = {
+                                "reference": obs_label,
+                                "test_models": [model_label],
+                                "mapping": var_mapping,
+                            }
 
         # Standardize existing evaluations block if it uses old keys
         for eval_label, eval_cfg in new_dict["evaluations"].items():

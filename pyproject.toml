@@ -26,6 +26,7 @@ dependencies = [
     "pyyaml",
     "prefect-dask",
     "dask-jobqueue",
+    "joblib",
 ]
 
 [project.optional-dependencies]
