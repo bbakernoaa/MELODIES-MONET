@@ -64,6 +64,9 @@ To ensure `monet-stats` and `monet-plots` can operate as "pure consumers," a sta
 ### 2.1: Format Specification
 - **Primary Format**: NetCDF4 (with groups) or Zarr.
 - **Data Structure**: Xarray Dataset.
+- **Standards**:
+    - **Point Data**: Utilize the **UGRID** standard (via `monetio`) for representation of discrete sampling geometries.
+    - **Model-to-Model / Model-to-Satellite**: Data should be maintained in the **Reference Grid** (typically the model's native grid or the satellite's retrieval grid) to preserve spatial integrity and avoid unnecessary re-interpolation.
 
 ### 2.2: Mandatory Content
 A "Paired Data" file must contain:
