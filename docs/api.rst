@@ -11,11 +11,14 @@ API
    :toctree: api/
    :nosignatures:
 
-   driver
-   plots
-   stats
+   driver.analysis
+   plots.aircraftplots
+   plots.satplots
+   plots.surfplots
+   stats.proc_stats
    tutorial
-   util
+   util.read_grid_util
+   util.write_util
 
 A typical workflow involves using an instance of :class:`driver.analysis`.
 See :doc:`the examples <examples/intro_examples>`.

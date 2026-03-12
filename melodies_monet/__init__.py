@@ -3,6 +3,7 @@
 """
 MELODIES MONET
 """
+
 import sys
 
 __version__ = "1.0"
@@ -37,4 +38,6 @@ else:
             try:
                 return globals()[name]
             except KeyError:
-                raise AttributeError(f"Module 'melodies_monet' has no attribute '{name}'")
+                raise AttributeError(
+                    f"Module 'melodies_monet' has no attribute '{name}'"
+                )

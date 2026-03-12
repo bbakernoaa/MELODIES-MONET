@@ -140,7 +140,9 @@ def make_timeseries(
     # Then, if no plot has been created yet, create a plot and plot the obs.
     if ax is None:
         # First define the colors for the observations.
-        obs_dict = dict(color="k", linestyle="-", marker="*", linewidth=1.2, markersize=6.0)
+        obs_dict = dict(
+            color="k", linestyle="-", marker="*", linewidth=1.2, markersize=6.0
+        )
         if plot_dict is not None:
             # Whatever is not defined in the yaml file is filled in with the obs_dict here.
             plot_kwargs = {**obs_dict, **plot_dict}
@@ -166,7 +168,9 @@ def make_timeseries(
                 label=plot_kwargs["label"],
             )
         else:
-            dset[varname].resample(time=avg_window).mean().mean(dim=("y", "x")).plot.line(
+            dset[varname].resample(time=avg_window).mean().mean(
+                dim=("y", "x")
+            ).plot.line(
                 x="time",
                 ax=ax,
                 color=plot_kwargs["color"],
@@ -180,7 +184,9 @@ def make_timeseries(
     # If plot has been created add to the current axes.
     else:
         # this means that an axis handle already exists and use it to plot the model output.
-        mod_dict = dict(color=None, linestyle="-", marker="*", linewidth=1.2, markersize=6.0)
+        mod_dict = dict(
+            color=None, linestyle="-", marker="*", linewidth=1.2, markersize=6.0
+        )
         if plot_dict is not None:
             # Whatever is not defined in the yaml file is filled in with the mod_dict here.
             plot_kwargs = {**mod_dict, **plot_dict}
@@ -198,7 +204,9 @@ def make_timeseries(
                 label=plot_kwargs["label"],
             )
         else:
-            dset[varname].resample(time=avg_window).mean().mean(dim=("y", "x")).plot.line(
+            dset[varname].resample(time=avg_window).mean().mean(
+                dim=("y", "x")
+            ).plot.line(
                 x="time",
                 ax=ax,
                 color=plot_kwargs["color"],
@@ -351,9 +359,9 @@ def make_taylor(
                 **plot_dict,
             )
         elif scale_factor != 1:
-            dset_forplot[varname_m].attrs[
-                "units"
-            ] = f"{scale_factor} {dset_forplot[varname_m].attrs['units']}"
+            dset_forplot[varname_m].attrs["units"] = (
+                f"{scale_factor} {dset_forplot[varname_m].attrs['units']}"
+            )
 
         else:
             dia = td(refstd, scale=ty_scale, fig=f, rect=111, label=label_o)
@@ -395,7 +403,9 @@ def make_taylor(
     contours = dia.add_contours(colors="0.5")
     # control the clabel format for very high values (e.g., NO2 columns), M.Li
     # plt.clabel(contours, inline=1, fontsize=text_kwargs['fontsize']*0.8)
-    plt.clabel(contours, inline=1, fontsize=text_kwargs["fontsize"] * 0.8, fmt="(%1.5g)")
+    plt.clabel(
+        contours, inline=1, fontsize=text_kwargs["fontsize"] * 0.8, fmt="(%1.5g)"
+    )
 
     plt.grid(alpha=0.5)
     plt.legend(
@@ -458,7 +468,9 @@ def calculate_boxplot(
         comb_bx = pd.DataFrame()
         label_bx = []
         # First define the colors for the observations.
-        obs_dict = dict(color="gray", linestyle="-", marker="x", linewidth=1.2, markersize=6.0)
+        obs_dict = dict(
+            color="gray", linestyle="-", marker="x", linewidth=1.2, markersize=6.0
+        )
         if plot_dict is not None:
             # Whatever is not defined in the yaml file is filled in with the obs_dict here.
             plot_kwargs = {**obs_dict, **plot_dict}
@@ -669,10 +681,14 @@ def make_spatial_dist(
         lonmax = -60.0
         title_add = domain_name + ": "
     elif domain_type == "epa_region" and domain_name is not None:
-        latmin, lonmin, latmax, lonmax, acro = get_epa_bounds(index=None, acronym=domain_name)
+        latmin, lonmin, latmax, lonmax, acro = get_epa_bounds(
+            index=None, acronym=domain_name
+        )
         title_add = "EPA Region " + domain_name + ": "
     elif domain_type == "giorgi_region" and domain_name is not None:
-        latmin, lonmin, latmax, lonmax, acro = get_giorgi_bounds(index=None, acronym=domain_name)
+        latmin, lonmin, latmax, lonmax, acro = get_giorgi_bounds(
+            index=None, acronym=domain_name
+        )
         title_add = "Giorgi Region " + domain_name + ": "
     elif domain_name == "model":
         latmin, latmax = dset["latitude"].min(), dset["latitude"].max()
@@ -697,7 +713,9 @@ def make_spatial_dist(
     # First determine colorbar
     if vmin is None and vmax is None:
         # vmin = vmodel_mean.quantile(0.01)
-        vmax = np.max((np.abs(var2plot.quantile(0.99)), np.abs(var2plot.quantile(0.01))))
+        vmax = np.max(
+            (np.abs(var2plot.quantile(0.99)), np.abs(var2plot.quantile(0.01)))
+        )
         vmin = -vmax
 
     if nlevels is None:
@@ -711,16 +729,19 @@ def make_spatial_dist(
     states = fig_dict.get("states", True)
     counties = fig_dict.get("counties", False)
     ax = monet.plots.mapgen.draw_map(
-        crs=map_kwargs["crs"], extent=map_kwargs["extent"], states=states, counties=counties
+        crs=map_kwargs["crs"],
+        extent=map_kwargs["extent"],
+        states=states,
+        counties=counties,
     )
     # draw scatter plot of model and satellite differences
     # c = ax.axes.scatter(dset.longitude, dset.latitude, c=var2plot, cmap=cmap, s=2, norm=norm)
-    c = ax.axes.pcolormesh(dset.longitude, dset.latitude, var2plot, cmap=cmap, norm=norm)
+    c = ax.axes.pcolormesh(
+        dset.longitude, dset.latitude, var2plot, cmap=cmap, norm=norm
+    )
     plt.gcf().canvas.draw()
     plt.tight_layout(pad=0)
-    timestamps = (
-        f" {dset['time'][0].values.astype(str)[:16]}$-${dset['time'][-1].values.astype(str)[:16]}"
-    )
+    timestamps = f" {dset['time'][0].values.astype(str)[:16]}$-${dset['time'][-1].values.astype(str)[:16]}"
     plt.title(title_add + label + timestamps, fontweight="bold", **text_kwargs)
     ax.axes.set_extent(map_kwargs["extent"], crs=ccrs.PlateCarree())
 
@@ -783,7 +804,7 @@ def make_spatial_bias_gridded(
     fig_dict=None,
     text_dict=None,
     debug=False,
-    **kwargs
+    **kwargs,
 ):
     """Creates difference plot for satellite and model data.
     For data in swath format, overplots all differences
@@ -853,10 +874,14 @@ def make_spatial_bias_gridded(
         lonmax = -60.0
         title_add = domain_name + ": "
     elif domain_type == "epa_region" and domain_name is not None:
-        latmin, lonmin, latmax, lonmax, _ = get_epa_bounds(index=None, acronym=domain_name)
+        latmin, lonmin, latmax, lonmax, _ = get_epa_bounds(
+            index=None, acronym=domain_name
+        )
         title_add = "EPA Region " + domain_name + ": "
     elif domain_type == "giorgi_region" and domain_name is not None:
-        latmin, lonmin, latmax, lonmax, _ = get_giorgi_bounds(index=None, acronym=domain_name)
+        latmin, lonmin, latmax, lonmax, _ = get_giorgi_bounds(
+            index=None, acronym=domain_name
+        )
         title_add = "Giorgi Region " + domain_name + ": "
     elif domain_name == "model":
         latmin, latmax = dset["latitude"].min(), dset["latitude"].max()
@@ -898,19 +923,26 @@ def make_spatial_bias_gridded(
     states = fig_dict.get("states", True)
     counties = fig_dict.get("counties", False)
     ax = monet.plots.mapgen.draw_map(
-        crs=map_kwargs["crs"], extent=map_kwargs["extent"], states=states, counties=counties
+        crs=map_kwargs["crs"],
+        extent=map_kwargs["extent"],
+        states=states,
+        counties=counties,
     )
     # draw scatter plot of model and satellite differences
     # c = ax.axes.scatter(
     #     dset.longitude, dset.latitude, c=diff_mod_min_obs, cmap=cmap, s=2, norm=norm
     # )
-    c = ax.axes.pcolormesh(dset.longitude, dset.latitude, diff_mod_min_obs, cmap=cmap, norm=norm)
+    c = ax.axes.pcolormesh(
+        dset.longitude, dset.latitude, diff_mod_min_obs, cmap=cmap, norm=norm
+    )
     plt.gcf().canvas.draw()
     plt.tight_layout(pad=0)
-    timestamps = (
-        f" {dset['time'][0].values.astype(str)[:16]}$-${dset['time'][-1].values.astype(str)[:16]}"
+    timestamps = f" {dset['time'][0].values.astype(str)[:16]}$-${dset['time'][-1].values.astype(str)[:16]}"
+    plt.title(
+        title_add + label_m + " - " + label_o + timestamps,
+        fontweight="bold",
+        **text_kwargs,
     )
-    plt.title(title_add + label_m + " - " + label_o + timestamps, fontweight="bold", **text_kwargs)
     ax.axes.set_extent(map_kwargs["extent"], crs=ccrs.PlateCarree())
 
     # Uncomment these lines if you update above just to verify colorbars are identical.
@@ -1046,7 +1078,11 @@ def make_multi_boxplot(
     sns.set_style("ticks")
     len_combx = len(comb_bx.columns)
 
-    data_obs = comb_bx[comb_bx.columns[0]].to_frame().rename({comb_bx.columns[0]: "Value"}, axis=1)
+    data_obs = (
+        comb_bx[comb_bx.columns[0]]
+        .to_frame()
+        .rename({comb_bx.columns[0]: "Value"}, axis=1)
+    )
     data_obs["model"] = model_name_list[0]
     data_obs["Regions"] = region_bx["set_regions"].values
     to_concat = []
@@ -1054,7 +1090,9 @@ def make_multi_boxplot(
 
     for i in range(1, len_combx):
         data_model = (
-            comb_bx[comb_bx.columns[i]].to_frame().rename({comb_bx.columns[i]: "Value"}, axis=1)
+            comb_bx[comb_bx.columns[i]]
+            .to_frame()
+            .rename({comb_bx.columns[i]: "Value"}, axis=1)
         )
         data_model["model"] = model_name_list[i]
         data_model["Regions"] = region_bx["set_regions"].values
@@ -1077,7 +1115,9 @@ def make_multi_boxplot(
         if domain_type == "epa_region":
             ax.set_title("EPA Region " + domain_name, fontweight="bold", **text_kwargs)
         elif domain_type == "giorgi_region":
-            ax.set_title("Giorgi Region" + domain_name, fontweight="bold", **text_kwargs)
+            ax.set_title(
+                "Giorgi Region" + domain_name, fontweight="bold", **text_kwargs
+            )
         else:
             ax.set_title(domain_name, fontweight="bold", **text_kwargs)
     if vmin is not None and vmax is not None:
@@ -1154,7 +1194,12 @@ def make_diurnal_cycle(dset, varname, ax=None, **kwargs):
 
     # Set some defaults
     text_kwargs = {"fontsize": 14}
-    style_dict = {"linestyle": "-", "marker": "*", "linewidth": "1.2", "markersize": "6.0"}
+    style_dict = {
+        "linestyle": "-",
+        "marker": "*",
+        "linewidth": "1.2",
+        "markersize": "6.0",
+    }
     if ax is None:
         style_dict["color"] = "k"
         fig_dict = kwargs.get("fig_dict", {"figsize": (10, 6)})
@@ -1184,7 +1229,9 @@ def make_diurnal_cycle(dset, varname, ax=None, **kwargs):
     range_shading = kwargs["range_shading"]
     if range_shading == "no":
         pass
-    elif (range_shading not in ["total", "std", "IQR"]) and ("pct:" not in range_shading):
+    elif (range_shading not in ["total", "std", "IQR"]) and (
+        "pct:" not in range_shading
+    ):
         warnings.warn(
             f"range_shading is {range_shading}, not in ['no', 'total', 'std', 'IQR'] nor 'pct:'."
             + " Ignoring."
@@ -1207,7 +1254,9 @@ def make_diurnal_cycle(dset, varname, ax=None, **kwargs):
             range_max = dset_diurnal_group.quantile(upper_range)[varname]
             range_min = dset_diurnal_group.quantile(lower_range)[varname]
         color = p[-1].get_color()
-        ax.fill_between(dset_diurnal["hour"], range_min, range_max, alpha=0.2, color=color)
+        ax.fill_between(
+            dset_diurnal["hour"], range_min, range_max, alpha=0.2, color=color
+        )
     vmax = kwargs.get("vmax", None)
     vmin = kwargs.get("vmin", None)
     vmax = float(vmax) if vmax is not None else None
@@ -1248,10 +1297,14 @@ def sel_region(domain_type=None, domain_name=None, domain_box=None):
         lonmax = -60.0
         title_add = domain_name + ": "
     elif "epa" in domain_type and domain_name is not None:
-        latmin, lonmin, latmax, lonmax, acro = get_epa_bounds(index=None, acronym=domain_name)
+        latmin, lonmin, latmax, lonmax, acro = get_epa_bounds(
+            index=None, acronym=domain_name
+        )
         title_add = "EPA Region " + domain_name + ": "
     elif "giorgi" in domain_type and domain_name is not None:
-        latmin, lonmin, latmax, lonmax, acro = get_giorgi_bounds(index=None, acronym=domain_name)
+        latmin, lonmin, latmax, lonmax, acro = get_giorgi_bounds(
+            index=None, acronym=domain_name
+        )
         title_add = "Giorgi Region " + domain_name + ": "
     elif domain_type == "custom":
         assert lonmax <= 180, "Longitude must be in range -180, 180"
