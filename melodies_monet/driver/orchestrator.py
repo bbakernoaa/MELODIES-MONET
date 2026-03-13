@@ -153,6 +153,7 @@ class orchestrator:
 
         self._migrate_control_dict()
         self._build_graph()
+        self.graph_engine.validate_dag()
 
         # Basic settings
         self.start_time = pd.Timestamp(self.control_dict["analysis"]["start_time"])

@@ -1,6 +1,6 @@
 # MELODIES-MONET Prefect Orchestrator
 
-This subpackage implements the orchestration layer for MELODIES-MONET using Prefect and Dask.
+This subpackage implements the orchestration layer for MELODIES-MONET using Prefect and Dask, leveraging the `prefect-dask` integration for seamless distributed execution.
 
 ## Architecture
 
@@ -25,7 +25,7 @@ analysis:
 ### Supported Platforms
 
 Predefined configurations are available for:
-- **NOAA RDHPCS**: `hera`, `jet`, `orion`, `hercules`, `gaea`, `ursa`
+- **NOAA RDHPCS**: `hera`, `jet`, `orion`, `hercules`, `gaea-c5`, `gaea-c6`, `ursa`
 - **NCAR**: `casper`, `derecho`
 
 The `ClusterFactory` attempts to automatically detect the platform based on the hostname if not explicitly provided.
