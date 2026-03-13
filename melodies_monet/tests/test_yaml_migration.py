@@ -107,6 +107,32 @@ def test_migrate_control_dict_legacy():
     assert an.control_dict['evaluations']['airnow_cmaq']['model'] == 'cmaq'
     assert an.control_dict['evaluations']['airnow_cmaq']['obs'] == 'airnow'
 
+def test_migrate_control_dict_list_eval():
+    an = analysis()
+    an.control_dict = {
+        'analysis': {'start_time': '2019-08-01', 'end_time': '2019-08-02', 'output_dir': '.'},
+        'data': {
+            'mod1': {'type': 'exp'},
+            'mod2': {'type': 'exp'},
+            'obs1': {'type': 'ref'}
+        },
+        'evaluations': {
+            'eval_grp': {
+                'exp': ['mod1', 'mod2'],
+                'ref': 'obs1',
+                'mapping': {'O3': 'OZONE'}
+            }
+        },
+        'plotting': {
+            'plot1': {'data': ['eval_grp']}
+        }
+    }
+    an._migrate_control_dict()
+    assert 'obs1_mod1' in an.control_dict['evaluations']
+    assert 'obs1_mod2' in an.control_dict['evaluations']
+    assert 'eval_grp' not in an.control_dict['evaluations']
+    assert an.control_dict['plotting']['plot1']['data'] == ['obs1_mod1', 'obs1_mod2']
+
 def test_pair_data_mapping_logic():
     an = analysis()
     an.control_dict = {

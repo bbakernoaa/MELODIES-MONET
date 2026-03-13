@@ -216,6 +216,47 @@ class analysis:
                             "mapping": mapping
                         }
 
+        # Expand evaluations if exp or ref are lists
+        if "evaluations" in self.control_dict:
+            new_evals = {}
+            expanded_map = {} # old_eval_label -> [new_eval_labels]
+            for eval_label, cfg in self.control_dict["evaluations"].items():
+                exps = cfg.get("exp", cfg.get("model"))
+                refs = cfg.get("ref", cfg.get("obs"))
+
+                if isinstance(exps, list) or isinstance(refs, list):
+                    if not isinstance(exps, list): exps = [exps]
+                    if not isinstance(refs, list): refs = [refs]
+
+                    expanded_labels = []
+                    for e in exps:
+                        for r in refs:
+                            new_label = f"{r}_{e}"
+                            expanded_labels.append(new_label)
+                            new_evals[new_label] = cfg.copy()
+                            if "exp" in cfg: new_evals[new_label]["exp"] = e
+                            if "model" in cfg: new_evals[new_label]["model"] = e
+                            if "ref" in cfg: new_evals[new_label]["ref"] = r
+                            if "obs" in cfg: new_evals[new_label]["obs"] = r
+                    expanded_map[eval_label] = expanded_labels
+                else:
+                    new_evals[eval_label] = cfg
+
+            self.control_dict["evaluations"] = new_evals
+
+            # Update data lists in plotting and stats
+            for task in ["plotting", "stats"]:
+                if task in self.control_dict:
+                    for grp in self.control_dict[task].values():
+                        if "data" in grp:
+                            new_data = []
+                            for d in grp["data"]:
+                                if d in expanded_map:
+                                    new_data.extend(expanded_map[d])
+                                else:
+                                    new_data.append(d)
+                            grp["data"] = new_data
+
     def save_analysis(self):
         if self.save:
             for attr, cfg in self.save.items():

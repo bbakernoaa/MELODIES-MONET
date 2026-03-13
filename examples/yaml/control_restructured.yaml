@@ -16,6 +16,16 @@ data:
       marker: 'o'
       linestyle: '--'
 
+  rrfs_expt:
+    type: exp
+    files: 'example_rrfs_files.nc'
+    source: 'ufs'
+    radius_of_influence: 19500
+    plot_kwargs:
+      color: 'purple'
+      marker: 'x'
+      linestyle: '--'
+
   airnow:
     type: ref  # reference / observational data
     files: 'example_airnow_files.nc'
@@ -28,9 +38,9 @@ data:
         vmax_plot: 55.0
 
 evaluations:
-  airnow_cmaq:
-    exp: cmaq_expt
-    ref: airnow
+  all_expts:
+    exp: ['cmaq_expt', 'rrfs_expt']
+    ref: 'airnow'
     mapping:
       O3: 'OZONE'
 
@@ -39,7 +49,7 @@ plotting:
     type: 'timeseries'
     domain_type: ['all']
     domain_name: ['CONUS']
-    data: ['airnow_cmaq']
+    data: ['all_expts'] # References the evaluation group defined above
     data_proc:
       ts_select_time: 'time_local'
       ts_avg_window: 'h'
@@ -48,4 +58,4 @@ stats:
   stat_list: ['MB', 'RMSE', 'R2']
   domain_type: ['all']
   domain_name: ['CONUS']
-  data: ['airnow_cmaq']
+  data: ['all_expts']
