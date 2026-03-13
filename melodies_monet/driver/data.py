@@ -30,6 +30,7 @@ class Data:
         self.variable_summing = None
         self.mapping = None
         self.mod_kwargs = {}
+        self.obs_kwargs = {}
         self.plot_kwargs = None
 
         # Specific to models
@@ -57,7 +58,7 @@ class Data:
     def __repr__(self):
         return f"Data(type={self.data_type!r}, label={self.label!r}, source={self.source!r})"
 
-    def from_dict(self, cfg):
+    def from_dict(self, cfg: dict):
         """
         Update attributes from a configuration dictionary.
 
@@ -82,7 +83,7 @@ class Data:
             self.file_vert_str = cfg.get("files_vert")
             self.file_surf_str = cfg.get("files_surf")
             self.file_pm25_str = cfg.get("files_pm25")
-            self.mod_kwargs = cfg.get("mod_kwargs", {})
+            self.mod_kwargs = {**cfg.get("mod_kwargs", {}), **cfg.get("kwargs", {})}
             self.plot_kwargs = cfg.get("plot_kwargs")
             self.scrip_file = cfg.get("scrip_file")
         else:
@@ -97,11 +98,12 @@ class Data:
             self.sat_type = cfg.get("sat_type")
             self.data_proc = cfg.get("data_proc")
             self.regrid_method = cfg.get("regrid_method")
+            self.obs_kwargs = {**cfg.get("obs_kwargs", {}), **cfg.get("kwargs", {})}
 
         self.use_dtn = cfg.get("use_dtn", False)
         return self
 
-    def glob_files(self, time_interval=None):
+    def glob_files(self, time_interval: list = None) -> None:
         """
         Expand file patterns and optionally subset by time.
 
@@ -109,6 +111,10 @@ class Data:
         ----------
         time_interval : list of pd.Timestamp, optional
             A list containing [start_time, end_time] to subset the data.
+
+        Returns
+        -------
+        None
         """
         from glob import glob
 
@@ -150,7 +156,7 @@ class Data:
             elif self.sat_type == "modis_l2":
                 self.files = tsub.subset_MODIS_l2(self.files, time_interval)
 
-    def load(self, time_interval=None):
+    def load(self, time_interval: list = None) -> None:
         """
         Load data using monetio.load and apply standard processing.
 
@@ -158,14 +164,20 @@ class Data:
         ----------
         time_interval : list of pd.Timestamp, optional
             A list containing [start_time, end_time] to subset the data.
+
+        Returns
+        -------
+        None
         """
+        import pandas as pd
+
         self.glob_files(time_interval=time_interval)
 
         if not self.files:
             print(f"WARNING: No files found for {self.label}")
             return
 
-        load_kwargs = self.mod_kwargs.copy()
+        load_kwargs = self.mod_kwargs.copy() if self.data_type == "model" else self.obs_kwargs.copy()
 
         if self.data_type == "model":
             list_input_var = self._get_model_var_list()
@@ -205,6 +217,11 @@ class Data:
             self.filter_obs()
             if time_interval is not None and "time" in self.obj.dims:
                 self.obj = self.obj.sel(time=slice(time_interval[0], time_interval[-1]))
+
+        # Scientific hygiene: Update history
+        history = self.obj.attrs.get("history", "")
+        new_history = f"{pd.Timestamp.now()}: Loaded and processed {self.label} data via MELODIES-MONET Orchestrator."
+        self.obj.attrs["history"] = f"{new_history}\n{history}"
 
     def _get_model_var_list(self):
         """Gather all variables required for pairing and summing."""

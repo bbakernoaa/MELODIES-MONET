@@ -107,7 +107,8 @@ def test_plot_regression():
     """
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
     ax.plot([0, 1], [0, 1], label="Regression Line")
     ax.set_title("Plotting Regression Test")
     ax.legend()
