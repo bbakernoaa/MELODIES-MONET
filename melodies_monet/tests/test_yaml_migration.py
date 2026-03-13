@@ -50,6 +50,28 @@ def test_migrate_control_dict_unified_data():
     assert 'airnow' in an.control_dict['obs']
     assert an.control_dict['models']['cmaq_expt']['source'] == 'cmaq'
 
+def test_migrate_control_dict_ref_exp():
+    an = analysis()
+    an.control_dict = {
+        'analysis': {'start_time': '2019-08-02-12:00:00', 'end_time': '2019-08-03-12:00:00', 'output_dir': './output'},
+        'data': {
+            'cmaq_expt': {'type': 'exp', 'files': 'cmaq_files', 'source': 'cmaq'},
+            'airnow': {'type': 'ref', 'files': 'airnow_files', 'obs_type': 'pt_sfc'}
+        },
+        'evaluations': {
+            'airnow_cmaq': {
+                'exp': 'cmaq_expt',
+                'ref': 'airnow',
+                'mapping': {'O3': 'OZONE'}
+            }
+        }
+    }
+    an._migrate_control_dict()
+    assert 'models' in an.control_dict
+    assert 'obs' in an.control_dict
+    assert 'cmaq_expt' in an.control_dict['models']
+    assert 'airnow' in an.control_dict['obs']
+
 def test_migrate_control_dict_legacy():
     an = analysis()
     an.control_dict = {
@@ -91,8 +113,8 @@ def test_pair_data_mapping_logic():
         'analysis': {'start_time': '2019-08-01', 'end_time': '2019-08-02', 'output_dir': '.'},
         'evaluations': {
             'eval1': {
-                'model': 'mod1',
-                'obs': 'obs1',
+                'exp': 'mod1',
+                'ref': 'obs1',
                 'mapping': {'O3': 'OZONE'}
             }
         }

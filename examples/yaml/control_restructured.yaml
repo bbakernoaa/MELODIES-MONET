@@ -1,4 +1,4 @@
-# Restructured MM Control YAML with Unified Data Section
+# Restructured MM Control YAML with Unified Data Section and Ref/Exp terminology
 analysis:
   start_time: '2019-08-02-12:00:00' #UTC
   end_time: '2019-08-03-12:00:00' #UTC
@@ -7,7 +7,7 @@ analysis:
 
 data:
   cmaq_expt:
-    type: model
+    type: exp  # experimental / model data
     files: 'example_cmaq_files.nc'
     source: 'cmaq'
     radius_of_influence: 18000
@@ -17,7 +17,7 @@ data:
       linestyle: '--'
 
   airnow:
-    type: obs
+    type: ref  # reference / observational data
     files: 'example_airnow_files.nc'
     obs_type: pt_sfc
     variables:
@@ -29,8 +29,8 @@ data:
 
 evaluations:
   airnow_cmaq:
-    model: cmaq_expt
-    obs: airnow
+    exp: cmaq_expt
+    ref: airnow
     mapping:
       O3: 'OZONE'
 

@@ -118,8 +118,8 @@ class analysis:
         """Unified pairing logic leveraging monet.pair."""
         if "evaluations" in self.control_dict:
             for eval_label, cfg in self.control_dict["evaluations"].items():
-                mod_label = cfg["model"]
-                ref_label = cfg["obs"]
+                mod_label = cfg.get("model", cfg.get("exp"))
+                ref_label = cfg.get("obs", cfg.get("ref"))
                 mod = self.models[mod_label]
                 ref = self.obs[ref_label]
 
@@ -196,9 +196,9 @@ class analysis:
             data_cfg = self.control_dict.pop("data")
             for k, v in data_cfg.items():
                 dtype = v.get("type", "model")
-                if dtype == "model":
+                if dtype in ["model", "exp"]:
                     self.control_dict.setdefault("models", {})[k] = v
-                elif dtype == "obs":
+                elif dtype in ["obs", "ref"]:
                     self.control_dict.setdefault("obs", {})[k] = v
 
         if "plots" in self.control_dict:
