@@ -21,14 +21,14 @@ def execute_dag_flow(control_dict, execution_order, graph, pairing_kwargs, time_
         upstream_nodes = list(graph.predecessors(node_id))
         wait_for = [task_results[up_id] for up_id in upstream_nodes]
 
-        resources = {}
-        if node_type == "data":
-            resources = {"dtn": 1}
-
         if node_type == "data":
             data_type = node_attr["data_type"]
-            # Unified data section
             cfg = control_dict.get("data", {}).get(label, {})
+
+            # Route to DTN if configured
+            resources = {}
+            if cfg.get("use_dtn", False):
+                resources = {"dtn": 1}
 
             with dask.annotate(resources=resources):
                 future = run_data_task.submit(

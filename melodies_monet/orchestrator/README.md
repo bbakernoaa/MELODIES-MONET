@@ -43,6 +43,20 @@ The `ClusterFactory` automatically detects project/account codes from environmen
 - `run_stats_task`: Calculates statistical metrics.
 - `run_plotting_task`: Generates visualizations.
 
+### Task Routing (DTN Support)
+
+You can route specific data loading tasks to Data Transfer Nodes (DTN) by adding `use_dtn: True` to the data source configuration:
+
+```yaml
+data:
+  airnow:
+    type: "obs"
+    use_dtn: True
+    # ...
+```
+
+This ensures the fetch and read logic runs on partitions labeled with the `dtn` resource.
+
 ## Multi-Node Execution
 
 MELODIES-MONET leverages Xarray and Dask to enable tasks to utilize multiple HPC nodes.

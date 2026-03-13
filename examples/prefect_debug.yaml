@@ -31,6 +31,7 @@ data:
 
   airnow:
     type: "obs"
+    use_dtn: True  # Route to DTN nodes
     source: "airnow"
     files: "/path/to/airnow/files/*.nc"
     obs_type: "pt_sfc"

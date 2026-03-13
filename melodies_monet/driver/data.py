@@ -51,6 +51,7 @@ class Data:
         self.time_var = None
         self.ground_coordinate = None
         self.regrid_method = None
+        self.use_dtn = False
 
     def __repr__(self):
         return f"Data(type={self.data_type!r}, label={self.label!r}, source={self.source!r})"
@@ -83,6 +84,8 @@ class Data:
             self.sat_type = cfg.get("sat_type")
             self.data_proc = cfg.get("data_proc")
             self.regrid_method = cfg.get("regrid_method")
+
+        self.use_dtn = cfg.get("use_dtn", False)
         return self
 
     def glob_files(self, time_interval=None):
