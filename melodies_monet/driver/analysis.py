@@ -44,6 +44,8 @@ class analysis:
         with open(self.control, "r") as stream:
             self.control_dict = yaml.safe_load(stream)
 
+        self._migrate_control_dict()
+
         # Basic settings
         self.start_time = pd.Timestamp(self.control_dict["analysis"]["start_time"])
         self.end_time = pd.Timestamp(self.control_dict["analysis"]["end_time"])
@@ -67,13 +69,13 @@ class analysis:
             self.time_intervals = [[time_stamps[n], time_stamps[n + 1]] for n in range(len(time_stamps) - 1)]
 
     def open_models(self, time_interval=None, load_files=True):
-        if "model" in self.control_dict:
-            for mod_label in self.control_dict["model"]:
-                cfg = self.control_dict["model"][mod_label]
+        if "models" in self.control_dict:
+            for mod_label in self.control_dict["models"]:
+                cfg = self.control_dict["models"][mod_label]
                 m_inst = Data(data_type="model")
                 m_inst.label = mod_label
-                m_inst.source = cfg["mod_type"]
-                m_inst.file_str = cfg["files"]
+                m_inst.source = cfg.get("mod_type", cfg.get("source"))
+                m_inst.file_str = cfg.get("files", cfg.get("filename"))
                 m_inst.mapping = cfg.get("mapping")
                 m_inst.variable_dict = cfg.get("variables")
                 m_inst.variable_summing = cfg.get("variable_summing")
@@ -96,8 +98,9 @@ class analysis:
                 cfg = self.control_dict["obs"][obs_label]
                 o_inst = Data(data_type="obs")
                 o_inst.label = obs_label
-                o_inst.obs_type = cfg["obs_type"]
-                o_inst.file_str = cfg["filename"]
+                o_inst.obs_type = cfg.get("obs_type", "pt_sfc")
+                o_inst.source = cfg.get("source")
+                o_inst.file_str = cfg.get("filename", cfg.get("files"))
                 o_inst.variable_dict = cfg.get("variables")
                 o_inst.variable_summing = cfg.get("variable_summing")
                 o_inst.resample = cfg.get("resample")
@@ -113,13 +116,19 @@ class analysis:
 
     def pair_data(self):
         """Unified pairing logic leveraging monet.pair."""
-        for mod_label, mod in self.models.items():
-            for ref_label in mod.mapping.keys():
+        if "evaluations" in self.control_dict:
+            for eval_label, cfg in self.control_dict["evaluations"].items():
+                mod_label = cfg["model"]
+                ref_label = cfg["obs"]
+                mod = self.models[mod_label]
                 ref = self.obs[ref_label]
 
                 # Mapping and subsetting
-                keys = list(mod.mapping[ref_label].keys())
-                ref_vars = list(mod.mapping[ref_label].values())
+                mapping = cfg.get("mapping")
+                if mapping is None:
+                    mapping = mod.mapping.get(ref_label, {}) if mod.mapping else {}
+                keys = list(mapping.keys())
+                ref_vars = list(mapping.values())
                 mod_vars = list(mod.variable_dict.keys()) if mod.variable_dict else []
 
                 # Model variables for this pairing
@@ -142,8 +151,70 @@ class analysis:
                 p_inst.type = ref.obs_type.lower()
                 p_inst.obj = paired_data
 
-                label = f"{p_inst.ref}_{p_inst.model}"
-                self.paired[label] = p_inst
+                self.paired[eval_label] = p_inst
+        else:
+            # Fallback for old mapping style if migration didn't run or failed
+            for mod_label, mod in self.models.items():
+                if not mod.mapping: continue
+                for ref_label in mod.mapping.keys():
+                    ref = self.obs[ref_label]
+
+                    # Mapping and subsetting
+                    keys = list(mod.mapping[ref_label].keys())
+                    ref_vars = list(mod.mapping[ref_label].values())
+                    mod_vars = list(mod.variable_dict.keys()) if mod.variable_dict else []
+
+                    # Model variables for this pairing
+                    model_obj = mod.obj[list(set(keys + mod_vars))]
+
+                    # Perform pairing
+                    paired_data = m.pair(
+                        model_obj, ref.obj,
+                        radius_of_influence=mod.radius_of_influence,
+                        suffix=mod.label,
+                        type=ref.obs_type.lower(),
+                        **self.pairing_kwargs.get(ref.obs_type.lower(), {})
+                    )
+
+                    p_inst = pair()
+                    p_inst.ref = ref.label
+                    p_inst.model = mod.label
+                    p_inst.model_vars = keys
+                    p_inst.ref_vars = ref_vars
+                    p_inst.type = ref.obs_type.lower()
+                    p_inst.obj = paired_data
+
+                    label = f"{p_inst.ref}_{p_inst.model}"
+                    self.paired[label] = p_inst
+
+    def _migrate_control_dict(self):
+        """Transparently upgrade configurations to the four-tier hierarchical schema."""
+        if "model" in self.control_dict:
+            self.control_dict.setdefault("models", {}).update(self.control_dict.pop("model"))
+
+        if "data" in self.control_dict:
+            data_cfg = self.control_dict.pop("data")
+            for k, v in data_cfg.items():
+                dtype = v.get("type", "model")
+                if dtype == "model":
+                    self.control_dict.setdefault("models", {})[k] = v
+                elif dtype == "obs":
+                    self.control_dict.setdefault("obs", {})[k] = v
+
+        if "plots" in self.control_dict:
+            self.control_dict.setdefault("plotting", {}).update(self.control_dict.pop("plots"))
+
+        if "evaluations" not in self.control_dict and "models" in self.control_dict:
+            self.control_dict["evaluations"] = {}
+            for mod_label, mod_cfg in self.control_dict["models"].items():
+                if "mapping" in mod_cfg:
+                    for obs_label, mapping in mod_cfg["mapping"].items():
+                        eval_label = f"{obs_label}_{mod_label}"
+                        self.control_dict["evaluations"][eval_label] = {
+                            "model": mod_label,
+                            "obs": obs_label,
+                            "mapping": mapping
+                        }
 
     def save_analysis(self):
         if self.save:

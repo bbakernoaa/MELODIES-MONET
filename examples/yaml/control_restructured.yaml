@@ -1,0 +1,51 @@
+# Restructured MM Control YAML with Unified Data Section
+analysis:
+  start_time: '2019-08-02-12:00:00' #UTC
+  end_time: '2019-08-03-12:00:00' #UTC
+  output_dir: './output'
+  debug: True
+
+data:
+  cmaq_expt:
+    type: model
+    files: 'example_cmaq_files.nc'
+    source: 'cmaq'
+    radius_of_influence: 18000
+    plot_kwargs:
+      color: 'magenta'
+      marker: 'o'
+      linestyle: '--'
+
+  airnow:
+    type: obs
+    files: 'example_airnow_files.nc'
+    obs_type: pt_sfc
+    variables:
+      OZONE:
+        unit_scale: 1
+        ylabel_plot: 'Ozone (ppbv)'
+        vmin_plot: 15.0
+        vmax_plot: 55.0
+
+evaluations:
+  airnow_cmaq:
+    model: cmaq_expt
+    obs: airnow
+    mapping:
+      O3: 'OZONE'
+
+plotting:
+  plot_grp1:
+    type: 'timeseries'
+    domain_type: ['all']
+    domain_name: ['CONUS']
+    data: ['airnow_cmaq']
+    data_proc:
+      ts_select_time: 'time_local'
+      ts_avg_window: 'h'
+
+stats:
+  stat_list: ['MB', 'RMSE', 'R2']
+  domain_type: ['all']
+  domain_name: ['CONUS']
+  data: ['airnow_cmaq']
