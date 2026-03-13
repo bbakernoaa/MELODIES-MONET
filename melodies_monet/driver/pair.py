@@ -1,7 +1,3 @@
-import xarray as xr
-import pandas as pd
-
-
 class pair:
     """The pair class.
 

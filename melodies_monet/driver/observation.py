@@ -1,6 +1,7 @@
 import os
-import xarray as xr
+
 import numpy as np
+import xarray as xr
 
 import monetio as mio
 
@@ -47,19 +48,19 @@ class observation:
         )
 
     def open_obs(self, time_interval=None, control_dict=None):
-        """Open the observational data, store data in observation pair,
+        """
+        Open the observational data, store data in observation pair,
         and apply mask and scaling.
 
         Parameters
         ----------
-        time_interval (optional, default None) : [pandas.Timestamp, pandas.Timestamp]
+        time_interval : list of pd.Timestamp, optional
             If not None, restrict obs to datetime range spanned by time interval [start, end].
-
-        Returns
-        -------
-        None
+        control_dict : dict, optional
+            The full control configuration dictionary.
         """
         from glob import glob
+
         from numpy import sort
 
         from melodies_monet import tutorial
@@ -112,25 +113,14 @@ class observation:
         # If ground site
         if self.obs_type == "ground":
             if self.ground_coordinate and isinstance(self.ground_coordinate, dict):
-                self.obj["latitude"] = (
-                    xr.ones_like(self.obj["time"], dtype=np.float64)
-                    * self.ground_coordinate["latitude"]
-                )
-                self.obj["longitude"] = (
-                    xr.ones_like(self.obj["time"], dtype=np.float64)
-                    * self.ground_coordinate["longitude"]
-                )
+                self.obj["latitude"] = xr.ones_like(self.obj["time"], dtype=np.float64) * self.ground_coordinate["latitude"]
+                self.obj["longitude"] = xr.ones_like(self.obj["time"], dtype=np.float64) * self.ground_coordinate["longitude"]
             elif self.ground_coordinate and ~isinstance(self.ground_coordinate, dict):
-                raise TypeError(
-                    "The ground_coordinate option must be specified as a dict with keys latitude and longitude."
-                )
+                raise TypeError("The ground_coordinate option must be specified as a dict with keys latitude and longitude.")
 
     def rename_vars(self):
-        """Rename any variables in observation with rename set.
-
-        Returns
-        -------
-        None
+        """
+        Rename any variables in observation with rename set.
         """
         data_vars = self.obj.data_vars
         # For xarray datasets using data_vars does not grab names of coordinates
@@ -146,23 +136,23 @@ class observation:
                         self.variable_dict[d["rename"]] = self.variable_dict.pop(v)
 
     def open_sat_obs(self, time_interval=None, control_dict=None):
-        """Methods to opens satellite data observations.
+        """
+        Open satellite data observations.
         Uses in-house python code to open and load observations.
         Alternatively may use the satpy reader.
         Fills the object class associated with the equivalent label (self.label) with satellite observation
-        dataset read in from the associated file (self.file) by the satellite file reader
+        dataset read in from the associated file (self.file) by the satellite file reader.
 
         Parameters
         ----------
-        time_interval (optional, default None) : [pandas.Timestamp, pandas.Timestamp]
+        time_interval : list of pd.Timestamp, optional
             If not None, restrict obs to datetime range spanned by time interval [start, end].
-
-        Returns
-        -------
-        None
+        control_dict : dict, optional
+            The full control configuration dictionary.
         """
-        from melodies_monet.util import time_interval_subset as tsub
         from glob import glob
+
+        from melodies_monet.util import time_interval_subset as tsub
 
         try:
             if self.sat_type == "omps_l3":
@@ -215,22 +205,16 @@ class observation:
                 flst = tsub.subset_MODIS_l2(self.file, time_interval)
                 # self.obj = mio.sat._modis_l2_mm.read_mfdataset(
                 #     self.file, self.variable_dict, debug=self.debug)
-                self.obj = mio.sat._modis_l2_mm.read_mfdataset(
-                    flst, self.variable_dict, debug=self.debug
-                )
+                self.obj = mio.sat._modis_l2_mm.read_mfdataset(flst, self.variable_dict, debug=self.debug)
                 # self.obj = granules, an OrderedDict of Datasets, keyed by datetime_str,
                 #   with variables: Latitude, Longitude, Scan_Start_Time, parameters, ...
             elif self.sat_type == "tropomi_l2_no2":
                 # from monetio import tropomi_l2_no2
                 print("Reading TROPOMI L2 NO2")
-                self.obj = mio.sat._tropomi_l2_no2_mm.read_trpdataset(
-                    self.file, self.variable_dict, debug=self.debug
-                )
+                self.obj = mio.sat._tropomi_l2_no2_mm.read_trpdataset(self.file, self.variable_dict, debug=self.debug)
             elif "tempo_l2" in self.sat_type:
                 print("Reading TEMPO L2")
-                self.obj = mio.sat._tempo_l2_no2_mm.open_dataset(
-                    self.file, self.variable_dict, debug=self.debug
-                )
+                self.obj = mio.sat._tempo_l2_no2_mm.open_dataset(self.file, self.variable_dict, debug=self.debug)
             else:
                 print("file reader not implemented for {} observation".format(self.sat_type))
                 raise ValueError
@@ -239,11 +223,8 @@ class observation:
             return
 
     def filter_obs(self):
-        """Filter observations based on filter_dict.
-
-        Returns
-        -------
-        None
+        """
+        Filter observations based on filter_dict.
         """
         if self.data_proc is not None:
             if "filter_dict" in self.data_proc:
@@ -271,12 +252,9 @@ class observation:
                         raise ValueError(f"Filter operation {filter_op!r} is not supported")
 
     def mask_and_scale(self):
-        """Mask and scale observations, including unit conversions and setting
+        """
+        Mask and scale observations, including unit conversions and setting
         detection limits.
-
-        Returns
-        -------
-        None
         """
         vars = self.obj.data_vars
         if self.variable_dict is not None:
@@ -308,28 +286,19 @@ class observation:
 
                     # Then replace LLOD_value with LLOD_setvalue (after unit conversion)
                     if "LLOD_value" in d:
-                        self.obj[v].data = self.obj[v].where(
-                            self.obj[v] != d["LLOD_value"], d["LLOD_setvalue"]
-                        )
+                        self.obj[v].data = self.obj[v].where(self.obj[v] != d["LLOD_value"], d["LLOD_setvalue"])
 
     def sum_variables(self):
-        """Sum any variables noted that should be summed to create new variables.
+        """
+        Sum any variables noted that should be summed to create new variables.
         This occurs after any unit scaling.
-
-        Returns
-        -------
-        None
         """
 
         try:
             if self.variable_summing is not None:
                 for var_new in self.variable_summing.keys():
                     if var_new in self.obj.variables:
-                        print(
-                            "The variable name, {}, already exists and cannot be created with variable_summing.".format(
-                                var_new
-                            )
-                        )
+                        print("The variable name, {}, already exists and cannot be created with variable_summing.".format(var_new))
                         raise ValueError
                     var_new_info = self.variable_summing[var_new]
                     if self.variable_dict is None:
@@ -344,11 +313,8 @@ class observation:
             raise Exception("Something happened when using variable_summing:") from e
 
     def resample_data(self):
-        """Resample the obs df based on the value set in the control file.
-
-        Returns
-        -------
-        None
+        """
+        Resample the observation data based on the value set in the control file.
         """
 
         ##Resample the data
@@ -356,11 +322,8 @@ class observation:
             self.obj = self.obj.resample(time=self.resample).mean(dim="time")
 
     def obs_to_df(self):
-        """Convert and reformat observation object (:attr:`obj`) to dataframe.
-
-        Returns
-        -------
-        None
+        """
+        Convert and reformat observation object (:attr:`obj`) to dataframe.
         """
         try:
             self.obj = self.obj.to_dataframe().reset_index().drop(["x", "y"], axis=1)

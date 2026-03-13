@@ -1,7 +1,7 @@
-from melodies_monet.driver.data import Data
-from melodies_monet.driver.pair import pair
-from melodies_monet.driver.orchestrator import orchestrator
 from melodies_monet.driver.analysis import analysis
+from melodies_monet.driver.data import Data
+from melodies_monet.driver.orchestrator import orchestrator
+from melodies_monet.driver.pair import pair
 
 # For backward compatibility
 model = Data

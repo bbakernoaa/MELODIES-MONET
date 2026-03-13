@@ -22,6 +22,21 @@ except ImportError:
 
 @lru_cache(None)
 def get_regions(url_or_path, **kwargs):
+    """
+    Get regions from a shapefile using regionmask.
+
+    Parameters
+    ----------
+    url_or_path : str
+        URL or path to the shapefile.
+    **kwargs
+        Extra arguments passed to regionmask.from_geopandas.
+
+    Returns
+    -------
+    regionmask.Regions
+        The regions object.
+    """
     return regionmask.from_geopandas(gpd.read_file(url_or_path), **kwargs)
 
 
@@ -127,10 +142,7 @@ def _create_shapefile_mask(data, mask_path=None, mask_url=None, region_name=None
     """
 
     if mask_url is not None and mask_path is not None:
-        warnings.warn(
-            "mask_url and mask_path provided. Only one can be used. "
-            "Selecting mask_path and discarding URL."
-        )
+        warnings.warn("mask_url and mask_path provided. Only one can be used. Selecting mask_path and discarding URL.")
 
     if mask_path is not None:
         url_or_path = mask_path
@@ -176,8 +188,7 @@ def control_custom_mask(data, domain_type, domain_info=None, **kwargs):
     """
     if regionmask is None:
         raise ImportError(
-            "regionmask is not installed, try alternative functions."
-            + " create_autoregion can probably do the trick."
+            "regionmask is not installed, try alternative functions." + " create_autoregion can probably do the trick."
         )
     if domain_info is None:
         raise KeyError("If regionmask is used, domain_info must exist.")

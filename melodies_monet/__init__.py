@@ -3,6 +3,7 @@
 """
 MELODIES MONET
 """
+
 import sys
 
 __version__ = "1.0"
@@ -19,7 +20,7 @@ __all__ = [__version__] + _submodules
 
 
 if sys.version_info < (3, 7):
-    from . import driver, plots, stats, util, tutorial  # noqa: F401
+    from . import driver, plots, stats, tutorial, util  # noqa: F401
 
 else:
     # Lazy imports

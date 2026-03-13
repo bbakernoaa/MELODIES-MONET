@@ -1,17 +1,18 @@
 import os
-import xarray as xr
-import pandas as pd
-import numpy as np
-import datetime
-import monet as m
+
 import networkx as nx
+import pandas as pd
+
+import monet as m
 from melodies_monet.driver.data import Data
 from melodies_monet.driver.pair import pair
+
 
 class GraphEngine:
     """
     GraphEngine class to manage the internal DAG for MELODIES-MONET.
     """
+
     def __init__(self):
         self.graph = nx.DiGraph()
 
@@ -111,6 +112,7 @@ class GraphEngine:
             raise ValueError("Graph is not a DAG; cannot determine execution order.")
         return list(nx.topological_sort(self.graph))
 
+
 class orchestrator:
     """The orchestrator class. High-level orchestrator for evaluations."""
 
@@ -146,8 +148,18 @@ class orchestrator:
         self.project = None
 
     def read_control(self, control=None):
+        """
+        Read and parse the control YAML file.
+
+        Parameters
+        ----------
+        control : str, optional
+            Path to the control YAML file. If not provided, uses the default 'control.yaml'.
+        """
         import yaml
-        if control is not None: self.control = control
+
+        if control is not None:
+            self.control = control
         with open(self.control, "r") as stream:
             self.control_dict = yaml.safe_load(stream)
 
@@ -174,13 +186,26 @@ class orchestrator:
 
         # Time intervals for chunking
         if "time_interval" in self.control_dict["analysis"]:
-            time_stamps = pd.date_range(start=self.start_time, end=self.end_time,
-                                       freq=self.control_dict["analysis"]["time_interval"])
+            time_stamps = pd.date_range(
+                start=self.start_time,
+                end=self.end_time,
+                freq=self.control_dict["analysis"]["time_interval"],
+            )
             if time_stamps[-1] < pd.Timestamp(self.end_time):
                 time_stamps = time_stamps.append(pd.DatetimeIndex([self.end_time]))
             self.time_intervals = [[time_stamps[n], time_stamps[n + 1]] for n in range(len(time_stamps) - 1)]
 
     def open_data(self, time_interval=None, load_files=True):
+        """
+        Open and load data sources defined in the control file.
+
+        Parameters
+        ----------
+        time_interval : list of pd.Timestamp, optional
+            A list containing [start_time, end_time] to subset the data.
+        load_files : bool, optional
+            Whether to actually load the data from files. Default is True.
+        """
         if "data" in self.control_dict:
             for label, cfg in self.control_dict["data"].items():
                 inst = Data(data_type=cfg.get("type", "model"))
@@ -192,7 +217,10 @@ class orchestrator:
                 self.data[label] = inst
 
     def pair_data(self):
-        """Unified pairing logic leveraging monet.pair."""
+        """
+        Perform data pairing for all evaluations defined in the control file.
+        Leverages monet.pair for the core pairing logic.
+        """
         if "evaluations" in self.control_dict:
             for eval_label, cfg in self.control_dict["evaluations"].items():
                 mod_label = cfg.get("model", cfg.get("exp"))
@@ -213,11 +241,12 @@ class orchestrator:
 
                 # Perform pairing
                 paired_data = m.pair(
-                    model_obj, ref.obj,
+                    model_obj,
+                    ref.obj,
                     radius_of_influence=mod.radius_of_influence,
                     suffix=mod.label,
                     type=ref.obs_type.lower(),
-                    **self.pairing_kwargs.get(ref.obs_type.lower(), {})
+                    **self.pairing_kwargs.get(ref.obs_type.lower(), {}),
                 )
 
                 p_inst = pair()
@@ -232,7 +261,8 @@ class orchestrator:
         else:
             # Fallback for old mapping style if migration didn't run or failed
             for mod_label, mod in self.models.items():
-                if not mod.mapping: continue
+                if not mod.mapping:
+                    continue
                 for ref_label in mod.mapping.keys():
                     ref = self.obs[ref_label]
 
@@ -246,11 +276,12 @@ class orchestrator:
 
                     # Perform pairing
                     paired_data = m.pair(
-                        model_obj, ref.obj,
+                        model_obj,
+                        ref.obj,
                         radius_of_influence=mod.radius_of_influence,
                         suffix=mod.label,
                         type=ref.obs_type.lower(),
-                        **self.pairing_kwargs.get(ref.obs_type.lower(), {})
+                        **self.pairing_kwargs.get(ref.obs_type.lower(), {}),
                     )
 
                     p_inst = pair()
@@ -265,7 +296,9 @@ class orchestrator:
                     self.paired[label] = p_inst
 
     def _build_graph(self):
-        """Build the internal DAG using GraphEngine."""
+        """
+        Build the internal Directed Acyclic Graph (DAG) using GraphEngine.
+        """
         if "data" in self.control_dict:
             for label, cfg in self.control_dict["data"].items():
                 self.graph_engine.add_data_node(label, cfg.get("type", "model"))
@@ -290,7 +323,10 @@ class orchestrator:
             raise ValueError("The constructed graph is not a Directed Acyclic Graph (DAG).")
 
     def _migrate_control_dict(self):
-        """Transparently upgrade configurations to the unified data schema."""
+        """
+        Transparently upgrade configurations to the unified data schema.
+        Consolidates 'model', 'models', and 'obs' into 'data' and renames 'plots' to 'plotting'.
+        """
         if "model" in self.control_dict:
             m_cfg = self.control_dict.pop("model")
             for k, v in m_cfg.items():
@@ -321,20 +357,22 @@ class orchestrator:
                         self.control_dict["evaluations"][eval_label] = {
                             "model": label,
                             "obs": obs_label,
-                            "mapping": mapping
+                            "mapping": mapping,
                         }
 
         # Expand evaluations if exp or ref are lists
         if "evaluations" in self.control_dict:
             new_evals = {}
-            expanded_map = {} # old_eval_label -> [new_eval_labels]
+            expanded_map = {}  # old_eval_label -> [new_eval_labels]
             for eval_label, cfg in self.control_dict["evaluations"].items():
                 exps = cfg.get("exp", cfg.get("model"))
                 refs = cfg.get("ref", cfg.get("obs"))
 
                 if isinstance(exps, list) or isinstance(refs, list):
-                    if not isinstance(exps, list): exps = [exps]
-                    if not isinstance(refs, list): refs = [refs]
+                    if not isinstance(exps, list):
+                        exps = [exps]
+                    if not isinstance(refs, list):
+                        refs = [refs]
 
                     expanded_labels = []
                     for e in exps:
@@ -342,10 +380,14 @@ class orchestrator:
                             new_label = f"{r}_{e}"
                             expanded_labels.append(new_label)
                             new_evals[new_label] = cfg.copy()
-                            if "exp" in cfg: new_evals[new_label]["exp"] = e
-                            if "model" in cfg: new_evals[new_label]["model"] = e
-                            if "ref" in cfg: new_evals[new_label]["ref"] = r
-                            if "obs" in cfg: new_evals[new_label]["obs"] = r
+                            if "exp" in cfg:
+                                new_evals[new_label]["exp"] = e
+                            if "model" in cfg:
+                                new_evals[new_label]["model"] = e
+                            if "ref" in cfg:
+                                new_evals[new_label]["ref"] = r
+                            if "obs" in cfg:
+                                new_evals[new_label]["obs"] = r
                     expanded_map[eval_label] = expanded_labels
                 else:
                     new_evals[eval_label] = cfg
@@ -366,36 +408,56 @@ class orchestrator:
                             grp["data"] = new_data
 
     def save_analysis(self):
+        """
+        Save analysis results (e.g., paired data) to disk as configured.
+        """
         if self.save:
             for attr, cfg in self.save.items():
                 obj = getattr(self, attr)
                 if cfg["method"] == "netcdf":
                     from melodies_monet.util.write_util import write_analysis_ncf
-                    write_analysis_ncf(obj=obj, output_dir=self.output_dir_save,
-                                     fn_prefix=cfg.get("prefix", ""),
-                                     keep_groups=cfg.get("data", "all"))
+
+                    write_analysis_ncf(
+                        obj=obj,
+                        output_dir=self.output_dir_save,
+                        fn_prefix=cfg.get("prefix", ""),
+                        keep_groups=cfg.get("data", "all"),
+                    )
                 elif cfg["method"] == "pkl":
                     from melodies_monet.util.write_util import write_pkl
-                    write_pkl(obj=obj, output_name=os.path.join(self.output_dir_save, cfg["output_name"]))
+
+                    write_pkl(
+                        obj=obj,
+                        output_name=os.path.join(self.output_dir_save, cfg["output_name"]),
+                    )
 
     def plotting(self):
-        """Standard plotting driver using monet-plots."""
-        import monet_plots as mplots
+        """
+        Execute plotting tasks as defined in the control file.
+        Delegates to monet-plots.
+        """
         # Implementation details omitted for brevity, logic remains in MM orchestrator
         pass
 
     def stats(self):
-        """Standard statistics driver using monet-stats."""
-        import monet_stats as mstats
+        """
+        Execute statistics tasks as defined in the control file.
+        Delegates to monet-stats.
+        """
         # Implementation details omitted for brevity, logic remains in MM orchestrator
         pass
 
     def run(self):
-        """Execute the DAG in topological order."""
+        """
+        Run the full evaluation workflow.
+        If 'use_prefect' is enabled in the control file, it uses the Prefect/Dask
+        orchestrator. Otherwise, it executes tasks sequentially in topological order.
+        """
         use_prefect = self.control_dict["analysis"].get("use_prefect", False)
 
         if use_prefect:
             from melodies_monet.orchestrator.flows import main_orchestration_flow
+
             return main_orchestration_flow(self)
         else:
             order = self.graph_engine.get_execution_order()

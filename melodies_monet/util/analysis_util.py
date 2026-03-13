@@ -1,46 +1,51 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-import os
 import logging
+import os
 from glob import glob
 
 
 def fill_date_template(template_str, date_str):
     """
-    Replace date template parameters with values from date string
+    Replace date template parameters with values from date string.
 
     Parameters
-        template_str (str): template string
-        date_str (str yyyy-mm-m_abbr-dd-ddd): date string
+    ----------
+    template_str : str
+        Template string.
+    date_str : str
+        Date string (yyyy-mm-m_abbr-dd-ddd).
 
     Returns
-        template_str (str): filled template string
+    -------
+    str
+        Filled template string.
     """
 
-    yyyy_str, mm_str, m_abbr_str, dd_str, ddd_str \
-        = tuple(date_str.split('-'))
+    yyyy_str, mm_str, m_abbr_str, dd_str, ddd_str = tuple(date_str.split("-"))
 
-    if 'DDD' in template_str:
-        return template_str.replace(
-            'YYYY', yyyy_str).replace(
-            'DDD', ddd_str)
+    if "DDD" in template_str:
+        return template_str.replace("YYYY", yyyy_str).replace("DDD", ddd_str)
     else:
-        return template_str.replace(
-            'YYYY', yyyy_str).replace(
-            'MM', mm_str).replace(
-            'M_ABBR', m_abbr_str).replace(
-            'DD', dd_str)
+        return template_str.replace("YYYY", yyyy_str).replace("MM", mm_str).replace("M_ABBR", m_abbr_str).replace("DD", dd_str)
 
 
 def find_file(datadir, filestr):
     """
+    Find a file matching a pattern in a directory.
+
     Parameters
-        datadir (str): data directory
-        filestr (str): filename regular expression
+    ----------
+    datadir : str
+        Data directory.
+    filestr : str
+        Filename regular expression.
 
     Returns
-        filename (str): complete path of matching filename in data directory
+    -------
+    str
+        Complete path of matching filename in data directory.
     """
     logger = logging.getLogger(__name__)
 
@@ -48,9 +53,9 @@ def find_file(datadir, filestr):
     files = glob(pattern)
 
     if len(files) == 0:
-        raise Exception('no file matches for %s' % pattern)
+        raise Exception("no file matches for %s" % pattern)
     if len(files) > 1:
-        raise Exception('more than one file match %s' % pattern)
+        raise Exception("more than one file match %s" % pattern)
 
     filename = files[0]
     logger.info(filename)
@@ -60,23 +65,25 @@ def find_file(datadir, filestr):
 
 def get_obs_vars(config):
     """
-    Get subset of obs variables from model to obs variable mapping
+    Get subset of obs variables from model to obs variable mapping.
 
     Parameters
-        config (dict): configuration dictionary
+    ----------
+    config : dict
+        Configuration dictionary.
 
     Returns
-        obs_vars_subset (dict of dict):
-            nested dictionary keyed by obs set name and obs variable name
+    -------
+    dict
+        Nested dictionary keyed by obs set name and obs variable name.
     """
     obs_vars_subset = dict()
 
-    for model_name in config['model']:
-
-        mapping = config['model'][model_name]['mapping']
+    for model_name in config["model"]:
+        mapping = config["model"][model_name]["mapping"]
 
         for obs_name in mapping:
-            obs_vars = config['obs'][obs_name]['variables']
+            obs_vars = config["obs"][obs_name]["variables"]
             obs_vars_subset[obs_name] = dict()
 
             for model_var in mapping[obs_name]:
