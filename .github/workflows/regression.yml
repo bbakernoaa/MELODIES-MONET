@@ -1,0 +1,40 @@
+name: Regression Testing
+
+on:
+  push:
+    branches: [ main, develop, 'jules-*' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libnetcdf-dev libhdf5-dev
+
+    - name: Install Core Repositories
+      run: |
+        pip install --upgrade pip
+        pip install git+https://github.com/NCAR/monetio.git@develop
+        pip install git+https://github.com/NCAR/monet.git@master
+        pip install git+https://github.com/NCAR/monet-stats.git@main || pip install git+https://github.com/NCAR/monet-stats.git@master
+        pip install git+https://github.com/NCAR/monet-plots.git@main || pip install git+https://github.com/NCAR/monet-plots.git@master
+
+    - name: Install MELODIES-MONET
+      run: |
+        pip install -e .
+        pip install prefect prefect-dask dask-jobqueue dask-cloudprovider networkx pooch pytest pytest-mpl xarray pandas numpy
+
+    - name: Run Regression Tests
+      run: |
+        python -m pytest melodies_monet/tests/test_regression.py
