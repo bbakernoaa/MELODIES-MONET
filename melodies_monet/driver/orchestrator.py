@@ -444,8 +444,15 @@ class orchestrator:
                 return
 
             for group_label, cfg in self.control_dict["plotting"].items():
+                # Propagate global analysis settings
+                cfg_with_global = {
+                    "output_dir": self.output_dir,
+                    "debug": self.debug,
+                    "add_logo": self.add_logo,
+                    **cfg,
+                }
                 needed_pairs = {k: self.paired[k] for k in cfg.get("data", []) if k in self.paired}
-                monet_plots.create_plots(needed_pairs, **cfg)
+                monet_plots.create_plots(needed_pairs, **cfg_with_global)
 
     def stats(self):
         """
@@ -460,8 +467,14 @@ class orchestrator:
                 return
 
             for group_label, cfg in self.control_dict["stats"].items():
+                # Propagate global analysis settings
+                cfg_with_global = {
+                    "output_dir": self.output_dir,
+                    "debug": self.debug,
+                    **cfg,
+                }
                 needed_pairs = {k: self.paired[k] for k in cfg.get("data", []) if k in self.paired}
-                monet_stats.compute_stats(needed_pairs, **cfg)
+                monet_stats.compute_stats(needed_pairs, **cfg_with_global)
 
     def run(self):
         """

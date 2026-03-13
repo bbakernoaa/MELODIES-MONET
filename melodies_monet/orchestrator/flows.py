@@ -87,12 +87,24 @@ def execute_dag_flow(control_dict, execution_order, graph, pairing_kwargs, time_
 
         elif node_type == "stats":
             cfg = control_dict.get("stats", {}).get(label, {})
-            future = run_stats_task.submit(group_label=label, cfg=cfg, paired_dict=paired_data, wait_for=wait_for)
+            future = run_stats_task.submit(
+                group_label=label,
+                cfg=cfg,
+                paired_dict=paired_data,
+                analysis_cfg=control_dict.get("analysis", {}),
+                wait_for=wait_for,
+            )
             task_results[node_id] = future
 
         elif node_type == "plot":
             cfg = control_dict.get("plotting", {}).get(label, {})
-            future = run_plotting_task.submit(group_label=label, cfg=cfg, paired_dict=paired_data, wait_for=wait_for)
+            future = run_plotting_task.submit(
+                group_label=label,
+                cfg=cfg,
+                paired_dict=paired_data,
+                analysis_cfg=control_dict.get("analysis", {}),
+                wait_for=wait_for,
+            )
             task_results[node_id] = future
 
     return task_results

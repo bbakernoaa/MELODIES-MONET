@@ -102,7 +102,7 @@ def run_pairing_task(eval_label, cfg, model_inst, obs_inst, pairing_kwargs, **kw
 
 
 @task
-def run_stats_task(group_label, cfg, paired_dict, **kwargs):
+def run_stats_task(group_label, cfg, paired_dict, analysis_cfg=None, **kwargs):
     """
     Task to calculate statistics for a group of pairings.
 
@@ -114,6 +114,8 @@ def run_stats_task(group_label, cfg, paired_dict, **kwargs):
         Configuration dictionary for the statistics group.
     paired_dict : dict
         Dictionary of available pair instances.
+    analysis_cfg : dict, optional
+        Global analysis configuration for propagation.
 
     Returns
     -------
@@ -129,12 +131,20 @@ def run_stats_task(group_label, cfg, paired_dict, **kwargs):
         logger.error("monet_stats not found. Statistics cannot be calculated.")
         return f"Stats for {group_label} failed: monet_stats not found"
 
+    # Propagate global analysis settings
+    analysis_cfg = analysis_cfg or {}
+    cfg_with_global = {
+        "output_dir": analysis_cfg.get("output_dir"),
+        "debug": analysis_cfg.get("debug"),
+        **cfg,
+    }
+
     needed_pairs = {k: paired_dict[k] for k in cfg.get("data", []) if k in paired_dict}
-    return monet_stats.compute_stats(needed_pairs, **cfg)
+    return monet_stats.compute_stats(needed_pairs, **cfg_with_global)
 
 
 @task
-def run_plotting_task(group_label, cfg, paired_dict, **kwargs):
+def run_plotting_task(group_label, cfg, paired_dict, analysis_cfg=None, **kwargs):
     """
     Task to generate plots for a group of pairings.
 
@@ -146,6 +156,8 @@ def run_plotting_task(group_label, cfg, paired_dict, **kwargs):
         Configuration dictionary for the plotting group.
     paired_dict : dict
         Dictionary of available pair instances.
+    analysis_cfg : dict, optional
+        Global analysis configuration for propagation.
 
     Returns
     -------
@@ -161,5 +173,14 @@ def run_plotting_task(group_label, cfg, paired_dict, **kwargs):
         logger.error("monet_plots not found. Plotting cannot be performed.")
         return f"Plotting for {group_label} failed: monet_plots not found"
 
+    # Propagate global analysis settings
+    analysis_cfg = analysis_cfg or {}
+    cfg_with_global = {
+        "output_dir": analysis_cfg.get("output_dir"),
+        "debug": analysis_cfg.get("debug"),
+        "add_logo": analysis_cfg.get("add_logo", True),
+        **cfg,
+    }
+
     needed_pairs = {k: paired_dict[k] for k in cfg.get("data", []) if k in paired_dict}
-    return monet_plots.create_plots(needed_pairs, **cfg)
+    return monet_plots.create_plots(needed_pairs, **cfg_with_global)
