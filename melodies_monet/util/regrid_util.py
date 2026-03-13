@@ -58,4 +58,3 @@ def filename_regrid(filename, regridder):
     filename_regrid = filename.replace('.nc', '_regrid.nc')
 
     return filename_regrid
-

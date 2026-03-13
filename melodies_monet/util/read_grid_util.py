@@ -93,4 +93,3 @@ def read_grid_obs(config, obs_vars, date_str, obs=None):
         filenames[obs_name] = filename
 
     return obs_datasets, filenames
-
