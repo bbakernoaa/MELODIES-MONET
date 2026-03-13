@@ -6,6 +6,7 @@ import datetime
 import monet as m
 from melodies_monet.driver.data import Data
 from melodies_monet.driver.pair import pair
+from melodies_monet.driver.orchestrator import GraphEngine
 
 class analysis:
     """The analysis class. High-level orchestrator for evaluations."""
@@ -13,6 +14,7 @@ class analysis:
     def __init__(self):
         self.control = "control.yaml"
         self.control_dict = None
+        self.graph_engine = GraphEngine()
         self.models = {}
         self.obs = {}
         self.paired = {}
@@ -45,6 +47,7 @@ class analysis:
             self.control_dict = yaml.safe_load(stream)
 
         self._migrate_control_dict()
+        self._build_graph()
 
         # Basic settings
         self.start_time = pd.Timestamp(self.control_dict["analysis"]["start_time"])
@@ -186,6 +189,35 @@ class analysis:
 
                     label = f"{p_inst.ref}_{p_inst.model}"
                     self.paired[label] = p_inst
+
+    def _build_graph(self):
+        """Build the internal DAG using GraphEngine."""
+        if "models" in self.control_dict:
+            for mod_label in self.control_dict["models"]:
+                self.graph_engine.add_data_node(mod_label, "model")
+
+        if "obs" in self.control_dict:
+            for obs_label in self.control_dict["obs"]:
+                self.graph_engine.add_data_node(obs_label, "obs")
+
+        if "evaluations" in self.control_dict:
+            for eval_label, cfg in self.control_dict["evaluations"].items():
+                mod_label = cfg.get("model", cfg.get("exp"))
+                obs_label = cfg.get("obs", cfg.get("ref"))
+                self.graph_engine.add_pairing_node(eval_label, mod_label, obs_label)
+
+        if "stats" in self.control_dict:
+            for group_label, cfg in self.control_dict["stats"].items():
+                pairing_labels = cfg.get("data", [])
+                self.graph_engine.add_stats_node(group_label, pairing_labels)
+
+        if "plotting" in self.control_dict:
+            for group_label, cfg in self.control_dict["plotting"].items():
+                pairing_labels = cfg.get("data", [])
+                self.graph_engine.add_plot_node(group_label, pairing_labels)
+
+        if not self.graph_engine.validate_dag():
+            raise ValueError("The constructed graph is not a Directed Acyclic Graph (DAG).")
 
     def _migrate_control_dict(self):
         """Transparently upgrade configurations to the four-tier hierarchical schema."""
