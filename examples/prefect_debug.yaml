@@ -1,0 +1,49 @@
+# Example Control YAML for Prefect & Dask Orchestration
+analysis:
+  start_time: "2019-08-01-00:00:00"
+  end_time: "2019-08-02-00:00:00"
+  output_dir: "./output"
+
+  # Enable Prefect Orchestration
+  use_prefect: True
+
+  # Platform & Account Configuration
+  platform: "hera"  # options: hera, jet, orion, hercules, gaea, casper, derecho
+  account: "your_hpc_account"
+
+  dask:
+    cluster_kwargs:
+      walltime: "01:00:00"
+      nodes: 2
+    adaptive_kwargs:
+      minimum: 1
+      maximum: 10
+
+data:
+  cmaq_test:
+    type: "model"
+    source: "cmaq"
+    files: "/path/to/cmaq/files/*.nc"
+    variables:
+      O3: {rename: "OZONE", unit_scale: 1.0}
+    mapping:
+      airnow: {O3: "OZONE"}
+
+  airnow:
+    type: "obs"
+    use_dtn: True  # Route to DTN nodes
+    source: "airnow"
+    files: "/path/to/airnow/files/*.nc"
+    obs_type: "pt_sfc"
+    variables:
+      OZONE: {unit_scale: 1.0}
+
+evaluations:
+  airnow_cmaq:
+    model: "cmaq_test"
+    obs: "airnow"
+
+plotting:
+  timeseries_grp:
+    type: "timeseries"
+    data: ["airnow_cmaq"]

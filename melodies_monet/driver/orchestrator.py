@@ -118,8 +118,7 @@ class orchestrator:
         self.control = "control.yaml"
         self.control_dict = None
         self.graph_engine = GraphEngine()
-        self.models = {}
-        self.obs = {}
+        self.data = {}
         self.paired = {}
         self.start_time = None
         self.end_time = None
@@ -142,6 +141,9 @@ class orchestrator:
         self.obs_gridded_dataset = None
         self.add_logo = True
         self.pairing_kwargs = {}
+        self.platform = None
+        self.account = None
+        self.project = None
 
     def read_control(self, control=None):
         import yaml
@@ -151,6 +153,7 @@ class orchestrator:
 
         self._migrate_control_dict()
         self._build_graph()
+        self.graph_engine.validate_dag()
 
         # Basic settings
         self.start_time = pd.Timestamp(self.control_dict["analysis"]["start_time"])
@@ -165,6 +168,9 @@ class orchestrator:
         self.regrid = self.control_dict["analysis"].get("regrid", False)
         self.target_grid = self.control_dict["analysis"].get("target_grid")
         self.pairing_kwargs = self.control_dict["analysis"].get("pairing_kwargs", {})
+        self.platform = self.control_dict["analysis"].get("platform")
+        self.account = self.control_dict["analysis"].get("account")
+        self.project = self.control_dict["analysis"].get("project")
 
         # Time intervals for chunking
         if "time_interval" in self.control_dict["analysis"]:
@@ -174,51 +180,16 @@ class orchestrator:
                 time_stamps = time_stamps.append(pd.DatetimeIndex([self.end_time]))
             self.time_intervals = [[time_stamps[n], time_stamps[n + 1]] for n in range(len(time_stamps) - 1)]
 
-    def open_models(self, time_interval=None, load_files=True):
-        if "models" in self.control_dict:
-            for mod_label in self.control_dict["models"]:
-                cfg = self.control_dict["models"][mod_label]
-                m_inst = Data(data_type="model")
-                m_inst.label = mod_label
-                m_inst.source = cfg.get("mod_type", cfg.get("source"))
-                m_inst.file_str = cfg.get("files", cfg.get("filename"))
-                m_inst.mapping = cfg.get("mapping")
-                m_inst.variable_dict = cfg.get("variables")
-                m_inst.variable_summing = cfg.get("variable_summing")
-                m_inst.radius_of_influence = cfg.get("radius_of_influence", 1e6)
-                m_inst.is_global = cfg.get("is_global", False)
-                m_inst.file_vert_str = cfg.get("files_vert")
-                m_inst.file_surf_str = cfg.get("files_surf")
-                m_inst.file_pm25_str = cfg.get("files_pm25")
-                m_inst.mod_kwargs = cfg.get("mod_kwargs", {})
-                m_inst.plot_kwargs = cfg.get("plot_kwargs")
-                m_inst.scrip_file = cfg.get("scrip_file")
+    def open_data(self, time_interval=None, load_files=True):
+        if "data" in self.control_dict:
+            for label, cfg in self.control_dict["data"].items():
+                inst = Data(data_type=cfg.get("type", "model"))
+                inst.label = label
+                inst.from_dict(cfg)
 
                 if load_files:
-                    m_inst.load(time_interval=time_interval)
-                self.models[mod_label] = m_inst
-
-    def open_obs(self, time_interval=None, load_files=True):
-        if "obs" in self.control_dict:
-            for obs_label in self.control_dict["obs"]:
-                cfg = self.control_dict["obs"][obs_label]
-                o_inst = Data(data_type="obs")
-                o_inst.label = obs_label
-                o_inst.obs_type = cfg.get("obs_type", "pt_sfc")
-                o_inst.source = cfg.get("source")
-                o_inst.file_str = cfg.get("filename", cfg.get("files"))
-                o_inst.variable_dict = cfg.get("variables")
-                o_inst.variable_summing = cfg.get("variable_summing")
-                o_inst.resample = cfg.get("resample")
-                o_inst.time_var = cfg.get("time_var")
-                o_inst.ground_coordinate = cfg.get("ground_coordinate")
-                o_inst.sat_type = cfg.get("sat_type")
-                o_inst.data_proc = cfg.get("data_proc")
-                o_inst.regrid_method = cfg.get("regrid_method")
-
-                if load_files:
-                    o_inst.load(time_interval=time_interval)
-                self.obs[obs_label] = o_inst
+                    inst.load(time_interval=time_interval)
+                self.data[label] = inst
 
     def pair_data(self):
         """Unified pairing logic leveraging monet.pair."""
@@ -226,8 +197,8 @@ class orchestrator:
             for eval_label, cfg in self.control_dict["evaluations"].items():
                 mod_label = cfg.get("model", cfg.get("exp"))
                 ref_label = cfg.get("obs", cfg.get("ref"))
-                mod = self.models[mod_label]
-                ref = self.obs[ref_label]
+                mod = self.data[mod_label]
+                ref = self.data[ref_label]
 
                 # Mapping and subsetting
                 mapping = cfg.get("mapping")
@@ -295,13 +266,9 @@ class orchestrator:
 
     def _build_graph(self):
         """Build the internal DAG using GraphEngine."""
-        if "models" in self.control_dict:
-            for mod_label in self.control_dict["models"]:
-                self.graph_engine.add_data_node(mod_label, "model")
-
-        if "obs" in self.control_dict:
-            for obs_label in self.control_dict["obs"]:
-                self.graph_engine.add_data_node(obs_label, "obs")
+        if "data" in self.control_dict:
+            for label, cfg in self.control_dict["data"].items():
+                self.graph_engine.add_data_node(label, cfg.get("type", "model"))
 
         if "evaluations" in self.control_dict:
             for eval_label, cfg in self.control_dict["evaluations"].items():
@@ -323,30 +290,36 @@ class orchestrator:
             raise ValueError("The constructed graph is not a Directed Acyclic Graph (DAG).")
 
     def _migrate_control_dict(self):
-        """Transparently upgrade configurations to the four-tier hierarchical schema."""
+        """Transparently upgrade configurations to the unified data schema."""
         if "model" in self.control_dict:
-            self.control_dict.setdefault("models", {}).update(self.control_dict.pop("model"))
+            m_cfg = self.control_dict.pop("model")
+            for k, v in m_cfg.items():
+                v["type"] = "model"
+                self.control_dict.setdefault("data", {})[k] = v
 
-        if "data" in self.control_dict:
-            data_cfg = self.control_dict.pop("data")
-            for k, v in data_cfg.items():
-                dtype = v.get("type", "model")
-                if dtype in ["model", "exp"]:
-                    self.control_dict.setdefault("models", {})[k] = v
-                elif dtype in ["obs", "ref"]:
-                    self.control_dict.setdefault("obs", {})[k] = v
+        if "models" in self.control_dict:
+            m_cfg = self.control_dict.pop("models")
+            for k, v in m_cfg.items():
+                v["type"] = "model"
+                self.control_dict.setdefault("data", {})[k] = v
+
+        if "obs" in self.control_dict:
+            o_cfg = self.control_dict.pop("obs")
+            for k, v in o_cfg.items():
+                v["type"] = "obs"
+                self.control_dict.setdefault("data", {})[k] = v
 
         if "plots" in self.control_dict:
             self.control_dict.setdefault("plotting", {}).update(self.control_dict.pop("plots"))
 
-        if "evaluations" not in self.control_dict and "models" in self.control_dict:
+        if "evaluations" not in self.control_dict and "data" in self.control_dict:
             self.control_dict["evaluations"] = {}
-            for mod_label, mod_cfg in self.control_dict["models"].items():
-                if "mapping" in mod_cfg:
-                    for obs_label, mapping in mod_cfg["mapping"].items():
-                        eval_label = f"{obs_label}_{mod_label}"
+            for label, cfg in self.control_dict["data"].items():
+                if "mapping" in cfg:
+                    for obs_label, mapping in cfg["mapping"].items():
+                        eval_label = f"{obs_label}_{label}"
                         self.control_dict["evaluations"][eval_label] = {
-                            "model": mod_label,
+                            "model": label,
                             "obs": obs_label,
                             "mapping": mapping
                         }
@@ -419,9 +392,21 @@ class orchestrator:
 
     def run(self):
         """Execute the DAG in topological order."""
-        order = self.graph_engine.get_execution_order()
-        if self.debug:
-            print(f"Execution order: {order}")
+        use_prefect = self.control_dict["analysis"].get("use_prefect", False)
 
-        # Placeholder for future logic that will execute each node type
-        pass
+        if use_prefect:
+            from melodies_monet.orchestrator.flows import main_orchestration_flow
+            return main_orchestration_flow(self)
+        else:
+            order = self.graph_engine.get_execution_order()
+            if self.debug:
+                print(f"Execution order: {order}")
+
+            # Sequential execution fallback
+            # We process each interval if defined, otherwise run once
+            intervals = self.time_intervals if self.time_intervals else [None]
+            for interval in intervals:
+                self.open_data(time_interval=interval)
+                self.pair_data()
+                self.stats()
+                self.plotting()
