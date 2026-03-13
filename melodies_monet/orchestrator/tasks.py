@@ -1,26 +1,23 @@
 from prefect import task, get_run_logger
-from dask.distributed import worker_client, as_completed
+from dask.distributed import worker_client
 import monet as m
 from melodies_monet.driver.data import Data
 from melodies_monet.driver.pair import pair as pair_inst
 
 @task
-def run_data_task(data_type, label, cfg, time_interval=None):
+def run_data_task(data_type, label, cfg, time_interval=None, **kwargs):
     logger = get_run_logger()
     logger.info(f"Loading {data_type} data: {label}")
-
     inst = Data(data_type=data_type)
     inst.label = label
     inst.from_dict(cfg)
-
     inst.load(time_interval=time_interval)
     return inst
 
 @task
-def run_pairing_task(eval_label, cfg, model_inst, obs_inst, pairing_kwargs):
+def run_pairing_task(eval_label, cfg, model_inst, obs_inst, pairing_kwargs, **kwargs):
     logger = get_run_logger()
     logger.info(f"Pairing evaluation: {eval_label}")
-
     mapping = cfg.get("mapping")
     if mapping is None:
         mapping = model_inst.mapping.get(obs_inst.label, {}) if model_inst.mapping else {}
@@ -28,7 +25,6 @@ def run_pairing_task(eval_label, cfg, model_inst, obs_inst, pairing_kwargs):
     ref_vars = list(mapping.values())
     mod_vars = list(model_inst.variable_dict.keys()) if model_inst.variable_dict else []
 
-    # Implement fine-grained parallelism using worker_client
     with worker_client() as client:
         futures = []
         for var_mod, var_obs in mapping.items():
@@ -42,7 +38,6 @@ def run_pairing_task(eval_label, cfg, model_inst, obs_inst, pairing_kwargs):
                 **pairing_kwargs.get(obs_inst.obs_type.lower(), {})
             )
             futures.append(f)
-
         results = client.gather(futures)
         if len(results) > 1:
             import xarray as xr
@@ -57,27 +52,24 @@ def run_pairing_task(eval_label, cfg, model_inst, obs_inst, pairing_kwargs):
     p_inst.ref_vars = ref_vars
     p_inst.type = obs_inst.obs_type.lower()
     p_inst.obj = paired_data
-
     return p_inst
 
 @task
-def run_stats_task(group_label, cfg, paired_dict):
+def run_stats_task(group_label, cfg, paired_dict, **kwargs):
     logger = get_run_logger()
     logger.info(f"Calculating stats for group: {group_label}")
-
     needed_pairs = {k: paired_dict[k] for k in cfg.get("data", []) if k in paired_dict}
 
-    import monet_stats as m_stats
-    # Real implementation: return m_stats.compute_stats(needed_pairs, **cfg)
+    from melodies_monet import stats
+    # Real implementation: return stats.compute_stats(needed_pairs, **cfg)
     return f"Stats for {group_label} completed"
 
 @task
-def run_plotting_task(group_label, cfg, paired_dict):
+def run_plotting_task(group_label, cfg, paired_dict, **kwargs):
     logger = get_run_logger()
     logger.info(f"Generating plots for group: {group_label}")
-
     needed_pairs = {k: paired_dict[k] for k in cfg.get("data", []) if k in paired_dict}
 
-    import monet_plots as m_plots
-    # Real implementation: return m_plots.create_plots(needed_pairs, **cfg)
+    from melodies_monet import plots
+    # Real implementation: return plots.create_plots(needed_pairs, **cfg)
     return f"Plotting for {group_label} completed"

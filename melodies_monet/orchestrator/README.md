@@ -16,19 +16,19 @@ To enable Prefect orchestration, add the following to your control YAML:
 analysis:
   use_prefect: True
   dask:
-    cluster_type: "slurm"  # options: local, slurm, pbs, lsf, fargate, azure
-    cluster_kwargs:  # Default worker group (compute)
-      nodes: 2
-      cores: 24
-      memory: "128GB"
-      walltime: "02:00:00"
-      partition: "compute"
-    worker_groups:
-      dtn:  # Data Transfer Node group
-        partition: "service"
-        qos: "high"
-        scale: 1
+    platform: "hera"  # optional: hera, jet, orion, hercules, gaea, casper, derecho
+    # If platform is set, cluster_type and kwargs are defaulted based on predefined setups.
+    cluster_kwargs:
+      nodes: 4
 ```
+
+### Supported Platforms
+
+Predefined configurations are available for:
+- **NOAA RDHPCS**: `hera`, `jet`, `orion`, `hercules`, `gaea`, `ursa`
+- **NCAR**: `casper`, `derecho`
+
+The `ClusterFactory` attempts to automatically detect the platform based on the hostname if not explicitly provided.
 
 ### HPC Support
 

@@ -142,6 +142,9 @@ class orchestrator:
         self.obs_gridded_dataset = None
         self.add_logo = True
         self.pairing_kwargs = {}
+        self.platform = None
+        self.account = None
+        self.project = None
 
     def read_control(self, control=None):
         import yaml
@@ -165,6 +168,9 @@ class orchestrator:
         self.regrid = self.control_dict["analysis"].get("regrid", False)
         self.target_grid = self.control_dict["analysis"].get("target_grid")
         self.pairing_kwargs = self.control_dict["analysis"].get("pairing_kwargs", {})
+        self.platform = self.control_dict["analysis"].get("platform")
+        self.account = self.control_dict["analysis"].get("account")
+        self.project = self.control_dict["analysis"].get("project")
 
         # Time intervals for chunking
         if "time_interval" in self.control_dict["analysis"]:
