@@ -20,13 +20,11 @@ WORKDIR /app
 # Upgrade pip
 RUN pip install --no-cache-dir --upgrade pip
 
-# Install core repositories from NCAR
-RUN pip install --no-cache-dir git+https://github.com/NCAR/monetio.git@develop
-RUN pip install --no-cache-dir git+https://github.com/NCAR/monet.git@master
-RUN pip install --no-cache-dir git+https://github.com/NCAR/monet-stats.git@main || \
-    pip install --no-cache-dir git+https://github.com/NCAR/monet-stats.git@master
-RUN pip install --no-cache-dir git+https://github.com/NCAR/monet-plots.git@main || \
-    pip install --no-cache-dir git+https://github.com/NCAR/monet-plots.git@master
+# Install core repositories
+RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/monetio.git@develop
+RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/monet.git@feature/interp_improvements
+RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/monet-stats.git@dev
+RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/monet-plots.git@main
 
 # Copy the MELODIES-MONET source code
 COPY . .

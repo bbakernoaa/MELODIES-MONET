@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 import os
-import warnings
-import xarray as xr
-import pandas as pd
+
 import numpy as np
+import xarray as xr
+
 import monetio as mio
 from melodies_monet import tutorial
 from melodies_monet.util import time_interval_subset as tsub
+
 
 class Data:
     """The unified Data class for both models and observations.
@@ -57,7 +58,19 @@ class Data:
         return f"Data(type={self.data_type!r}, label={self.label!r}, source={self.source!r})"
 
     def from_dict(self, cfg):
-        """Update attributes from a configuration dictionary."""
+        """
+        Update attributes from a configuration dictionary.
+
+        Parameters
+        ----------
+        cfg : dict
+            Configuration dictionary for the data source.
+
+        Returns
+        -------
+        Data
+            The updated Data instance.
+        """
         if self.data_type == "model":
             self.source = cfg.get("mod_type", cfg.get("source"))
             self.file_str = cfg.get("files", cfg.get("filename"))
@@ -89,8 +102,16 @@ class Data:
         return self
 
     def glob_files(self, time_interval=None):
-        """Expand file patterns and optionally subset by time."""
+        """
+        Expand file patterns and optionally subset by time.
+
+        Parameters
+        ----------
+        time_interval : list of pd.Timestamp, optional
+            A list containing [start_time, end_time] to subset the data.
+        """
         from glob import glob
+
         from numpy import sort
 
         if not self.file_str:
@@ -105,7 +126,7 @@ class Data:
             example_id = ":".join(s.strip() for s in expanded_file_str.split(":")[1:])
             self.files = [tutorial.fetch_example(example_id)]
         elif expanded_file_str.lower().endswith(".txt"):
-            with open(expanded_file_str, 'r') as f:
+            with open(expanded_file_str, "r") as f:
                 self.files = [os.path.expandvars(line.strip()) for line in f if line.strip()]
         else:
             self.files = sort(glob(expanded_file_str)).tolist()
@@ -130,7 +151,14 @@ class Data:
                 self.files = tsub.subset_MODIS_l2(self.files, time_interval)
 
     def load(self, time_interval=None):
-        """Load data using monetio.load and apply standard processing."""
+        """
+        Load data using monetio.load and apply standard processing.
+
+        Parameters
+        ----------
+        time_interval : list of pd.Timestamp, optional
+            A list containing [start_time, end_time] to subset the data.
+        """
         self.glob_files(time_interval=time_interval)
 
         if not self.files:
@@ -142,9 +170,12 @@ class Data:
         if self.data_type == "model":
             list_input_var = self._get_model_var_list()
             load_kwargs.update({"var_list": list_input_var})
-            if self.files_vert: load_kwargs.update({"fname_vert": self.files_vert})
-            if self.files_surf: load_kwargs.update({"fname_surf": self.files_surf})
-            if self.files_pm25: load_kwargs.update({"fname_pm25": self.files_pm25})
+            if self.files_vert:
+                load_kwargs.update({"fname_vert": self.files_vert})
+            if self.files_surf:
+                load_kwargs.update({"fname_surf": self.files_surf})
+            if self.files_pm25:
+                load_kwargs.update({"fname_pm25": self.files_pm25})
             if self.source == "cesm_se":
                 scrip = os.path.expandvars(self.scrip_file) if self.scrip_file else ""
                 if scrip.startswith("example:"):
@@ -177,23 +208,30 @@ class Data:
 
     def _get_model_var_list(self):
         """Gather all variables required for pairing and summing."""
-        if not self.variable_dict and not self.mapping: return None
+        if not self.variable_dict and not self.mapping:
+            return None
         vars_req = set()
-        if self.variable_dict: vars_req.update(self.variable_dict.keys())
+        if self.variable_dict:
+            vars_req.update(self.variable_dict.keys())
         if self.variable_summing:
-            for v in self.variable_summing.values(): vars_req.update(v["vars"])
+            for v in self.variable_summing.values():
+                vars_req.update(v["vars"])
         if self.mapping:
-            for m in self.mapping.values(): vars_req.update(m.keys())
+            for m in self.mapping.values():
+                vars_req.update(m.keys())
         # Remove standardized names
         for vn in ["temperature_k", "pres_pa_mid"]:
-            if vn in vars_req: vars_req.remove(vn)
+            if vn in vars_req:
+                vars_req.remove(vn)
         return list(vars_req)
 
     def _guess_source(self):
         fn = self.files[0]
         ext = os.path.splitext(fn)[1].lower()
-        if ext in {".ict", ".icartt"}: return "icartt"
-        if ext == ".csv": return "aircraft_csv"
+        if ext in {".ict", ".icartt"}:
+            return "icartt"
+        if ext == ".csv":
+            return "aircraft_csv"
         return self.label.lower()
 
     def add_coordinates_ground(self):
@@ -202,7 +240,8 @@ class Data:
             self.obj["longitude"] = xr.ones_like(self.obj["time"], dtype=float) * self.ground_coordinate["longitude"]
 
     def rename_vars(self):
-        if not self.variable_dict: return
+        if not self.variable_dict:
+            return
         rename_map = {v: d["rename"] for v, d in self.variable_dict.items() if v in self.obj.variables and "rename" in d}
         if rename_map:
             self.obj = self.obj.rename(rename_map)
@@ -210,33 +249,44 @@ class Data:
                 self.variable_dict[new] = self.variable_dict.pop(old)
 
     def mask_and_scale(self):
-        if not self.variable_dict: return
+        if not self.variable_dict:
+            return
         for v in self.obj.data_vars:
             if v in self.variable_dict:
                 d = self.variable_dict[v]
                 # Removal of bad values (Lazy)
-                if "obs_min" in d: self.obj[v] = self.obj[v].where(self.obj[v] >= d["obs_min"])
-                if "obs_max" in d: self.obj[v] = self.obj[v].where(self.obj[v] <= d["obs_max"])
-                if "nan_value" in d: self.obj[v] = self.obj[v].where(self.obj[v] != d["nan_value"])
+                if "obs_min" in d:
+                    self.obj[v] = self.obj[v].where(self.obj[v] >= d["obs_min"])
+                if "obs_max" in d:
+                    self.obj[v] = self.obj[v].where(self.obj[v] <= d["obs_max"])
+                if "nan_value" in d:
+                    self.obj[v] = self.obj[v].where(self.obj[v] != d["nan_value"])
 
                 # Scaling
                 scale = d.get("unit_scale", 1.0)
                 method = d.get("unit_scale_method", "*")
-                if method == "*": self.obj[v] = self.obj[v] * scale
-                elif method == "/": self.obj[v] = self.obj[v] / scale
-                elif method == "+": self.obj[v] = self.obj[v] + scale
-                elif method == "-": self.obj[v] = self.obj[v] - scale
+                if method == "*":
+                    self.obj[v] = self.obj[v] * scale
+                elif method == "/":
+                    self.obj[v] = self.obj[v] / scale
+                elif method == "+":
+                    self.obj[v] = self.obj[v] + scale
+                elif method == "-":
+                    self.obj[v] = self.obj[v] - scale
 
                 # Detection limits
                 if "LLOD_value" in d:
                     self.obj[v] = self.obj[v].where(self.obj[v] != d["LLOD_value"], d.get("LLOD_setvalue", np.nan))
 
     def sum_variables(self):
-        if not self.variable_summing: return
+        if not self.variable_summing:
+            return
         for var_new, info in self.variable_summing.items():
-            if var_new in self.obj.variables: continue
+            if var_new in self.obj.variables:
+                continue
             self.obj[var_new] = sum(self.obj[v] for v in info["vars"] if v in self.obj.variables)
-            if self.variable_dict is None: self.variable_dict = {}
+            if self.variable_dict is None:
+                self.variable_dict = {}
             self.variable_dict[var_new] = info
 
     def resample_data(self):
@@ -244,17 +294,27 @@ class Data:
             self.obj = self.obj.resample(time=self.resample).mean(dim="time")
 
     def filter_obs(self):
-        if not self.data_proc or "filter_dict" not in self.data_proc: return
+        if not self.data_proc or "filter_dict" not in self.data_proc:
+            return
         fd = self.data_proc["filter_dict"]
         for col, cfg in fd.items():
-            if col not in self.obj.variables: continue
+            if col not in self.obj.variables:
+                continue
             val = cfg["value"]
             op = cfg["oper"]
-            if op == "isin": self.obj = self.obj.where(self.obj[col].isin(val), drop=True)
-            elif op == "isnotin": self.obj = self.obj.where(~self.obj[col].isin(val), drop=True)
-            elif op == "==": self.obj = self.obj.where(self.obj[col] == val, drop=True)
-            elif op == "!=": self.obj = self.obj.where(self.obj[col] != val, drop=True)
-            elif op == ">": self.obj = self.obj.where(self.obj[col] > val, drop=True)
-            elif op == "<": self.obj = self.obj.where(self.obj[col] < val, drop=True)
-            elif op == ">=": self.obj = self.obj.where(self.obj[col] >= val, drop=True)
-            elif op == "<=": self.obj = self.obj.where(self.obj[col] <= val, drop=True)
+            if op == "isin":
+                self.obj = self.obj.where(self.obj[col].isin(val), drop=True)
+            elif op == "isnotin":
+                self.obj = self.obj.where(~self.obj[col].isin(val), drop=True)
+            elif op == "==":
+                self.obj = self.obj.where(self.obj[col] == val, drop=True)
+            elif op == "!=":
+                self.obj = self.obj.where(self.obj[col] != val, drop=True)
+            elif op == ">":
+                self.obj = self.obj.where(self.obj[col] > val, drop=True)
+            elif op == "<":
+                self.obj = self.obj.where(self.obj[col] < val, drop=True)
+            elif op == ">=":
+                self.obj = self.obj.where(self.obj[col] >= val, drop=True)
+            elif op == "<=":
+                self.obj = self.obj.where(self.obj[col] <= val, drop=True)

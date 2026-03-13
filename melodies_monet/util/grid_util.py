@@ -6,30 +6,46 @@ file: grid_util.py
 """
 
 import math
-import numpy as np
+
 import numba
+import numpy as np
 
 
-def update_sparse_data_grid(time_edges, x_edges, y_edges,
-                            time_obs, x_obs, y_obs, data_obs,
-                            count_grid, data_grid):
+def update_sparse_data_grid(
+    time_edges,
+    x_edges,
+    y_edges,
+    time_obs,
+    x_obs,
+    y_obs,
+    data_obs,
+    count_grid,
+    data_grid,
+):
     """
-    Accumulate obs data on a uniform grid with dimensions (time, x, y)
-    Store running counts and sums in dictionaries keyed by grid index tuples (i_time, i_x, i_y)
+    Accumulate observation data on a uniform grid with dimensions (time, x, y).
+    Store running counts and sums in dictionaries keyed by grid index tuples (i_time, i_x, i_y).
 
     Parameters
-        time_edges (np.array): grid time edges
-        x_edges (np.array): grid x coord edges
-        y_edges (np.array): grid y coord edges
-        time_obs (np.array): obs times
-        x_obs (np.array): obs x coords
-        y_obs (np.array): obs y coords
-        data_obs (np.array): obs data values
-        count_grid (dict): number of obs points in grid cell
-        data_grid (dict): sum of data values in grid cell
-
-    Returns
-        None
+    ----------
+    time_edges : np.ndarray
+        Grid time edges.
+    x_edges : np.ndarray
+        Grid x coordinate edges.
+    y_edges : np.ndarray
+        Grid y coordinate edges.
+    time_obs : np.ndarray
+        Observation times.
+    x_obs : np.ndarray
+        Observation x coordinates.
+    y_obs : np.ndarray
+        Observation y coordinates.
+    data_obs : np.ndarray
+        Observation data values.
+    count_grid : dict
+        Number of observation points in grid cell.
+    data_grid : dict
+        Sum of data values in grid cell.
     """
     time_del = time_edges[1] - time_edges[0]
     x_del = x_edges[1] - x_edges[0]
@@ -53,37 +69,52 @@ def update_sparse_data_grid(time_edges, x_edges, y_edges,
 
 def normalize_sparse_data_grid(count_grid, data_grid):
     """
-    Normalize accumulated data on a uniform grid
+    Normalize accumulated data on a uniform grid.
 
     Parameters
-        count_grid (dict): number of obs points in grid cell
-        data_grid (dict): sum of data values in grid cell
-
-    Returns
-        None
+    ----------
+    count_grid : dict
+        Number of observation points in grid cell.
+    data_grid : dict
+        Sum of data values in grid cell.
     """
     for index_tuple in count_grid.keys():
         data_grid[index_tuple] /= count_grid[index_tuple]
 
 
-def sparse_data_to_array(time_edges, x_edges, y_edges,
-                         count_grid, data_grid,
-                         count_type=np.uint32, data_type=np.float32):
+def sparse_data_to_array(
+    time_edges,
+    x_edges,
+    y_edges,
+    count_grid,
+    data_grid,
+    count_type=np.uint32,
+    data_type=np.float32,
+):
     """
-    Convert sparse grid data to numpy arrays
+    Convert sparse grid data to numpy arrays.
 
     Parameters
-        time_edges (np.array): grid time edges
-        x_edges (np.array): grid x coord edges
-        y_edges (np.array): grid y coord edges
-        count_grid (dict): number of obs points in grid cell
-        data_grid (dict): sum of data values in grid cell
-        count_type (dtype, default=np.uint32): data type of count_grid_array
-        data_type (dtype, default=np.float32): data type of data_grid_array
+    ----------
+    time_edges : np.ndarray
+        Grid time edges.
+    x_edges : np.ndarray
+        Grid x coordinate edges.
+    y_edges : np.ndarray
+        Grid y coordinate edges.
+    count_grid : dict
+        Number of observation points in grid cell.
+    data_grid : dict
+        Sum of data values in grid cell.
+    count_type : dtype, optional
+        Data type of count_grid_array. Default is np.uint32.
+    data_type : dtype, optional
+        Data type of data_grid_array. Default is np.float32.
 
     Returns
-        count_grid_array (np.array): number of obs points in grid cell
-        data_grid_array (np.array): sum of data values in grid cell
+    -------
+    tuple of np.ndarray
+        A tuple containing (count_grid_array, data_grid_array).
     """
     ntime, nx, ny = len(time_edges) - 1, len(x_edges) - 1, len(y_edges) - 1
     count_grid_array = np.zeros((ntime, nx, ny), dtype=count_type)
@@ -96,26 +127,41 @@ def sparse_data_to_array(time_edges, x_edges, y_edges,
 
 
 @numba.jit(nopython=True)
-def update_data_grid(time_edges, x_edges, y_edges,
-                     time_obs, x_obs, y_obs, data_obs,
-                     count_grid, data_grid):
+def update_data_grid(
+    time_edges,
+    x_edges,
+    y_edges,
+    time_obs,
+    x_obs,
+    y_obs,
+    data_obs,
+    count_grid,
+    data_grid,
+):
     """
-    Accumulate obs data on a uniform grid with dimensions (time, x, y)
-    Store running counts and sums in numpy arrays
+    Accumulate observation data on a uniform grid with dimensions (time, x, y).
+    Store running counts and sums in numpy arrays.
 
     Parameters
-        time_edges (np.array): grid time edges
-        x_edges (np.array): grid x coord edges
-        y_edges (np.array): grid y coord edges
-        time_obs (np.array): obs times
-        x_obs (np.array): obs x coords
-        y_obs (np.array): obs y coords
-        data_obs (np.array): obs data values
-        count_grid (np.array): number of obs points in grid cell
-        data_grid (np.array): sum of data values in grid cell
-
-    Returns
-        None
+    ----------
+    time_edges : np.ndarray
+        Grid time edges.
+    x_edges : np.ndarray
+        Grid x coordinate edges.
+    y_edges : np.ndarray
+        Grid y coordinate edges.
+    time_obs : np.ndarray
+        Observation times.
+    x_obs : np.ndarray
+        Observation x coordinates.
+    y_obs : np.ndarray
+        Observation y coordinates.
+    data_obs : np.ndarray
+        Observation data values.
+    count_grid : np.ndarray
+        Number of observation points in grid cell.
+    data_grid : np.ndarray
+        Sum of data values in grid cell.
     """
     time_del = time_edges[1] - time_edges[0]
     x_del = x_edges[1] - x_edges[0]
@@ -149,22 +195,23 @@ def update_data_grid(time_edges, x_edges, y_edges,
 
 def normalize_data_grid(count_grid, data_grid):
     """
-    Normalize accumulated data on a uniform grid
+    Normalize accumulated data on a uniform grid.
 
     Parameters
-        count_grid (np.array): number of obs points in grid cell
-        data_grid (np.array): sum of data values in grid cell
-
-    Returns
-        None
+    ----------
+    count_grid : np.ndarray
+        Number of observation points in grid cell.
+    data_grid : np.ndarray
+        Sum of data values in grid cell.
     """
-    mask = (count_grid > 0)
+    mask = count_grid > 0
     data_grid[count_grid == 0] = np.nan
     data_grid[mask] /= count_grid[mask]
 
 
 def generate_uniform_grid(start, end, ntime, nlat, nlon):
     import pandas as pd
+
     start_timestamp = pd.to_datetime(start).timestamp()
     end_timestamp = pd.to_datetime(end).timestamp()
 
@@ -174,17 +221,15 @@ def generate_uniform_grid(start, end, ntime, nlat, nlon):
     lon0 = -180
 
     # generate uniform grid
-    time_edges = np.linspace(start_timestamp, end_timestamp, ntime+1, endpoint=True, dtype=float)
-    time_grid = 0.5 * (time_edges[0:ntime] + time_edges[1:ntime+1])
-    lat_edges = np.linspace(-90, 90, nlat+1, endpoint=True, dtype=float)
-    lat_grid = 0.5 * (lat_edges[0:nlat] + lat_edges[1:nlat+1])
+    time_edges = np.linspace(start_timestamp, end_timestamp, ntime + 1, endpoint=True, dtype=float)
+    time_grid = 0.5 * (time_edges[0:ntime] + time_edges[1 : ntime + 1])
+    lat_edges = np.linspace(-90, 90, nlat + 1, endpoint=True, dtype=float)
+    lat_grid = 0.5 * (lat_edges[0:nlat] + lat_edges[1 : nlat + 1])
     # lat_min, lat_max = lat_edges[0:nlat], lat_edges[1:nlat+1]
-    lon_edges = np.linspace(lon0, lon0 + 360, nlon+1, endpoint=True, dtype=float)
-    lon_grid = 0.5 * (lon_edges[0:nlon] + lon_edges[1:nlon+1])
+    lon_edges = np.linspace(lon0, lon0 + 360, nlon + 1, endpoint=True, dtype=float)
+    lon_grid = 0.5 * (lon_edges[0:nlon] + lon_edges[1 : nlon + 1])
 
-    grid = {'longitude':lon_grid,
-            'latitude':lat_grid,
-            'time':time_grid}  
-    edges = {'time_edges':time_edges,'lon_edges':lon_edges,'lat_edges':lat_edges}
+    grid = {"longitude": lon_grid, "latitude": lat_grid, "time": time_grid}
+    edges = {"time_edges": time_edges, "lon_edges": lon_edges, "lat_edges": lat_edges}
 
     return grid, edges

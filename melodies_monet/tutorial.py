@@ -8,7 +8,6 @@ https://csl.noaa.gov/groups/csl4/modeldata/melodies-monet/
 """
 # Inspired by xarray.tutorial
 
-
 _base_url = "https://csl.noaa.gov/groups/csl4/modeldata/melodies-monet/data/"
 
 _examples = {
@@ -105,13 +104,13 @@ _examples = {
         ),
     },
     "improve": {
-        "2019_daily" : (
+        "2019_daily": (
             "example_observation_data/surface/IMPROVE_DAILY_2019.nc",
             "599afc11238c30345f9f756e379d527b2e67b5674cdcf5074df1a93677fe7f9d",
         )
     },
     "ncore": {
-        "2019_daily" : (
+        "2019_daily": (
             "example_observation_data/surface/NCORE_DAILY_2019.nc",
             "888fb70f7f6cd9af8b49398b56240fcb70ebe886152c143e6a6016074d4f0bfe",
         )
@@ -125,11 +124,7 @@ _examples = {
 }
 """Files to fetch for a certain example, paths relative to the FTP site."""
 
-_examples_flat = {
-    f"{a}:{b}": tup
-    for a, dct in _examples.items()
-    for b, tup in dct.items()
-}
+_examples_flat = {f"{a}:{b}": tup for a, dct in _examples.items() for b, tup in dct.items()}
 
 example_ids = list(_examples_flat)
 
@@ -145,9 +140,7 @@ def fetch_example(example: str) -> str:
     try:
         import pooch
     except ImportError as e:
-        raise RuntimeError(
-            "downloading and caching the docs/examples datasets requires `pooch`"
-        ) from e
+        raise RuntimeError("downloading and caching the docs/examples datasets requires `pooch`") from e
 
     if example not in example_ids:
         raise ValueError(f"invalid example choice. Valid options are {example_ids}")

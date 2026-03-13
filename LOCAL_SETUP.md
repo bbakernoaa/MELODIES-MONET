@@ -26,10 +26,10 @@ To run the validation and deployment environment locally, follow these steps:
 2. Install system dependencies (e.g., `libnetcdf-dev` on Ubuntu).
 3. Install the 5 core repositories:
    ```bash
-   pip install git+https://github.com/NCAR/monetio.git@develop
-   pip install git+https://github.com/NCAR/monet.git@master
-   pip install git+https://github.com/NCAR/monet-stats.git@main || pip install git+https://github.com/NCAR/monet-stats.git@master
-   pip install git+https://github.com/NCAR/monet-plots.git@main || pip install git+https://github.com/NCAR/monet-plots.git@master
+   pip install git+https://github.com/bbakernoaa/monetio.git@develop
+   pip install git+https://github.com/bbakernoaa/monet.git@feature/interp_improvements
+   pip install git+https://github.com/bbakernoaa/monet-stats.git@dev
+   pip install git+https://github.com/bbakernoaa/monet-plots.git@main
    ```
 4. Install MELODIES-MONET and testing dependencies:
    ```bash

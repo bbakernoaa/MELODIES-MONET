@@ -1,6 +1,8 @@
 import os
 import warnings
+
 import xarray as xr
+
 import monetio as mio
 
 
@@ -50,15 +52,14 @@ class model:
         )
 
     def glob_files(self):
-        """Convert the model file location string read in by the yaml file
-        into a list of files containing all model data.
-
-        Returns
-        -------
-        None
         """
-        from numpy import sort  # TODO: maybe use `sorted` for this
+        Convert the model file location string read in by the yaml file
+        into a list of files containing all model data.
+        """
         from glob import glob
+
+        from numpy import sort  # TODO: maybe use `sorted` for this
+
         from melodies_monet import tutorial
 
         print(self.file_str)
@@ -73,8 +74,8 @@ class model:
         # add option to read list of files from text file
         if not isinstance(self.file_str, list):
             _, extension = os.path.splitext(self.file_str)
-            if extension.lower() == '.txt':
-                with open(self.file_str,'r') as f:
+            if extension.lower() == ".txt":
+                with open(self.file_str, "r") as f:
                     self.files = f.read().split()
 
         if self.file_vert_str is not None:
@@ -85,7 +86,8 @@ class model:
             self.files_pm25 = sort(glob(self.file_pm25_str))
 
     def open_model_files(self, time_interval=None, control_dict=None):
-        """Open the model files, store data in :class:`model` instance attributes,
+        """
+        Open the model files, store data in :class:`model` instance attributes,
         and apply mask and scaling.
 
         Models supported are cmaq, wrfchem, ufs (rrfs is deprecated), and gsdchem.
@@ -95,12 +97,10 @@ class model:
 
         Parameters
         ----------
-        time_interval (optional, default None) : [pandas.Timestamp, pandas.Timestamp]
+        time_interval : list of pd.Timestamp, optional
             If not None, restrict models to datetime range spanned by time interval [start, end].
-
-        Returns
-        -------
-        None
+        control_dict : dict, optional
+            The full control configuration dictionary.
         """
         from melodies_monet.util import time_interval_subset as tsub
 
@@ -123,9 +123,7 @@ class model:
                     - set(list_input_var)
                 )
             else:
-                list_input_var = list_input_var + list(
-                    set(self.mapping[obs_map].keys()) - set(list_input_var)
-                )
+                list_input_var = list_input_var + list(set(self.mapping[obs_map].keys()) - set(list_input_var))
         # Only certain models need this option for speeding up i/o.
 
         # Remove standardized variable names that user may have requested to pair on or output in MM
@@ -198,24 +196,16 @@ class model:
             # self.obj.monet.scrip = self.obj_scrip
         elif "camx" in self.model.lower():
             self.mod_kwargs.update({"var_list": list_input_var})
-            self.mod_kwargs.update(
-                {"surf_only": control_dict["model"][self.label].get("surf_only", False)}
-            )
-            self.mod_kwargs.update(
-                {"fname_met_3D": control_dict["model"][self.label].get("files_vert", None)}
-            )
-            self.mod_kwargs.update(
-                {"fname_met_2D": control_dict["model"][self.label].get("files_met_surf", None)}
-            )
+            self.mod_kwargs.update({"surf_only": control_dict["model"][self.label].get("surf_only", False)})
+            self.mod_kwargs.update({"fname_met_3D": control_dict["model"][self.label].get("files_vert", None)})
+            self.mod_kwargs.update({"fname_met_2D": control_dict["model"][self.label].get("files_met_surf", None)})
             self.obj = mio.models._camx_mm.open_mfdataset(self.files, **self.mod_kwargs)
         elif "raqms" in self.model.lower():
             self.mod_kwargs.update({"var_list": list_input_var})
             if time_interval is not None:
                 # fill filelist with subset
                 print("subsetting model files to interval")
-                file_list = tsub.subset_model_filelist(
-                    self.files, "%m_%d_%Y_%HZ", "6H", time_interval
-                )
+                file_list = tsub.subset_model_filelist(self.files, "%m_%d_%Y_%HZ", "6H", time_interval)
             else:
                 file_list = self.files
             if len(file_list) > 1:
@@ -236,11 +226,8 @@ class model:
         self.sum_variables()
 
     def rename_vars(self):
-        """Rename any variables in model with rename set.
-
-        Returns
-        -------
-        None
+        """
+        Rename any variables in model with rename set.
         """
         data_vars = self.obj.data_vars
         if self.variable_dict is not None:
@@ -252,11 +239,8 @@ class model:
                         self.variable_dict[d["rename"]] = self.variable_dict.pop(v)
 
     def mask_and_scale(self):
-        """Mask and scale model data including unit conversions.
-
-        Returns
-        -------
-        None
+        """
+        Mask and scale model data including unit conversions.
         """
         vars = self.obj.data_vars
         if self.variable_dict is not None:
@@ -278,23 +262,16 @@ class model:
                             self.obj[v].data += -1 * scale
 
     def sum_variables(self):
-        """Sum any variables noted that should be summed to create new variables.
+        """
+        Sum any variables noted that should be summed to create new variables.
         This occurs after any unit scaling.
-
-        Returns
-        -------
-        None
         """
 
         try:
             if self.variable_summing is not None:
                 for var_new in self.variable_summing.keys():
                     if var_new in self.obj.variables:
-                        print(
-                            "The variable name, {}, already exists and cannot be created with variable_summing.".format(
-                                var_new
-                            )
-                        )
+                        print("The variable name, {}, already exists and cannot be created with variable_summing.".format(var_new))
                         raise ValueError
                     var_new_info = self.variable_summing[var_new]
                     if self.variable_dict is None:
