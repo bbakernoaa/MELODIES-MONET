@@ -8,6 +8,7 @@ from melodies_monet.driver.pair import pair as pair_inst
 def run_data_task(data_type, label, cfg, time_interval=None, **kwargs):
     logger = get_run_logger()
     logger.info(f"Loading {data_type} data: {label}")
+    # cfg already contains 'type' due to migration or unified schema
     inst = Data(data_type=data_type)
     inst.label = label
     inst.from_dict(cfg)
@@ -28,9 +29,10 @@ def run_pairing_task(eval_label, cfg, model_inst, obs_inst, pairing_kwargs, **kw
     with worker_client() as client:
         futures = []
         for var_mod, var_obs in mapping.items():
+            vars_to_pair = list(set([var_mod] + mod_vars))
             f = client.submit(
                 m.pair,
-                model_inst.obj[[var_mod] + mod_vars],
+                model_inst.obj[vars_to_pair],
                 obs_inst.obj,
                 radius_of_influence=model_inst.radius_of_influence,
                 suffix=model_inst.label,

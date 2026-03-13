@@ -1,5 +1,6 @@
 from prefect import flow, get_run_logger, task
 from prefect_dask import DaskTaskRunner
+import dask
 from melodies_monet.orchestrator.tasks import run_data_task, run_pairing_task, run_stats_task, run_plotting_task
 from melodies_monet.orchestrator.cluster_config import ClusterFactory, PLATFORM_CONFIGS
 
@@ -20,29 +21,28 @@ def execute_dag_flow(control_dict, execution_order, graph, pairing_kwargs, time_
         upstream_nodes = list(graph.predecessors(node_id))
         wait_for = [task_results[up_id] for up_id in upstream_nodes]
 
-        # Routing to specific worker groups (e.g. DTN)
-        dask_kwargs = {}
+        resources = {}
         if node_type == "data":
-            dask_kwargs = {"resources": {"dtn": 1}}
+            resources = {"dtn": 1}
 
         if node_type == "data":
             data_type = node_attr["data_type"]
-            cfg_section = "models" if data_type == "model" else "obs"
-            cfg = control_dict[cfg_section][label]
+            # Unified data section
+            cfg = control_dict.get("data", {}).get(label, {})
 
-            future = run_data_task.submit(
-                data_type=data_type,
-                label=label,
-                cfg=cfg,
-                time_interval=time_interval,
-                wait_for=wait_for,
-                dask_task_kwargs=dask_kwargs
-            )
+            with dask.annotate(resources=resources):
+                future = run_data_task.submit(
+                    data_type=data_type,
+                    label=label,
+                    cfg=cfg,
+                    time_interval=time_interval,
+                    wait_for=wait_for
+                )
             task_results[node_id] = future
             loaded_data[label] = future
 
         elif node_type == "pair":
-            cfg = control_dict["evaluations"][label]
+            cfg = control_dict.get("evaluations", {}).get(label, {})
             mod_label = cfg.get("model", cfg.get("exp"))
             obs_label = cfg.get("obs", cfg.get("ref"))
 
@@ -58,7 +58,7 @@ def execute_dag_flow(control_dict, execution_order, graph, pairing_kwargs, time_
             paired_data[label] = future
 
         elif node_type == "stats":
-            cfg = control_dict["stats"][label]
+            cfg = control_dict.get("stats", {}).get(label, {})
             future = run_stats_task.submit(
                 group_label=label,
                 cfg=cfg,
@@ -68,7 +68,7 @@ def execute_dag_flow(control_dict, execution_order, graph, pairing_kwargs, time_
             task_results[node_id] = future
 
         elif node_type == "plot":
-            cfg = control_dict["plotting"][label]
+            cfg = control_dict.get("plotting", {}).get(label, {})
             future = run_plotting_task.submit(
                 group_label=label,
                 cfg=cfg,
@@ -103,9 +103,9 @@ def main_orchestration_flow(orchestrator_inst):
         project=project
     )
 
-    # Scale both groups if using SpecCluster
-    if hasattr(cluster, "specs"):
-        for name in cluster.specs:
+    # Correct attribute for worker scaling in SpecCluster
+    if hasattr(cluster, "worker_spec"):
+        for name in cluster.worker_spec:
             if name == "dtn": cluster.scale(1, name=name)
             else: cluster.scale(2, name=name)
 

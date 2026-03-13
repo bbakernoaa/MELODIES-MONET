@@ -11,7 +11,7 @@ PLATFORM_CONFIGS = {
             "memory": "128GB"
         },
         "worker_groups": {
-            "compute": { # Primary group
+            "compute": {
                 "partition": "batch",
                 "cores": 40,
                 "memory": "128GB"
@@ -20,7 +20,7 @@ PLATFORM_CONFIGS = {
                 "partition": "service",
                 "cores": 1,
                 "memory": "8GB",
-                "job_extra": ["--resources dtn=1"]
+                "worker_extra_args": ["--resources dtn=1"]
             }
         }
     },
@@ -41,7 +41,7 @@ PLATFORM_CONFIGS = {
                 "partition": "service",
                 "cores": 1,
                 "memory": "8GB",
-                "job_extra": ["--resources dtn=1"]
+                "worker_extra_args": ["--resources dtn=1"]
             }
         }
     },
@@ -51,6 +51,13 @@ PLATFORM_CONFIGS = {
             "partition": "orion",
             "cores": 40,
             "memory": "192GB"
+        },
+        "worker_groups": {
+            "compute": {
+                "partition": "orion",
+                "cores": 40,
+                "memory": "192GB"
+            }
         }
     },
     "hercules": {
@@ -59,6 +66,13 @@ PLATFORM_CONFIGS = {
             "partition": "hercules",
             "cores": 80,
             "memory": "256GB"
+        },
+        "worker_groups": {
+            "compute": {
+                "partition": "hercules",
+                "cores": 80,
+                "memory": "256GB"
+            }
         }
     },
     "gaea": {
@@ -67,6 +81,13 @@ PLATFORM_CONFIGS = {
             "partition": "batch",
             "cores": 32,
             "memory": "128GB"
+        },
+        "worker_groups": {
+            "compute": {
+                "partition": "batch",
+                "cores": 32,
+                "memory": "128GB"
+            }
         }
     },
     "ursa": {
@@ -75,6 +96,13 @@ PLATFORM_CONFIGS = {
             "partition": "batch",
             "cores": 32,
             "memory": "128GB"
+        },
+        "worker_groups": {
+            "compute": {
+                "partition": "batch",
+                "cores": 32,
+                "memory": "128GB"
+            }
         }
     },
     "casper": {
@@ -82,6 +110,12 @@ PLATFORM_CONFIGS = {
         "cluster_kwargs": {
             "queue": "casper",
             "resource_spec": "select=1:ncpus=4:mem=16GB"
+        },
+        "worker_groups": {
+            "compute": {
+                "queue": "casper",
+                "resource_spec": "select=1:ncpus=4:mem=16GB"
+            }
         }
     },
     "derecho": {
@@ -89,6 +123,12 @@ PLATFORM_CONFIGS = {
         "cluster_kwargs": {
             "queue": "main",
             "resource_spec": "select=1:ncpus=128:mem=256GB"
+        },
+        "worker_groups": {
+            "compute": {
+                "queue": "main",
+                "resource_spec": "select=1:ncpus=128:mem=256GB"
+            }
         }
     }
 }
@@ -103,7 +143,6 @@ class ClusterFactory:
         if cluster_kwargs is None: cluster_kwargs = {}
         if adaptive_kwargs is None: adaptive_kwargs = {}
 
-        # Platform Detection
         if platform is None:
             hostname = socket.gethostname()
             for p_key in PLATFORM_CONFIGS:
@@ -111,7 +150,6 @@ class ClusterFactory:
                     platform = p_key
                     break
 
-        # Platform Defaults
         worker_groups = {}
         if platform and platform in PLATFORM_CONFIGS:
             p_config = PLATFORM_CONFIGS[platform]
@@ -124,10 +162,8 @@ class ClusterFactory:
         cluster_type_lower = cluster_type.lower()
         final_account = account or os.environ.get("ACCOUNT") or project or os.environ.get("PROJECT")
 
-        # Support for multi-spec clusters
         if worker_groups:
             from dask.distributed import SpecCluster
-
             job_cls = None
             if cluster_type_lower == "slurm":
                 from dask_jobqueue import SLURMJob
@@ -146,12 +182,9 @@ class ClusterFactory:
                     if final_account:
                         if cluster_type_lower == "lsf": spec.setdefault("project", final_account)
                         else: spec.setdefault("account", final_account)
-
                     worker_specs[name] = {"cls": job_cls, "options": spec}
-
                 return SpecCluster(worker_specs)
 
-        # Standard single-spec cluster
         if cluster_type_lower == "local":
             from dask.distributed import LocalCluster
             return LocalCluster(**cluster_kwargs)
