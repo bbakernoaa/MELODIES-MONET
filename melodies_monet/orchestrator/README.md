@@ -16,12 +16,18 @@ To enable Prefect orchestration, add the following to your control YAML:
 analysis:
   use_prefect: True
   dask:
-    cluster_type: "slurm"  # options: local, slurm, pbs, lsf, fargate
-    cluster_kwargs:
+    cluster_type: "slurm"  # options: local, slurm, pbs, lsf, fargate, azure
+    cluster_kwargs:  # Default worker group (compute)
       nodes: 2
       cores: 24
       memory: "128GB"
       walltime: "02:00:00"
+      partition: "compute"
+    worker_groups:
+      dtn:  # Data Transfer Node group
+        partition: "service"
+        qos: "high"
+        scale: 1
 ```
 
 ### HPC Support
