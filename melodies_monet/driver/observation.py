@@ -47,21 +47,9 @@ class observation:
         )
 
     def open_obs(self, time_interval=None, control_dict=None):
-        """Open the observational data, store data in observation pair,
-        and apply mask and scaling.
-
-        Parameters
-        ----------
-        time_interval (optional, default None) : [pandas.Timestamp, pandas.Timestamp]
-            If not None, restrict obs to datetime range spanned by time interval [start, end].
-
-        Returns
-        -------
-        None
-        """
+        """Open the observational data using monetio.load."""
         from glob import glob
         from numpy import sort
-
         from melodies_monet import tutorial
 
         if self.file.startswith("example:"):
@@ -72,30 +60,25 @@ class observation:
 
         assert len(files) >= 1, "need at least one"
 
-        _, extension = os.path.splitext(files[0])
         try:
-            if extension in {".nc", ".ncf", ".netcdf", ".nc4"}:
-                if len(files) > 1:
-                    self.obj = xr.open_mfdataset(files)
-                else:
-                    self.obj = xr.open_dataset(files[0])
-            elif extension in [".ict", ".icartt"]:
-                assert len(files) == 1, "monetio.icartt.add_data can only read one file"
-                self.obj = mio.icartt.add_data(files[0])
-            elif extension in [".csv"]:
-                from melodies_monet.util.read_util import read_aircraft_obs_csv
-
-                assert len(files) == 1, "MELODIES-MONET can only read one csv file"
-                self.obj = read_aircraft_obs_csv(filename=files[0], time_var=self.time_var)
+            # Determine source type for monetio.load
+            _, extension = os.path.splitext(files[0])
+            if extension in {".ict", ".icartt"}:
+                source = "icartt"
+            elif extension == ".csv":
+                source = "aircraft_csv"
             else:
-                raise ValueError(f"extension {extension!r} currently unsupported")
+                source = self.obs.lower()
+
+            self.obj = mio.load(source, files=files, time_var=self.time_var)
         except Exception as e:
-            print("something happened opening file:", e)
+            print(f"Error opening {self.obs} with monetio.load: {e}")
+            # Fallback to generic reader if available
             return
 
-        self.add_coordinates_ground()  # If ground site then add coordinates based on yaml if necessary
-        self.mask_and_scale()  # mask and scale values from the control values
-        self.rename_vars()  # rename any variables as necessary
+        self.add_coordinates_ground()
+        self.mask_and_scale()
+        self.rename_vars()
         self.sum_variables()
         self.resample_data()
         self.filter_obs()
@@ -146,96 +129,22 @@ class observation:
                         self.variable_dict[d["rename"]] = self.variable_dict.pop(v)
 
     def open_sat_obs(self, time_interval=None, control_dict=None):
-        """Methods to opens satellite data observations.
-        Uses in-house python code to open and load observations.
-        Alternatively may use the satpy reader.
-        Fills the object class associated with the equivalent label (self.label) with satellite observation
-        dataset read in from the associated file (self.file) by the satellite file reader
-
-        Parameters
-        ----------
-        time_interval (optional, default None) : [pandas.Timestamp, pandas.Timestamp]
-            If not None, restrict obs to datetime range spanned by time interval [start, end].
-
-        Returns
-        -------
-        None
-        """
-        from melodies_monet.util import time_interval_subset as tsub
-        from glob import glob
-
+        """Open satellite data observations using monetio.load."""
         try:
-            if self.sat_type == "omps_l3":
-                print("Reading OMPS L3")
-                self.obj = mio.sat._omps_l3_mm.open_dataset(self.file)
-            elif self.sat_type == "omps_nm":
-                print("Reading OMPS_NM")
-                if time_interval is not None:
-                    flst = tsub.subset_OMPS_l2(self.file, time_interval)
-                else:
-                    flst = self.file
+            source = self.sat_type.split("_")[0] if self.sat_type else self.obs.lower()
+            if "tempo" in self.sat_type:
+                source = "tempo"
+            elif "tropomi" in self.sat_type:
+                source = "tropomi"
 
-                self.obj = mio.sat._omps_nadir_mm.read_OMPS_nm(flst)
+            self.obj = mio.load(source, files=self.file, variable_dict=self.variable_dict)
 
-                # couple of changes to move to reader
-                self.obj = self.obj.swap_dims({"x": "time"})  # indexing needs
-                self.obj = self.obj.sortby("time")  # enforce time in order.
-                # restrict observation data to time_interval if using
-                # additional development to deal with files crossing intervals needed (eg situations where orbit start at 23hrs, ends next day).
-                if time_interval is not None:
-                    self.obj = self.obj.sel(time=slice(time_interval[0], time_interval[-1]))
+            # Unified readers already handle most of the coordinate standardization
+            if "x" in self.obj.dims and "time" not in self.obj.dims:
+                self.obj = self.obj.swap_dims({"x": "time"})
 
-            elif self.sat_type == "mopitt_l3":
-                print("Reading MOPITT")
-                if time_interval is not None:
-                    flst = tsub.subset_mopitt_l3(self.file, time_interval)
-                else:
-                    flst = self.file
-                self.obj = mio.sat._mopitt_l3_mm.open_dataset(
-                    flst,
-                    [
-                        "column",
-                        "pressure_surf",
-                        "apriori_col",
-                        "apriori_surf",
-                        "apriori_prof",
-                        "ak_col",
-                    ],
-                )
-
-                # Determine if monthly or daily product and set as attribute
-                if any(mtype in glob(self.file)[0] for mtype in ("MOP03JM", "MOP03NM", "MOP03TM")):
-                    self.obj.attrs["monthly"] = True
-                else:
-                    self.obj.attrs["monthly"] = False
-
-            elif self.sat_type == "modis_l2":
-                # from monetio import modis_l2
-                print("Reading MODIS L2")
-                flst = tsub.subset_MODIS_l2(self.file, time_interval)
-                # self.obj = mio.sat._modis_l2_mm.read_mfdataset(
-                #     self.file, self.variable_dict, debug=self.debug)
-                self.obj = mio.sat._modis_l2_mm.read_mfdataset(
-                    flst, self.variable_dict, debug=self.debug
-                )
-                # self.obj = granules, an OrderedDict of Datasets, keyed by datetime_str,
-                #   with variables: Latitude, Longitude, Scan_Start_Time, parameters, ...
-            elif self.sat_type == "tropomi_l2_no2":
-                # from monetio import tropomi_l2_no2
-                print("Reading TROPOMI L2 NO2")
-                self.obj = mio.sat._tropomi_l2_no2_mm.read_trpdataset(
-                    self.file, self.variable_dict, debug=self.debug
-                )
-            elif "tempo_l2" in self.sat_type:
-                print("Reading TEMPO L2")
-                self.obj = mio.sat._tempo_l2_no2_mm.open_dataset(
-                    self.file, self.variable_dict, debug=self.debug
-                )
-            else:
-                print("file reader not implemented for {} observation".format(self.sat_type))
-                raise ValueError
-        except ValueError as e:
-            print("something happened opening file:", e)
+        except Exception as e:
+            print(f"Error opening satellite {self.sat_type} with monetio.load: {e}")
             return
 
     def filter_obs(self):

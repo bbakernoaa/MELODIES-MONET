@@ -572,103 +572,36 @@ class analysis:
                 obs = self.obs[obs_to_pair]
 
                 # pair the data
-                # if pt_sfc (surface point network or monitor)
-                if obs.obs_type.lower() == "pt_sfc":
-                    # convert this to pandas dataframe unless already done because second time paired this obs
-                    if not isinstance(obs.obj, pd.DataFrame):
-                        obs.obs_to_df()
-                    # Check if z dim is larger than 1. If so select, the first level as all models read through
-                    # MONETIO will be reordered such that the first level is the level nearest to the surface.
-                    try:
-                        if model_obj.sizes["z"] > 1:
-                            # Select only the surface values to pair with obs.
-                            model_obj = model_obj.isel(z=0).expand_dims("z", axis=1)
-                    except KeyError as e:
-                        raise Exception("MONET requires an altitude dimension named 'z'") from e
-                    # now combine obs with
-                    paired_data = model_obj.monet.combine_point(
-                        obs.obj, radius_of_influence=mod.radius_of_influence, suffix=mod.label
+                # using unified monet.pair interface
+                if obs.obs_type.lower() in ["pt_sfc", "aircraft", "mobile", "ground"]:
+                    paired_data = m.pair(
+                        model_obj,
+                        obs.obj,
+                        radius_of_influence=mod.radius_of_influence,
+                        suffix=mod.label,
+                        type=obs.obs_type.lower(),
+                        **self.pairing_kwargs.get(obs.obs_type.lower(), {}),
                     )
+
                     if self.debug:
                         print("After pairing: ", paired_data)
-                    # this outputs as a pandas dataframe.  Convert this to xarray obj
+
                     p = pair()
-                    print("saving pair")
                     p.obs = obs.label
                     p.model = mod.label
                     p.model_vars = keys
                     p.obs_vars = obs_vars
+                    p.type = obs.obs_type.lower()
                     p.filename = "{}_{}.nc".format(p.obs, p.model)
-                    p.obj = paired_data.monet._df_to_da()
+
+                    if isinstance(paired_data, pd.DataFrame):
+                        p.obj = paired_data.monet._df_to_da()
+                    else:
+                        p.obj = paired_data
+
                     label = "{}_{}".format(p.obs, p.model)
                     self.paired[label] = p
                     p.obj = p.fix_paired_xarray(dset=p.obj)
-                    # write_util.write_ncf(p.obj,p.filename) # write out to file
-
-                # if aircraft (aircraft observation)
-                elif obs.obs_type.lower() == "aircraft":
-                    from melodies_monet.util.tools import vert_interp
-
-                    # convert this to pandas dataframe unless already done because second time paired this obs
-                    if not isinstance(obs.obj, pd.DataFrame):
-                        obs.obj = obs.obj.to_dataframe()
-
-                    # drop any variables where coords NaN
-                    obs.obj = (
-                        obs.obj.reset_index()
-                        .dropna(subset=["pressure_obs", "latitude", "longitude"])
-                        .set_index("time")
-                    )
-
-                    # do the facy trick to convert to get something useful for MONET
-                    # this converts to dimensions of x and y
-                    # you may want to make pressure / msl a coordinate too
-                    new_ds_obs = (
-                        obs.obj.rename_axis("time_obs")
-                        .reset_index()
-                        .monet._df_to_da()
-                        .set_coords(["time_obs", "pressure_obs"])
-                    )
-
-                    # Nearest neighbor approach to find closest grid cell to each point.
-                    ds_model = m.util.combinetool.combine_da_to_da(
-                        model_obj, new_ds_obs, merge=False
-                    )
-                    # Interpolate based on time in the observations
-                    ds_model = ds_model.interp(time=ds_model.time_obs.squeeze())
-
-                    # Debugging: Print the variables in ds_model to verify 'pressure_model' is included  ##qzr++
-                    # print("Variables in ds_model after combine_da_to_da and interp:", ds_model.variables)
-
-                    # Ensure 'pressure_model' is included in ds_model (checked it exists)
-                    # if 'pressure_model' not in ds_model:
-                    #   raise KeyError("'pressure_model' is missing in the model dataset")   #qzr++
-
-                    paired_data = vert_interp(ds_model, obs.obj, keys + mod_vars)
-                    print("After pairing: ", paired_data)
-
-                    # Ensure 'pressure_model' is included in the DataFrame (pairdf) #qzr++
-                    # if 'pressure_model' not in paired_data.columns:
-                    # raise KeyError("'pressure_model' is missing in the paired_data")   #qzr++
-
-                    # this outputs as a pandas dataframe.  Convert this to xarray obj
-                    p = pair()
-                    p.type = "aircraft"
-                    p.radius_of_influence = None
-                    p.obs = obs.label
-                    p.model = mod.label
-                    p.model_vars = keys
-                    p.obs_vars = obs_vars
-                    p.filename = "{}_{}.nc".format(p.obs, p.model)
-                    p.obj = (
-                        paired_data.set_index("time")
-                        .to_xarray()
-                        .expand_dims("x")
-                        .transpose("time", "x")
-                    )
-                    label = "{}_{}".format(p.obs, p.model)
-                    self.paired[label] = p
-                    # write_util.write_ncf(p.obj,p.filename) # write out to file
 
                 elif obs.obs_type.lower() == "sonde":
                     from melodies_monet.util.tools import vert_interp

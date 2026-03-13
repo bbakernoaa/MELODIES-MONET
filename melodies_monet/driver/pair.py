@@ -33,58 +33,7 @@ class pair:
         )
 
     def fix_paired_xarray(self, dset):
-        """Reformat the paired dataset.
+        """Reformat the paired dataset. Redirection to monet.util.combinetool.fix_paired_xarray."""
+        import monet as m
 
-        Parameters
-        ----------
-        dset : xarray.Dataset
-
-        Returns
-        -------
-        xarray.Dataset
-            Reformatted paired dataset.
-        """
-        # first convert to dataframe
-        df = dset.to_dataframe().reset_index(drop=True)
-
-        # now get just the single site index
-        dfpsite = df.rename({"siteid": "x"}, axis=1).drop_duplicates(subset=["x"])
-        columns = dfpsite.columns  # all columns
-        site_columns = [
-            "latitude",
-            "longitude",
-            "x",
-            "site",
-            "msa_code",
-            "cmsa_name",
-            "epa_region",
-            "state_name",
-            "msa_name",
-            "site",
-            "utcoffset",
-        ]  # only columns for single site identificaiton
-
-        # site only xarray obj (no time dependence)
-        dfps = (
-            dfpsite.loc[:, columns[columns.isin(site_columns)]].set_index(["x"]).to_xarray()
-        )  # single column index
-
-        # now pivot df and convert back to xarray using only non site_columns
-        site_columns.remove("x")  # need to keep x to merge later
-        dfx = (
-            df.loc[:, df.columns[~df.columns.isin(site_columns)]]
-            .rename({"siteid": "x"}, axis=1)
-            .set_index(["time", "x"])
-            .to_xarray()
-        )
-
-        # merge the time dependent and time independent
-        out = xr.merge([dfx, dfps])
-
-        # reset x index and add siteid back to the xarray object
-        if ~pd.api.types.is_numeric_dtype(out.x):
-            siteid = out.x.values
-            out["x"] = range(len(siteid))
-            out["siteid"] = (("x"), siteid)
-
-        return out
+        return m.util.combinetool.fix_paired_xarray(dset)
