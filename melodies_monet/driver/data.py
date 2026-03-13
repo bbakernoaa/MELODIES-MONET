@@ -55,6 +55,36 @@ class Data:
     def __repr__(self):
         return f"Data(type={self.data_type!r}, label={self.label!r}, source={self.source!r})"
 
+    def from_dict(self, cfg):
+        """Update attributes from a configuration dictionary."""
+        if self.data_type == "model":
+            self.source = cfg.get("mod_type", cfg.get("source"))
+            self.file_str = cfg.get("files", cfg.get("filename"))
+            self.mapping = cfg.get("mapping")
+            self.variable_dict = cfg.get("variables")
+            self.variable_summing = cfg.get("variable_summing")
+            self.radius_of_influence = cfg.get("radius_of_influence", 1e6)
+            self.is_global = cfg.get("is_global", False)
+            self.file_vert_str = cfg.get("files_vert")
+            self.file_surf_str = cfg.get("files_surf")
+            self.file_pm25_str = cfg.get("files_pm25")
+            self.mod_kwargs = cfg.get("mod_kwargs", {})
+            self.plot_kwargs = cfg.get("plot_kwargs")
+            self.scrip_file = cfg.get("scrip_file")
+        else:
+            self.obs_type = cfg.get("obs_type", "pt_sfc")
+            self.source = cfg.get("source")
+            self.file_str = cfg.get("filename", cfg.get("files"))
+            self.variable_dict = cfg.get("variables")
+            self.variable_summing = cfg.get("variable_summing")
+            self.resample = cfg.get("resample")
+            self.time_var = cfg.get("time_var")
+            self.ground_coordinate = cfg.get("ground_coordinate")
+            self.sat_type = cfg.get("sat_type")
+            self.data_proc = cfg.get("data_proc")
+            self.regrid_method = cfg.get("regrid_method")
+        return self
+
     def glob_files(self, time_interval=None):
         """Expand file patterns and optionally subset by time."""
         from glob import glob

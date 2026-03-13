@@ -419,9 +419,22 @@ class orchestrator:
 
     def run(self):
         """Execute the DAG in topological order."""
-        order = self.graph_engine.get_execution_order()
-        if self.debug:
-            print(f"Execution order: {order}")
+        use_prefect = self.control_dict["analysis"].get("use_prefect", False)
 
-        # Placeholder for future logic that will execute each node type
-        pass
+        if use_prefect:
+            from melodies_monet.orchestrator.flows import main_orchestration_flow
+            return main_orchestration_flow(self)
+        else:
+            order = self.graph_engine.get_execution_order()
+            if self.debug:
+                print(f"Execution order: {order}")
+
+            # Sequential execution fallback
+            # We process each interval if defined, otherwise run once
+            intervals = self.time_intervals if self.time_intervals else [None]
+            for interval in intervals:
+                self.open_models(time_interval=interval)
+                self.open_obs(time_interval=interval)
+                self.pair_data()
+                self.stats()
+                self.plotting()
