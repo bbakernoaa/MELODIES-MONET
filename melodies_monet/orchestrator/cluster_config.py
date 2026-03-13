@@ -75,7 +75,37 @@ PLATFORM_CONFIGS = {
             }
         }
     },
-    "gaea": {
+    "gaea-c5": {
+        "cluster_type": "slurm",
+        "cluster_kwargs": {
+            "partition": "batch",
+            "cores": 32,
+            "memory": "128GB"
+        },
+        "worker_groups": {
+            "compute": {
+                "partition": "batch",
+                "cores": 32,
+                "memory": "128GB"
+            }
+        }
+    },
+    "gaea-c6": {
+        "cluster_type": "slurm",
+        "cluster_kwargs": {
+            "partition": "batch",
+            "cores": 64,
+            "memory": "256GB"
+        },
+        "worker_groups": {
+            "compute": {
+                "partition": "batch",
+                "cores": 64,
+                "memory": "256GB"
+            }
+        }
+    },
+    "gaea": { # Default to c5 for backward compatibility
         "cluster_type": "slurm",
         "cluster_kwargs": {
             "partition": "batch",
@@ -143,9 +173,12 @@ class ClusterFactory:
         if cluster_kwargs is None: cluster_kwargs = {}
         if adaptive_kwargs is None: adaptive_kwargs = {}
 
+        # Platform Detection
         if platform is None:
             hostname = socket.gethostname()
-            for p_key in PLATFORM_CONFIGS:
+            # Sort by length descending to catch gaea-c5 before gaea
+            sorted_platforms = sorted(PLATFORM_CONFIGS.keys(), key=len, reverse=True)
+            for p_key in sorted_platforms:
                 if p_key in hostname:
                     platform = p_key
                     break

@@ -42,3 +42,11 @@ The `ClusterFactory` automatically detects project/account codes from environmen
 - `run_pairing_task`: Performs spatial/temporal pairing using `monet.pair`. It uses the `worker_client` pattern for fine-grained parallelism.
 - `run_stats_task`: Calculates statistical metrics.
 - `run_plotting_task`: Generates visualizations.
+
+## Multi-Node Execution
+
+MELODIES-MONET leverages Xarray and Dask to enable tasks to utilize multiple HPC nodes.
+
+1. **Lazy Loading**: Data is loaded lazily as Dask arrays. Large datasets are automatically partitioned across the cluster.
+2. **Worker-Client Pattern**: Heavy compute tasks like `run_pairing_task` use the `worker_client` pattern to spawn sub-tasks. These sub-tasks are distributed across all available workers in the cluster, which can span many physical HPC nodes.
+3. **Scaling**: You can request multiple nodes by setting `scale` or `adaptive_kwargs` in the control YAML. Each "worker" typically corresponds to one HPC job (which can be configured to use one or more nodes via `cluster_kwargs`).

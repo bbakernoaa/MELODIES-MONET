@@ -103,11 +103,29 @@ def main_orchestration_flow(orchestrator_inst):
         project=project
     )
 
-    # Correct attribute for worker scaling in SpecCluster
+    # Scale worker groups
     if hasattr(cluster, "worker_spec"):
+        # Default scaling
+        default_scale = dask_cfg.get("scale", 2)
+
+        # Scaling overrides from worker_groups
+        worker_groups = dask_cfg.get("worker_groups", {})
+
         for name in cluster.worker_spec:
-            if name == "dtn": cluster.scale(1, name=name)
-            else: cluster.scale(2, name=name)
+            group_cfg = worker_groups.get(name, {})
+            if "adaptive_kwargs" in group_cfg:
+                cluster.adapt(name=name, **group_cfg["adaptive_kwargs"])
+            elif "scale" in group_cfg:
+                cluster.scale(group_cfg["scale"], name=name)
+            else:
+                # Platform/Default fallback
+                if name == "dtn":
+                    cluster.scale(1, name=name)
+                else:
+                    if adaptive_kwargs:
+                        cluster.adapt(name=name, **adaptive_kwargs)
+                    else:
+                        cluster.scale(default_scale, name=name)
 
     task_runner = DaskTaskRunner(address=cluster.scheduler_address)
 
