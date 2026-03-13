@@ -32,8 +32,3 @@ class pair:
             ")"
         )
 
-    def fix_paired_xarray(self, dset):
-        """Reformat the paired dataset. Redirection to monet.util.combinetool.fix_paired_xarray."""
-        import monet as m
-
-        return m.util.combinetool.fix_paired_xarray(dset)

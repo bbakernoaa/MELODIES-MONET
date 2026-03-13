@@ -1,0 +1,326 @@
+diff --git a/monetio/__init__.py b/monetio/__init__.py
+index 4e2e679..ad99973 100644
+--- a/monetio/__init__.py
++++ b/monetio/__init__.py
+@@ -130,6 +130,9 @@ _READER_MODULES = {
+     "mopitt": ".readers.mopitt",
+     "tempo": ".readers.tempo",
+     "tropomi": ".readers.tropomi",
++    "cesm_fv": ".readers.cesm_fv",
++    "cesm_se": ".readers.cesm_se",
++    "aircraft_csv": ".readers.aircraft_csv",
+     "nesdis_viirs_jrr": ".readers.nesdis_viirs_jrr",
+     "viirs_jrr": ".readers.nesdis_viirs_jrr",
+ }
+diff --git a/monetio/models/__init__.py b/monetio/models/__init__.py
+index 6ea026d..9f9c9bb 100644
+--- a/monetio/models/__init__.py
++++ b/monetio/models/__init__.py
+@@ -6,6 +6,8 @@ from . import (
+     _rrfs_cmaq_mm,
+     _wrfchem_mm,
+     camx,
++    cesm_fv,
++    cesm_se,
+     chimere,
+     cmaq,
+     fv3chem,
+@@ -26,6 +28,8 @@ __all__ = [
+     "_cmaq_mm",
+     "_rrfs_cmaq_mm",
+     "_wrfchem_mm",
++    "cesm_fv",
++    "cesm_se",
+     "chimere",
+     "cmaq",
+     "camx",
+diff --git a/monetio/models/cesm_fv.py b/monetio/models/cesm_fv.py
+new file mode 100644
+index 0000000..43b9c14
+--- /dev/null
++++ b/monetio/models/cesm_fv.py
+@@ -0,0 +1,21 @@
++"""
++CESM FV File Reader. Redirection to monetio.readers.cesm_fv
++"""
++
++from ..readers.cesm_fv import open_mfdataset as _open_mfdataset
++
++def open_mfdataset(fname, **kwargs):
++    """Method to open CESM-FV (CAM-Chem) netcdf files.
++
++    Parameters
++    ----------
++    fname : string or list
++        fname is the path to the file or files.
++    **kwargs : dict
++        Additional arguments passed to reader.
++
++    Returns
++    -------
++    xarray.DataSet
++    """
++    return _open_mfdataset(fname, **kwargs)
+diff --git a/monetio/models/cesm_se.py b/monetio/models/cesm_se.py
+new file mode 100644
+index 0000000..959b7bb
+--- /dev/null
++++ b/monetio/models/cesm_se.py
+@@ -0,0 +1,21 @@
++"""
++CESM SE File Reader. Redirection to monetio.readers.cesm_se
++"""
++
++from ..readers.cesm_se import open_mfdataset as _open_mfdataset
++
++def open_mfdataset(fname, **kwargs):
++    """Method to open CESM-SE netcdf files.
++
++    Parameters
++    ----------
++    fname : string or list
++        fname is the path to the file or files.
++    **kwargs : dict
++        Additional arguments passed to reader.
++
++    Returns
++    -------
++    xarray.DataSet
++    """
++    return _open_mfdataset(fname, **kwargs)
+diff --git a/monetio/readers/aircraft_csv.py b/monetio/readers/aircraft_csv.py
+new file mode 100644
+index 0000000..f545b92
+--- /dev/null
++++ b/monetio/readers/aircraft_csv.py
+@@ -0,0 +1,54 @@
++# SPDX-License-Identifier: Apache-2.0
++#
++import pandas as pd
++import xarray as xr
++
++def open_dataset(fname, **kwargs):
++    """
++    Open aircraft data from a CSV file.
++
++    Parameters
++    ----------
++    fname : str
++        The path to the CSV file.
++    **kwargs
++        Additional arguments passed to pandas.read_csv.
++
++    Returns
++    -------
++    xr.Dataset
++    """
++    df = pd.read_csv(fname, **kwargs)
++
++    # Standardize time
++    if 'time' in df.columns:
++        df['time'] = pd.to_datetime(df['time'])
++    elif 'datetime' in df.columns:
++        df['time'] = pd.to_datetime(df['datetime'])
++        df = df.drop(columns=['datetime'])
++
++    # Standardize coordinates
++    rename_dict = {}
++    if 'lat' in df.columns and 'latitude' not in df.columns:
++        rename_dict['lat'] = 'latitude'
++    if 'lon' in df.columns and 'longitude' not in df.columns:
++        rename_dict['lon'] = 'longitude'
++    if 'alt' in df.columns and 'altitude' not in df.columns:
++        rename_dict['alt'] = 'altitude'
++
++    if rename_dict:
++        df = df.rename(columns=rename_dict)
++
++    # Drop rows with missing coordinates or time
++    df = df.dropna(subset=['time', 'latitude', 'longitude'])
++
++    # Convert to xarray
++    ds = df.to_xarray()
++
++    # Add index 'x' as spatial dimension for monet pairing
++    if 'index' in ds.coords:
++        ds = ds.rename({'index': 'x'})
++    else:
++        ds = ds.rename_dims({'dim_0': 'x'})
++
++    return ds
+diff --git a/monetio/readers/cesm_fv.py b/monetio/readers/cesm_fv.py
+new file mode 100644
+index 0000000..9a533a5
+--- /dev/null
++++ b/monetio/readers/cesm_fv.py
+@@ -0,0 +1,100 @@
++"""CESM FV Reader"""
++
++import warnings
++from typing import List, Union
++import numpy as np
++import xarray as xr
++from .base import GriddedReader, register_reader
++from .sat_utils import update_history
++
++@register_reader("cesm_fv")
++class CESMFVReader(GriddedReader):
++    """
++    Reader for CESM FV (Finite Volume / CAM-Chem) data.
++    """
++
++    def open_dataset(
++        self,
++        files: Union[str, List[str]],
++        convert_to_ppb: bool = True,
++        var_list: List[str] = ["O3", "PM25"],
++        surf_only: bool = True,
++        **kwargs,
++    ) -> xr.Dataset:
++        """
++        Reads CESM FV data.
++        """
++        if not surf_only:
++             warnings.warn("3D data processing is still experimental in CESM-FV.")
++
++        if "concat_dim" not in kwargs:
++            kwargs["concat_dim"] = "time"
++        if "combine" not in kwargs:
++            kwargs["combine"] = "nested"
++
++        ds = self.driver.open(files, **kwargs)
++
++        # Vertical info
++        if not surf_only:
++            if "PMID" not in ds.variables:
++                ds["PMID"] = _calc_pressure(ds)
++
++            ds = ds.rename({
++                "T": "temperature_k",
++                "Z3": "alt_msl_m_mid",
++                "PMID": "pres_pa_mid",
++            })
++
++            var_list = list(set(var_list + ["temperature_k", "alt_msl_m_mid", "pres_pa_mid"]))
++
++        available = [v for v in var_list if v in ds.variables]
++        ds = ds[available]
++
++        # Standard Renaming
++        rename_dims = {}
++        if "lon" in ds.dims: rename_dims["lon"] = "x"
++        if "lat" in ds.dims: rename_dims["lat"] = "y"
++        if "lev" in ds.dims: rename_dims["lev"] = "z"
++        if rename_dims:
++            ds = ds.rename(rename_dims)
++
++        # Lon/Lat coords
++        if "x" in ds.dims and "y" in ds.dims:
++             # Logic to handle 180 flip and 2D coord creation
++             if np.any(ds["x"] > 180):
++                 ds["x"] = (ds["x"] + 180) % 360 - 180
++                 ds = ds.sortby("x")
++
++             lon = ds["x"]
++             lat = ds["y"]
++             lons, lats = np.meshgrid(lon, lat)
++             ds["longitude"] = (("y", "x"), lons)
++             ds["latitude"] = (("y", "x"), lats)
++             ds = ds.set_coords(["latitude", "longitude"])
++
++        # Re-order z
++        if "z" in ds.dims:
++            ds = ds.sortby("z", ascending=False)
++
++        # Units
++        if convert_to_ppb:
++            for i in ds.data_vars:
++                if "units" in ds[i].attrs:
++                    if "mol/mol" in ds[i].attrs["units"]:
++                        ds[i] = ds[i] * 1e9
++                        ds[i].attrs["units"] = "ppbV"
++                    elif "kg/m3" in ds[i].attrs["units"]:
++                        ds[i] = ds[i] * 1e9
++                        ds[i].attrs["units"] = r"$\mu g m^{-3}$"
++
++        ds = update_history(ds, "Read CESM FV data.")
++        return ds
++
++def _calc_pressure(ds):
++    # Simplified hybrid pressure calculation
++    p0 = ds.attrs.get("P0", 100000.0)
++    if "P0" in ds.variables: p0 = ds["P0"]
++    return ds.hyam * p0 + ds.hybm * ds.PS
++
++def open_mfdataset(fname, **kwargs):
++    return CESMFVReader().open_dataset(files=fname, **kwargs)
+diff --git a/monetio/readers/cesm_se.py b/monetio/readers/cesm_se.py
+new file mode 100644
+index 0000000..abae2e5
+--- /dev/null
++++ b/monetio/readers/cesm_se.py
+@@ -0,0 +1,64 @@
++"""CESM SE Reader"""
++
++from typing import List, Union
++import xarray as xr
++from .base import GriddedReader, register_reader
++from .sat_utils import update_history
++
++@register_reader("cesm_se")
++class CESMSEReader(GriddedReader):
++    """
++    Reader for CESM SE (Spectral Element) unstructured grid data.
++    """
++
++    def open_dataset(
++        self,
++        files: Union[str, List[str]],
++        convert_to_ppb: bool = True,
++        var_list: List[str] = ["O3", "NO", "NO2", "lat", "lon"],
++        scrip_file: str = "",
++        **kwargs,
++    ) -> xr.Dataset:
++        """
++        Reads CESM SE data.
++        """
++        if "concat_dim" not in kwargs:
++            kwargs["concat_dim"] = "time"
++        if "combine" not in kwargs:
++            kwargs["combine"] = "nested"
++
++        ds = self.driver.open(files, **kwargs)
++
++        # Ensure required coords are kept
++        vars_to_keep = list(set(var_list + ["lat", "lon", "lev"]))
++        available = [v for v in vars_to_keep if v in ds.variables]
++        ds = ds[available]
++
++        # Renaming
++        if "lev" in ds.dims:
++            ds = ds.rename({"lev": "z"})
++
++        # Sort so surface is first
++        if "z" in ds.dims:
++            ds = ds.sortby("z", ascending=False)
++
++        # Unstructured grid metadata
++        ds.attrs["mio_has_unstructured_grid"] = True
++        ds.attrs["mio_scrip_file"] = scrip_file
++
++        # Unit conversions
++        if convert_to_ppb:
++            for i in ds.data_vars:
++                if "units" in ds[i].attrs:
++                    if "mol/mol" in ds[i].attrs["units"]:
++                        ds[i] = ds[i] * 1e9
++                        ds[i].attrs["units"] = "ppbV"
++                    elif "kg/m3" in ds[i].attrs["units"]:
++                        ds[i] = ds[i] * 1e9
++                        ds[i].attrs["units"] = r"$\mu g m^{-3}$"
++
++        ds = update_history(ds, "Read CESM SE data.")
++        return ds
++
++def open_mfdataset(fname, **kwargs):
++    return CESMSEReader().open_dataset(files=fname, **kwargs)
