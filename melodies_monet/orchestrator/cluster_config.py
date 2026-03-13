@@ -4,11 +4,11 @@ import socket
 PLATFORM_CONFIGS = {
     "hera": {
         "cluster_type": "slurm",
-        "cluster_kwargs": {"partition": "batch", "cores": 40, "memory": "128GB"},
+        "cluster_kwargs": {"queue": "batch", "cores": 40, "memory": "128GB"},
         "worker_groups": {
-            "compute": {"partition": "batch", "cores": 40, "memory": "128GB"},
+            "compute": {"queue": "batch", "cores": 40, "memory": "128GB"},
             "dtn": {
-                "partition": "service",
+                "queue": "service",
                 "cores": 1,
                 "memory": "8GB",
                 "worker_extra_args": ["--resources dtn=1"],
@@ -17,11 +17,11 @@ PLATFORM_CONFIGS = {
     },
     "jet": {
         "cluster_type": "slurm",
-        "cluster_kwargs": {"partition": "batch", "cores": 24, "memory": "64GB"},
+        "cluster_kwargs": {"queue": "batch", "cores": 24, "memory": "64GB"},
         "worker_groups": {
-            "compute": {"partition": "batch", "cores": 24, "memory": "64GB"},
+            "compute": {"queue": "batch", "cores": 24, "memory": "64GB"},
             "dtn": {
-                "partition": "service",
+                "queue": "service",
                 "cores": 1,
                 "memory": "8GB",
                 "worker_extra_args": ["--resources dtn=1"],
@@ -30,33 +30,33 @@ PLATFORM_CONFIGS = {
     },
     "orion": {
         "cluster_type": "slurm",
-        "cluster_kwargs": {"partition": "orion", "cores": 40, "memory": "192GB"},
-        "worker_groups": {"compute": {"partition": "orion", "cores": 40, "memory": "192GB"}},
+        "cluster_kwargs": {"queue": "orion", "cores": 40, "memory": "192GB"},
+        "worker_groups": {"compute": {"queue": "orion", "cores": 40, "memory": "192GB"}},
     },
     "hercules": {
         "cluster_type": "slurm",
-        "cluster_kwargs": {"partition": "hercules", "cores": 80, "memory": "256GB"},
-        "worker_groups": {"compute": {"partition": "hercules", "cores": 80, "memory": "256GB"}},
+        "cluster_kwargs": {"queue": "hercules", "cores": 80, "memory": "256GB"},
+        "worker_groups": {"compute": {"queue": "hercules", "cores": 80, "memory": "256GB"}},
     },
     "gaea-c5": {
         "cluster_type": "slurm",
-        "cluster_kwargs": {"partition": "batch", "cores": 32, "memory": "128GB"},
-        "worker_groups": {"compute": {"partition": "batch", "cores": 32, "memory": "128GB"}},
+        "cluster_kwargs": {"queue": "batch", "cores": 32, "memory": "128GB"},
+        "worker_groups": {"compute": {"queue": "batch", "cores": 32, "memory": "128GB"}},
     },
     "gaea-c6": {
         "cluster_type": "slurm",
-        "cluster_kwargs": {"partition": "batch", "cores": 64, "memory": "256GB"},
-        "worker_groups": {"compute": {"partition": "batch", "cores": 64, "memory": "256GB"}},
+        "cluster_kwargs": {"queue": "batch", "cores": 64, "memory": "256GB"},
+        "worker_groups": {"compute": {"queue": "batch", "cores": 64, "memory": "256GB"}},
     },
     "gaea": {  # Default to c5 for backward compatibility
         "cluster_type": "slurm",
-        "cluster_kwargs": {"partition": "batch", "cores": 32, "memory": "128GB"},
-        "worker_groups": {"compute": {"partition": "batch", "cores": 32, "memory": "128GB"}},
+        "cluster_kwargs": {"queue": "batch", "cores": 32, "memory": "128GB"},
+        "worker_groups": {"compute": {"queue": "batch", "cores": 32, "memory": "128GB"}},
     },
     "ursa": {
         "cluster_type": "slurm",
-        "cluster_kwargs": {"partition": "batch", "cores": 32, "memory": "128GB"},
-        "worker_groups": {"compute": {"partition": "batch", "cores": 32, "memory": "128GB"}},
+        "cluster_kwargs": {"queue": "batch", "cores": 32, "memory": "128GB"},
+        "worker_groups": {"compute": {"queue": "batch", "cores": 32, "memory": "128GB"}},
     },
     "casper": {
         "cluster_type": "pbs",
@@ -154,15 +154,15 @@ class ClusterFactory:
 
             job_cls = None
             if cluster_type_lower == "slurm":
-                from dask_jobqueue import SLURMJob
+                from dask_jobqueue.slurm import SLURMJob
 
                 job_cls = SLURMJob
             elif cluster_type_lower == "pbs":
-                from dask_jobqueue import PBSJob
+                from dask_jobqueue.pbs import PBSJob
 
                 job_cls = PBSJob
             elif cluster_type_lower == "lsf":
-                from dask_jobqueue import LSFJob
+                from dask_jobqueue.lsf import LSFJob
 
                 job_cls = LSFJob
 

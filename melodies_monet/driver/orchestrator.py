@@ -436,16 +436,32 @@ class orchestrator:
         Execute plotting tasks as defined in the control file.
         Delegates to monet-plots.
         """
-        # Implementation details omitted for brevity, logic remains in MM orchestrator
-        pass
+        if "plotting" in self.control_dict:
+            try:
+                import monet_plots
+            except ImportError:
+                print("WARNING: monet_plots not found. Plotting cannot be performed.")
+                return
+
+            for group_label, cfg in self.control_dict["plotting"].items():
+                needed_pairs = {k: self.paired[k] for k in cfg.get("data", []) if k in self.paired}
+                monet_plots.create_plots(needed_pairs, **cfg)
 
     def stats(self):
         """
         Execute statistics tasks as defined in the control file.
         Delegates to monet-stats.
         """
-        # Implementation details omitted for brevity, logic remains in MM orchestrator
-        pass
+        if "stats" in self.control_dict:
+            try:
+                import monet_stats
+            except ImportError:
+                print("WARNING: monet_stats not found. Statistics cannot be calculated.")
+                return
+
+            for group_label, cfg in self.control_dict["stats"].items():
+                needed_pairs = {k: self.paired[k] for k in cfg.get("data", []) if k in self.paired}
+                monet_stats.compute_stats(needed_pairs, **cfg)
 
     def run(self):
         """

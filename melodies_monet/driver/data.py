@@ -57,7 +57,7 @@ class Data:
     def __repr__(self):
         return f"Data(type={self.data_type!r}, label={self.label!r}, source={self.source!r})"
 
-    def from_dict(self, cfg):
+    def from_dict(self, cfg: dict):
         """
         Update attributes from a configuration dictionary.
 
@@ -101,7 +101,7 @@ class Data:
         self.use_dtn = cfg.get("use_dtn", False)
         return self
 
-    def glob_files(self, time_interval=None):
+    def glob_files(self, time_interval: list = None) -> None:
         """
         Expand file patterns and optionally subset by time.
 
@@ -109,6 +109,10 @@ class Data:
         ----------
         time_interval : list of pd.Timestamp, optional
             A list containing [start_time, end_time] to subset the data.
+
+        Returns
+        -------
+        None
         """
         from glob import glob
 
@@ -150,7 +154,7 @@ class Data:
             elif self.sat_type == "modis_l2":
                 self.files = tsub.subset_MODIS_l2(self.files, time_interval)
 
-    def load(self, time_interval=None):
+    def load(self, time_interval: list = None) -> None:
         """
         Load data using monetio.load and apply standard processing.
 
@@ -158,7 +162,13 @@ class Data:
         ----------
         time_interval : list of pd.Timestamp, optional
             A list containing [start_time, end_time] to subset the data.
+
+        Returns
+        -------
+        None
         """
+        import pandas as pd
+
         self.glob_files(time_interval=time_interval)
 
         if not self.files:
@@ -205,6 +215,11 @@ class Data:
             self.filter_obs()
             if time_interval is not None and "time" in self.obj.dims:
                 self.obj = self.obj.sel(time=slice(time_interval[0], time_interval[-1]))
+
+        # Scientific hygiene: Update history
+        history = self.obj.attrs.get("history", "")
+        new_history = f"{pd.Timestamp.now()}: Loaded and processed {self.label} data via MELODIES-MONET Orchestrator."
+        self.obj.attrs["history"] = f"{new_history}\n{history}"
 
     def _get_model_var_list(self):
         """Gather all variables required for pairing and summing."""
