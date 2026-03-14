@@ -77,7 +77,6 @@ def run_pairing_task(eval_label, cfg, model_inst, obs_inst, pairing_kwargs, **kw
                 m.pair,
                 model_inst.obj[vars_to_pair],
                 obs_inst.obj,
-                radius_of_influence=model_inst.radius_of_influence,
                 suffix=model_inst.label,
                 type=obs_inst.obs_type.lower(),
                 **pairing_kwargs.get(obs_inst.obs_type.lower(), {}),

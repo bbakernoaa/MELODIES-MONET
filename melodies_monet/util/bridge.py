@@ -50,10 +50,7 @@ def compute_stats(paired_dict, output_dir='./', debug=False, **kwargs):
                 val = mm_calc(p_inst.obj, stat=stat, obsvar=obsvar, modvar=modvar, **kwargs)
                 stat_df.loc[stat, modvar] = val
 
-        # Save to CSV - Need to compute for CSV writing
-        # We compute a copy for saving, but return the original (potentially lazy) results in the dict if needed?
-        # MELODIES-MONET usually returns the stat_df which contains scalars or objects.
-
+        # Save to CSV - Need to compute scalar values for CSV writing
         compute_df = stat_df.copy()
         for col in p_inst.model_vars:
             for idx in stat_list:
@@ -76,7 +73,7 @@ def compute_stats(paired_dict, output_dir='./', debug=False, **kwargs):
 
 def create_plots(paired_dict, output_dir='./', debug=False, **kwargs):
     """
-    Bridge function to generate plots using monet-plots.
+    Truly generic bridge function to generate plots using monet-plots.
 
     Parameters
     ----------
@@ -91,36 +88,17 @@ def create_plots(paired_dict, output_dir='./', debug=False, **kwargs):
     """
     plot_type = kwargs.get('type', 'timeseries').lower()
 
-    # Map MELODIES-MONET plot types to monet_plots classes
-    plot_map = {
-        'timeseries': monet_plots.TimeSeriesPlot,
-        'scatter': monet_plots.ScatterPlot,
-        'taylor': monet_plots.TaylorDiagramPlot,
-        'kde': monet_plots.KDEPlot,
-        'spatial': monet_plots.SpatialPlot,
-        'spatial_bias': monet_plots.SpatialBiasScatterPlot,
-        'spatial_contour': monet_plots.SpatialContourPlot,
-        'spatial_imshow': monet_plots.SpatialImshowPlot,
-    }
+    # Discovery: Find the plot class in monet_plots
+    plot_class = None
+    import inspect
+    for name, obj in inspect.getmembers(monet_plots):
+        if inspect.isclass(obj) and (name.lower() == plot_type.lower() or name.lower() == plot_type.lower() + "plot"):
+            plot_class = obj
+            break
 
-    plot_class = plot_map.get(plot_type)
     if plot_class is None:
-        # Fallback to Case-insensitive lookup if direct mapping fails
-        for k, v in plot_map.items():
-            if k.replace('_', '') == plot_type.replace('_', ''):
-                plot_class = v
-                break
-
-        if plot_class is None:
-            # Last resort: check monet_plots directly for the class name
-            for name, obj in inspect.getmembers(monet_plots):
-                if inspect.isclass(obj) and name.lower() == plot_type.lower() + "plot":
-                    plot_class = obj
-                    break
-
-            if plot_class is None:
-                print(f"Warning: Plot type '{plot_type}' not supported by monet-plots bridge.")
-                return
+        print(f"Warning: Plot type '{plot_type}' not found in monet-plots.")
+        return
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
@@ -129,21 +107,16 @@ def create_plots(paired_dict, output_dir='./', debug=False, **kwargs):
         if debug:
             print(f"Generating {plot_type} plot for {label}")
 
-        # Global plotting configuration from YAML group
+        # Global plotting configuration
         group_kwargs = kwargs.copy()
-        # Remove keys that are not for plotting
         for k in ['type', 'data', 'output_dir', 'debug', 'add_logo']:
             group_kwargs.pop(k, None)
 
         group_plot_kwargs = group_kwargs.pop('plot_kwargs', {})
 
-        # Merge order: pair-specific < group-specific
-        combined_plot_kwargs = {**p_inst.model_plot_kwargs, **group_plot_kwargs}
-
         for i, modvar in enumerate(p_inst.model_vars):
             obsvar = p_inst.ref_vars[i]
 
-            # Use original object (Xarray Dataset) to preserve laziness
             data_to_plot = p_inst.obj
 
             # Identification of dimensions and coordinates
@@ -154,9 +127,6 @@ def create_plots(paired_dict, output_dir='./', debug=False, **kwargs):
                         time_col = c
                         break
 
-            # Handle multiple variables for plot types that expect only one Y
-            y_vars = [obsvar, modvar]
-
             # Subplot keyword arguments handling
             subplot_keys = ['figsize', 'nrows', 'ncols', 'sharex', 'sharey', 'subplot_kw', 'gridspec_kw']
 
@@ -166,8 +136,9 @@ def create_plots(paired_dict, output_dir='./', debug=False, **kwargs):
 
                 sig_init = inspect.signature(plot_class.__init__)
 
-                if plot_type == 'timeseries':
-                    # monet-plots TimeSeriesPlot handles xarray natively if initialized correctly
+                if plot_type == 'timeseries' and isinstance(data_to_plot, xr.Dataset):
+                    # Multi-line plot on same ax
+                    y_vars = [obsvar, modvar]
                     for j, y_var in enumerate(y_vars):
                         current_kwargs = p_inst.ref_plot_kwargs if j == 0 else p_inst.model_plot_kwargs
                         current_combined = {**current_kwargs, **group_plot_kwargs}
@@ -180,7 +151,6 @@ def create_plots(paired_dict, output_dir='./', debug=False, **kwargs):
                             'ax': ax,
                             'fig': fig
                         }
-                        # Filter and call
                         final_init_args = {k: v for k, v in init_args.items() if k in sig_init.parameters}
                         p = plot_class(**final_init_args)
 
@@ -191,12 +161,12 @@ def create_plots(paired_dict, output_dir='./', debug=False, **kwargs):
 
                         p.plot(**final_plot_args)
                 else:
-                    # Generic handling for other plot types
+                    # Generic handling
                     init_args = {
                         'data': data_to_plot,
                         'df': data_to_plot,
                         'x': time_col,
-                        'y': y_vars,
+                        'y': [obsvar, modvar],
                         'ax': ax,
                         'fig': fig
                     }
@@ -207,6 +177,8 @@ def create_plots(paired_dict, output_dir='./', debug=False, **kwargs):
                     p = plot_class(**final_init_args)
 
                     sig_plot = inspect.signature(p.plot)
+                    # Use combined_plot_kwargs (pair-specific + group-level)
+                    combined_plot_kwargs = {**p_inst.model_plot_kwargs, **group_plot_kwargs}
                     final_plot_args = {k: v for k, v in combined_plot_kwargs.items() if k in sig_plot.parameters}
                     if sig_plot.parameters.get('kwargs') is not None:
                         final_plot_args.update({k: v for k, v in combined_plot_kwargs.items() if k not in final_plot_args})

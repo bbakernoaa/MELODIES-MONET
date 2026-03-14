@@ -98,10 +98,6 @@ def calc(df, stat=None, obsvar=None, modvar=None, wind=False, **kwargs):
 
         value = stat_func(obs, mod, **call_kwargs)
 
-        # If it's an xarray object and we want a scalar for the table,
-        # we might need to compute it eventually, but we should stay lazy as long as possible.
-        # However, MELODIES-MONET stats table usually expects a scalar.
-        # For now, return the object and let the caller decide when to compute.
         return value
 
     except AttributeError:
@@ -153,15 +149,12 @@ def create_table(df, outname="plot", title="stats", out_table_kwargs=None, debug
     ax.axis("off")
     ax.axis("tight")
 
-    # If the dataframe contains lazy objects, we must compute them before plotting the table.
-    # This is the point where we 'break' laziness for visualization purposes.
-
-    # We copy to avoid modifying the original if it was used elsewhere
+    # We copy to avoid modifying the original
     plot_df = df.copy()
     stat_full_names = plot_df["Stat_FullName"].values.tolist()
     plot_df = plot_df.drop(columns=["Stat_FullName"])
 
-    # Compute any xarray objects
+    # Compute for display
     for col in plot_df.columns:
         for idx in plot_df.index:
             val = plot_df.loc[idx, col]

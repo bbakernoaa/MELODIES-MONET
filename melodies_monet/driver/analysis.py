@@ -9,3 +9,11 @@ class analysis(orchestrator):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def open_models(self, **kwargs):
+        """Legacy method for opening models. Redirects to open_data."""
+        return self.open_data(**kwargs)
+
+    def open_obs(self, **kwargs):
+        """Legacy method for opening observations. Redirects to open_data."""
+        return self.open_data(**kwargs)
