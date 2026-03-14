@@ -134,13 +134,6 @@ class orchestrator:
         self.read = None
         self.regrid = False
         self.target_grid = None
-        self.obs_regridders = None
-        self.model_regridders = None
-        self.obs_grid = None
-        self.obs_edges = None
-        self.obs_gridded_data = {}
-        self.obs_gridded_count = {}
-        self.obs_gridded_dataset = None
         self.add_logo = True
         self.pairing_kwargs = {}
         self.platform = None
@@ -243,7 +236,6 @@ class orchestrator:
                 paired_data = m.pair(
                     model_obj,
                     ref.obj,
-                    radius_of_influence=mod.radius_of_influence,
                     suffix=mod.label,
                     type=ref.obs_type.lower(),
                     **self.pairing_kwargs.get(ref.obs_type.lower(), {}),
@@ -256,44 +248,10 @@ class orchestrator:
                 p_inst.ref_vars = ref_vars
                 p_inst.type = ref.obs_type.lower()
                 p_inst.obj = paired_data
+                p_inst.model_plot_kwargs = mod.plot_kwargs
+                p_inst.ref_plot_kwargs = ref.plot_kwargs
 
                 self.paired[eval_label] = p_inst
-        else:
-            # Fallback for old mapping style if migration didn't run or failed
-            for mod_label, mod in self.models.items():
-                if not mod.mapping:
-                    continue
-                for ref_label in mod.mapping.keys():
-                    ref = self.obs[ref_label]
-
-                    # Mapping and subsetting
-                    keys = list(mod.mapping[ref_label].keys())
-                    ref_vars = list(mod.mapping[ref_label].values())
-                    mod_vars = list(mod.variable_dict.keys()) if mod.variable_dict else []
-
-                    # Model variables for this pairing
-                    model_obj = mod.obj[list(set(keys + mod_vars))]
-
-                    # Perform pairing
-                    paired_data = m.pair(
-                        model_obj,
-                        ref.obj,
-                        radius_of_influence=mod.radius_of_influence,
-                        suffix=mod.label,
-                        type=ref.obs_type.lower(),
-                        **self.pairing_kwargs.get(ref.obs_type.lower(), {}),
-                    )
-
-                    p_inst = pair()
-                    p_inst.ref = ref.label
-                    p_inst.model = mod.label
-                    p_inst.model_vars = keys
-                    p_inst.ref_vars = ref_vars
-                    p_inst.type = ref.obs_type.lower()
-                    p_inst.obj = paired_data
-
-                    label = f"{p_inst.ref}_{p_inst.model}"
-                    self.paired[label] = p_inst
 
     def _build_graph(self):
         """
@@ -355,8 +313,8 @@ class orchestrator:
                     for obs_label, mapping in cfg["mapping"].items():
                         eval_label = f"{obs_label}_{label}"
                         self.control_dict["evaluations"][eval_label] = {
-                            "model": label,
-                            "obs": obs_label,
+                            "exp": label,
+                            "ref": obs_label,
                             "mapping": mapping,
                         }
 
@@ -451,6 +409,8 @@ class orchestrator:
                     "add_logo": self.add_logo,
                     **cfg,
                 }
+                # Create a copy of needed pairs to avoid modifying the original objects if needed,
+                # but here we just need to pass them to monet_plots.
                 needed_pairs = {k: self.paired[k] for k in cfg.get("data", []) if k in self.paired}
                 monet_plots.create_plots(needed_pairs, **cfg_with_global)
 

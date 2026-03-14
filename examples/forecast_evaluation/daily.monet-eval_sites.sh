@@ -990,7 +990,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'wrfchem'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then
@@ -1061,7 +1060,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'wrfchem'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then
@@ -1132,7 +1130,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'wrfchem'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then
@@ -1203,7 +1200,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'wrfchem'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then
@@ -1275,7 +1271,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'wrfchem'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then
@@ -1347,7 +1342,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'wrfchem'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then
@@ -1419,7 +1413,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'wrfchem'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then
@@ -1489,7 +1482,6 @@ cat << EOF >> control.yaml.${todays_date}
   NAQFC_CMAQ_oper_12Z: # model label
     files: ${cmaq_oper12_datadir}/*
     mod_type: 'cmaq'
-    radius_of_influence: 12000 #meters
     #variables: #Opt
     mapping: #model species name : obs species name
       airnow:
@@ -1536,7 +1528,6 @@ cat << EOF >> control.yaml.${todays_date}
   NAQFC_CMAQ_oper_12Z_N-2: # model label
     files: ${cmaq_oper12_2_datadir}/*
     mod_type: 'cmaq'
-    radius_of_influence: 12000 #meters
     #variables: #Opt
     #  CO:
     #    unit_scale: 1000.0
@@ -1586,7 +1577,6 @@ cat << EOF >> control.yaml.${todays_date}
   NAQFC_CMAQ_expr_12Z: # model label
     files: ${cmaq_expr12_datadir}/*
     mod_type: 'cmaq'
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
       airnow:
 EOF
@@ -1632,7 +1622,6 @@ cat << EOF >> control.yaml.${todays_date}
   NAQFC_CMAQ_oper_06Z: # model label
     files: ${cmaq_oper06_datadir}/*
     mod_type: 'cmaq'
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
       airnow:
 EOF
@@ -1679,7 +1668,6 @@ cat << EOF >> control.yaml.${todays_date}
   NAQFC_CMAQ_expr_06Z: # model label
     files: ${cmaq_expr06_datadir}/*
     mod_type: 'cmaq'
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
       airnow:
 EOF
@@ -1727,7 +1715,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'hrrr'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then
@@ -1778,7 +1765,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'hrrr'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then
@@ -1830,7 +1816,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'hrrr'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then
@@ -1885,7 +1870,6 @@ cat << EOF >> control.yaml.${todays_date}
   online-CMAQ(UFS,v7.0b1): # model label
     files: ${onlinecmaq_b1_datadir}/aqm.t12z.chem_3d*
     mod_type: 'ufs'
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
       airnow:
 EOF
@@ -1927,7 +1911,6 @@ cat << EOF >> control.yaml.${todays_date}
   online-CMAQ(UFS,v7.0c3): # model label
     files: ${onlinecmaq_c3_datadir}/aqm.t12z.chem_3d*
     mod_type: 'ufs'
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
       airnow:
 EOF
@@ -1969,7 +1952,6 @@ cat << EOF >> control.yaml.${todays_date}
   RAQMS: # model label
     files: ${raqms_datadir}/*
     mod_type: 'raqms'
-    radius_of_influence: 12000 #meters
     variables: #Opt
       ico:
         unit_scale: 1000000000.0
@@ -2039,7 +2021,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'hrrr'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
       airnow:
 EOF
@@ -2078,7 +2059,6 @@ cat << EOF >> control.yaml.${todays_date}
     mod_type: 'wrfchem'
     mod_kwargs:
       surf_only_nc: True
-    radius_of_influence: 12000 #meters
     mapping: #model species name : obs species name
 EOF
 if [[ "${species}" == "AOD_550" ]]; then

@@ -8,22 +8,24 @@ class pair:
     def __init__(self):
         """Initialize a :class:`pair` object."""
         self.type = "pt_sfc"
-        self.radius_of_influence = 1e6
         self.ref = None
         self.model = None
         self.model_vars = None
         self.ref_vars = None
         self.filename = None
+        self.model_plot_kwargs = {}
+        self.ref_plot_kwargs = {}
 
     def __repr__(self):
         return (
             f"{type(self).__name__}(\n"
             f"    type={self.type!r},\n"
-            f"    radius_of_influence={self.radius_of_influence!r},\n"
             f"    ref={self.ref!r},\n"
             f"    model={self.model!r},\n"
             f"    model_vars={self.model_vars!r},\n"
             f"    ref_vars={self.ref_vars!r},\n"
             f"    filename={self.filename!r},\n"
+            f"    model_plot_kwargs={self.model_plot_kwargs!r},\n"
+            f"    ref_plot_kwargs={self.ref_plot_kwargs!r},\n"
             ")"
         )
