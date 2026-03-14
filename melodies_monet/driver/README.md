@@ -28,10 +28,16 @@ data:
   airnow:
     type: ref
     source: 'airnow'
-    files: '/path/to/airnow.nc'
+    # If files is not provided, MONETIO will attempt to retrieve data automatically.
+    # files: '/path/to/airnow.nc'
     obs_type: pt_sfc
 ```
-*Note: `source` is preferred over `mod_type`/`obs_type`, and `files` is preferred over `filename`.*
+*Note: `source` is preferred over `mod_type`/`obs_type`, and `files` is preferred over `filename`. If the `files` key is omitted, MELODIES-MONET will delegate data acquisition to the underlying MONETIO reader.*
+
+### Data Source Syntax (`files`)
+- **Local Path/Glob**: `/path/to/data/*.nc` or `['file1.nc', 'file2.nc']`
+- **Tutorial Data**: `example:SOURCE:ID` (e.g., `example:airnow:2019-08`) will automatically download and cache data from the NOAA CSL tutorial server.
+- **Auto-Retrieval**: Omit the `files` key entirely to allow readers with built-in download capabilities (like AirNow or AQS) to fetch data for the requested time period.
 
 ### 3. `evaluations`
 Relational logic that defines how data objects are paired.

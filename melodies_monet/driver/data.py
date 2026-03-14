@@ -129,19 +129,20 @@ class Data:
         if not self.file_str:
             return
 
-        # Expand environment variables
-        expanded_file_str = os.path.expandvars(self.file_str)
-
         if isinstance(self.file_str, list):
             self.files = sorted([os.path.expandvars(f) for f in self.file_str])
-        elif expanded_file_str.startswith("example:"):
-            example_id = ":".join(s.strip() for s in expanded_file_str.split(":")[1:])
-            self.files = [tutorial.fetch_example(example_id)]
-        elif expanded_file_str.lower().endswith(".txt"):
-            with open(expanded_file_str, "r") as f:
-                self.files = [os.path.expandvars(line.strip()) for line in f if line.strip()]
         else:
-            self.files = sort(glob(expanded_file_str)).tolist()
+            # Expand environment variables
+            expanded_file_str = os.path.expandvars(self.file_str)
+
+            if expanded_file_str.startswith("example:"):
+                example_id = ":".join(s.strip() for s in expanded_file_str.split(":")[1:])
+                self.files = [tutorial.fetch_example(example_id)]
+            elif expanded_file_str.lower().endswith(".txt"):
+                with open(expanded_file_str, "r") as f:
+                    self.files = [os.path.expandvars(line.strip()) for line in f if line.strip()]
+            else:
+                self.files = sort(glob(expanded_file_str)).tolist()
 
         # Auxiliary files
         if self.file_vert_str:
@@ -178,10 +179,6 @@ class Data:
         import pandas as pd
 
         self.glob_files(time_interval=time_interval)
-
-        if not self.files:
-            print(f"WARNING: No files found for {self.label}")
-            return
 
         # Build load_kwargs from the configuration
         load_kwargs = self.cfg.copy()
@@ -237,13 +234,20 @@ class Data:
         try:
             source = self.source or self._guess_source()
             # Handle special readers or generic fallback
-            self.obj = mio.load(source, files=self.files, **load_kwargs)
-        except Exception as e:
-            print(f"Error loading {self.label} ({self.source}): {e}. Falling back to generic xarray.")
-            if len(self.files) > 1:
-                self.obj = xr.open_mfdataset(self.files, **load_kwargs)
+            if self.files:
+                self.obj = mio.load(source, files=self.files, **load_kwargs)
             else:
-                self.obj = xr.open_dataset(self.files[0], **load_kwargs)
+                self.obj = mio.load(source, **load_kwargs)
+        except Exception as e:
+            if self.files:
+                print(f"Error loading {self.label} ({self.source}): {e}. Falling back to generic xarray.")
+                if len(self.files) > 1:
+                    self.obj = xr.open_mfdataset(self.files, **load_kwargs)
+                else:
+                    self.obj = xr.open_dataset(self.files[0], **load_kwargs)
+            else:
+                print(f"Error loading {self.label} ({self.source}): {e}.")
+                raise e
 
         if self.data_type == "obs":
             self.add_coordinates_ground()
@@ -283,6 +287,8 @@ class Data:
         return list(vars_req)
 
     def _guess_source(self):
+        if not self.files:
+            return self.label.lower()
         fn = self.files[0]
         ext = os.path.splitext(fn)[1].lower()
         if ext in {".ict", ".icartt"}:
