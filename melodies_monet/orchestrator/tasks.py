@@ -9,12 +9,12 @@ from melodies_monet.driver.pair import pair as pair_inst
 @task
 def run_data_task(data_type, label, cfg, time_interval=None, **kwargs):
     """
-    Task to load data (model or observation).
+    Task to load data.
 
     Parameters
     ----------
     data_type : str
-        'model' or 'obs'.
+        Categorization of data (e.g., 'model' or 'obs').
     label : str
         Unique label for the data source.
     cfg : dict
@@ -30,8 +30,7 @@ def run_data_task(data_type, label, cfg, time_interval=None, **kwargs):
     logger = get_run_logger()
     logger.info(f"Loading {data_type} data: {label}")
     # cfg already contains 'type' due to migration or unified schema
-    inst = Data(data_type=data_type)
-    inst.label = label
+    inst = Data(label=label)
     inst.from_dict(cfg)
     inst.load(time_interval=time_interval)
     return inst

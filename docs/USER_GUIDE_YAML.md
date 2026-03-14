@@ -7,11 +7,11 @@ MELODIES-MONET features a reorganized, unified control structure designed for cl
 ## 1. Core Philosophy: The Workflow Graph
 
 The orchestrator operates on a Directed Acyclic Graph (DAG). Every execution follows a standard path:
-1.  **Data Nodes**: Load and preprocess model or observation data.
-2.  **Pairing Nodes**: Spatial and temporal alignment between an "Experiment" (model) and a "Reference" (observation or another model).
+1.  **Data Nodes**: Load and preprocess datasets.
+2.  **Pairing Nodes**: Spatial and temporal alignment between an "Experiment" (typically a model) and a "Reference" (typically an observation).
 3.  **Analysis Nodes**: Calculation of scientific metrics and generation of visualizations.
 
-By decoupling data definition from analysis tasks, you can define a data source once and use it in multiple evaluations or plots without redundant loading.
+By decoupling data definition from analysis tasks, you can define any dataset once and use it in multiple evaluations or plots without redundant loading.
 
 ---
 
@@ -33,65 +33,59 @@ analysis:
   output_dir: "./output"
   use_prefect: True
   time_interval: "1D" # Chunks execution by day to save memory
-  platform: "hera"    # Force a specific platform config
-  account: "your_account"
 ```
 
 ---
 
-## 3. Unified Data Definition (`data`)
+## 3. Unified Data Entrance (`data`)
 
-All inputs are defined under the `data` key. MELODIES-MONET uses the `type` field to distinguish between models and observations.
+All datasets—whether they are models, surface observations, or satellite products—are defined under the unified `data` entrance. MELODIES-MONET treats all datasets as equal scientific objects.
 
-### Data Loading and Reader Kwargs
-You can pass additional keyword arguments directly to the underlying `monetio.load` function for each data source using `mod_kwargs` or `obs_kwargs`. This allows for fine-grained control over reader-specific options.
+### Dataset Configuration
+- **`source`**: The reader name (e.g., `cmaq`, `wrfchem`, `airnow`).
+- **`files`**: File path pattern or `example:ID`.
+- **`kwargs`**: Pass additional keyword arguments directly to the underlying `monetio.load` function. This allows for reader-specific or xarray-specific options.
 
 ```yaml
 data:
-  my_model:
-    type: model
+  my_dataset:
     source: 'cmaq'
     files: '/path/to/files/*.nc'
-    mod_kwargs:
-      preprocess: True      # Example monetio reader kwarg
-      engine: 'netcdf4'    # Example xarray engine kwarg
+    kwargs:
+      preprocess: True      # reader-specific kwarg
+      engine: 'netcdf4'    # xarray engine kwarg
     variables:
       O3: {rename: 'OZONE', unit_scale: 1.0}
+    plot_kwargs: {color: 'blue', label: 'CMAQ v5.4'}
 ```
 
 ### Data Processing Capabilities
-Within each data entry, you can perform standard transformations:
 - **`variables`**: Rename variables, apply unit scaling (multiply, divide, add, subtract), and set detection limits (`LLOD`).
-- **`variable_summing`**: Create new variables by summing existing ones (e.g., `PM25 = EC + OC + ...`).
-- **`data_proc`**: Apply filters to observations (e.g., `isin`, `==`, `>=`, `!=`).
+- **`variable_summing`**: Create new variables by summing existing ones.
+- **`data_proc`**: Apply arbitrary filters to the dataset (e.g., `isin`, `==`, `>=`, `!=`).
 - **`resample`**: Resample time-series data using standard rules (e.g., '1H', 'D').
-
-### Plotting Defaults
-The `plot_kwargs` key allows you to define the "brand" of a data source. These settings (color, marker, label) will follow this data source into every plot it appears in.
 
 ---
 
 ## 4. Logical Pairings (`evaluations`)
 
-The `evaluations` section defines the relational edges. It tells the orchestrator to pair an `exp` (Experiment/Model) with a `ref` (Reference/Observation).
+The `evaluations` section defines the relational edges in the graph. It tells the orchestrator to pair an `exp` (Experiment) with a `ref` (Reference).
 
 ```yaml
 evaluations:
   o3_evaluation:
     exp: 'my_model'
-    ref: 'airnow'
+    ref: 'airnow_obs'
     mapping:
-      OZONE: 'OZONE' # model_var: obs_var
+      OZONE: 'OZONE' # experiment_var: reference_var
 ```
 
 ---
 
 ## 5. Analysis Tasks (`stats` and `plotting`)
 
-Tasks are performed on the results of the pairings defined in `evaluations`.
-
 ### Dynamic Statistics (`stats`)
-MELODIES-MONET dynamically looks up any metric available in the `monet-stats` library. If a metric requires a threshold (like HSS or POD), simply include it in the group configuration.
+Specify any metric available in `monet-stats`. Thresholds for categorical metrics are passed directly from the group configuration.
 
 ```yaml
 stats:
@@ -99,47 +93,28 @@ stats:
     type: table
     data: ['o3_evaluation']
     stat_list: ['MB', 'RMSE', 'KGE', 'HSS']
-    threshold: 70.0 # Ozone exceedance threshold
+    threshold: 70.0
 ```
 
 ### Advanced Plotting (`plotting`)
-Plotting groups map to `monet-plots` classes. Most common matplotlib and cartopy keyword arguments are supported and passed through.
+Plotting groups map to `monet-plots` classes. Visual preferences from `data.plot_kwargs` are merged with group-level customizations.
 
 ```yaml
 plotting:
   ozone_ts:
     type: timeseries
     data: ['o3_evaluation']
-    title: "Ozone Evaluation"
-    plot_kwargs: {linewidth: 2.0} # Group-level override
+    title: "Regional Ozone Evaluation"
+    plot_kwargs: {linewidth: 2.0}
     figsize: [12, 6]
 ```
 
 ---
 
-## 6. Optimization: Saving and Reading
-
-For intensive pairings, you can save intermediate "Paired" objects.
-
-```yaml
-analysis:
-  save:
-    paired: {method: 'netcdf', prefix: 'my_study'}
-```
-
-Subsequent runs can use `read` to bypass the pairing step and go straight to analysis:
-```yaml
-analysis:
-  read:
-    paired: {method: 'netcdf', prefix: 'my_study'}
-```
-
----
-
-## 7. Performance and Scalability
+## 6. Performance and Scalability
 
 ### Lazy-First Architecture
-MELODIES-MONET is designed for "Big Data" using Xarray and Dask.
-- **Strict Lazy Preservation**: Data loading and pairing stay lazy. Computation is delayed until final output, ensuring efficient memory usage.
-- **Task Routing**: Use `use_dtn: True` in the `data` section to route heavy data loading tasks to Data Transfer Nodes (DTN).
-- **Scalable HPC**: The orchestrator can automatically provision and scale Dask-Jobqueue clusters on SLURM and PBS systems.
+MELODIES-MONET preserves Xarray/Dask laziness throughout the entire workflow. Laziness is only broken at the final rendering (plots) or output (CSV/NetCDF) steps.
+
+- **Task Routing**: Use `use_dtn: True` in the `data` section to ensure data loading occurs on HPC Data Transfer Nodes.
+- **Scalable Dask**: Clusters can be automatically provisioned and scaled on SLURM/PBS systems via the `analysis` configuration.

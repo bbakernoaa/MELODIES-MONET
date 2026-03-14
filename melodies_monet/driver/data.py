@@ -11,15 +11,14 @@ from melodies_monet.util import time_interval_subset as tsub
 
 
 class Data:
-    """The unified Data class for both models and observations.
+    """The unified Data class for MELODIES-MONET datasets.
 
     Acts as a conductor, leveraging monetio.load for ingestion and
-    standardizing processing.
+    standardizing processing for any data type (model or observation).
     """
 
-    def __init__(self, data_type="model"):
-        self.data_type = data_type
-        self.label = None
+    def __init__(self, label=None):
+        self.label = label
         self.source = None
         self.file_str = None
         self.files = None
@@ -32,7 +31,7 @@ class Data:
         self.mapping = None
         self.plot_kwargs = None
 
-        # Specific to models
+        # Grid and vertical settings
         self.is_global = False
         self.file_vert_str = None
         self.files_vert = None
@@ -42,8 +41,8 @@ class Data:
         self.files_pm25 = None
         self.scrip_file = None
 
-        # Specific to observations
-        self.obs_type = "pt_sfc"
+        # Data categorization and specialized processing
+        self.obs_type = None  # e.g., 'pt_sfc', 'aircraft'
         self.sat_type = None
         self.data_proc = None
         self.resample = None
@@ -56,7 +55,7 @@ class Data:
         """
         Return a string representation of the Data instance.
         """
-        return f"Data(type={self.data_type!r}, label={self.label!r}, source={self.source!r})"
+        return f"Data(label={self.label!r}, source={self.source!r})"
 
     def from_dict(self, cfg: dict):
         """
@@ -74,38 +73,39 @@ class Data:
         """
         self.cfg = cfg.copy()
 
-        if self.data_type in ["model", "exp"]:
-            self.source = cfg.get("mod_type", cfg.get("source"))
-            self.file_str = cfg.get("files", cfg.get("filename"))
-            self.mapping = cfg.get("mapping")
-            self.variable_dict = cfg.get("variables")
-            self.variable_summing = cfg.get("variable_summing")
-            self.is_global = cfg.get("is_global", False)
-            self.file_vert_str = cfg.get("files_vert")
-            self.file_surf_str = cfg.get("files_surf")
-            self.file_pm25_str = cfg.get("files_pm25")
-            self.scrip_file = cfg.get("scrip_file")
-        else:
-            self.obs_type = cfg.get("obs_type", "pt_sfc")
-            self.source = cfg.get("source")
-            self.file_str = cfg.get("filename", cfg.get("files"))
-            self.variable_dict = cfg.get("variables")
-            self.variable_summing = cfg.get("variable_summing")
-            self.resample = cfg.get("resample")
-            self.time_var = cfg.get("time_var")
-            self.ground_coordinate = cfg.get("ground_coordinate")
-            self.sat_type = cfg.get("sat_type")
-            self.data_proc = cfg.get("data_proc")
-            self.regrid_method = cfg.get("regrid_method")
+        # Source and files (handling legacy keys mod_type/filename)
+        self.source = cfg.get("source", cfg.get("mod_type"))
+        self.file_str = cfg.get("files", cfg.get("filename"))
 
+        # Processing and Mapping
+        self.mapping = cfg.get("mapping")
+        self.variable_dict = cfg.get("variables")
+        self.variable_summing = cfg.get("variable_summing")
+        self.data_proc = cfg.get("data_proc")
+        self.resample = cfg.get("resample")
+
+        # Grid and coordinates
+        self.is_global = cfg.get("is_global", False)
+        self.scrip_file = cfg.get("scrip_file")
+        self.ground_coordinate = cfg.get("ground_coordinate")
+        self.regrid_method = cfg.get("regrid_method")
+
+        # Specialized files
+        self.file_vert_str = cfg.get("files_vert")
+        self.file_surf_str = cfg.get("files_surf")
+        self.file_pm25_str = cfg.get("files_pm25")
+
+        # Metadata
+        self.obs_type = cfg.get("obs_type")
+        self.sat_type = cfg.get("sat_type")
+        self.time_var = cfg.get("time_var")
         self.plot_kwargs = cfg.get("plot_kwargs", {})
         self.use_dtn = cfg.get("use_dtn", False)
 
-        # Check for model kwargs and observation kwargs
-        if "mod_kwargs" in self.cfg:
-            self.cfg.update(self.cfg.pop("mod_kwargs"))
-        if "obs_kwargs" in self.cfg:
-            self.cfg.update(self.cfg.pop("obs_kwargs"))
+        # Check for unified kwargs (formerly mod_kwargs and obs_kwargs)
+        for k in ["kwargs", "mod_kwargs", "obs_kwargs"]:
+            if k in self.cfg:
+                self.cfg.update(self.cfg.pop(k))
 
         return self
 
@@ -123,7 +123,6 @@ class Data:
         None
         """
         from glob import glob
-
         from numpy import sort
 
         if not self.file_str:
@@ -183,9 +182,10 @@ class Data:
         # Build load_kwargs from the configuration
         load_kwargs = self.cfg.copy()
 
-        # Merge mod_kwargs if present
-        if "mod_kwargs" in load_kwargs:
-            load_kwargs.update(load_kwargs.pop("mod_kwargs"))
+        # Check for unified kwargs (formerly mod_kwargs and obs_kwargs)
+        for k in ["kwargs", "mod_kwargs", "obs_kwargs"]:
+            if k in load_kwargs:
+                load_kwargs.update(load_kwargs.pop(k))
 
         # Remove keys that are for MELODIES-MONET driver logic, not for monetio.load
         mm_keys = [
@@ -216,20 +216,22 @@ class Data:
             load_kwargs.pop(k, None)
 
         # Apply automated MM additions (var_list, fname_vert, etc.)
-        if self.data_type in ["model", "exp"]:
-            list_input_var = self._get_model_var_list()
+        list_input_var = self._get_var_list()
+        if list_input_var:
             load_kwargs.update({"var_list": list_input_var})
-            if self.files_vert:
-                load_kwargs.update({"fname_vert": self.files_vert})
-            if self.files_surf:
-                load_kwargs.update({"fname_surf": self.files_surf})
-            if self.files_pm25:
-                load_kwargs.update({"fname_pm25": self.files_pm25})
-            if self.source == "cesm_se":
-                scrip = os.path.expandvars(self.scrip_file) if self.scrip_file else ""
-                if scrip.startswith("example:"):
-                    scrip = tutorial.fetch_example(scrip.split(":", 1)[1].strip())
-                load_kwargs.update({"scrip_file": scrip})
+
+        if self.files_vert:
+            load_kwargs.update({"fname_vert": self.files_vert})
+        if self.files_surf:
+            load_kwargs.update({"fname_surf": self.files_surf})
+        if self.files_pm25:
+            load_kwargs.update({"fname_pm25": self.files_pm25})
+
+        if self.source == "cesm_se":
+            scrip = os.path.expandvars(self.scrip_file) if self.scrip_file else ""
+            if scrip.startswith("example:"):
+                scrip = tutorial.fetch_example(scrip.split(":", 1)[1].strip())
+            load_kwargs.update({"scrip_file": scrip})
 
         try:
             source = self.source or self._guess_source()
@@ -251,25 +253,29 @@ class Data:
                 print(f"Error loading {self.label} ({self.source}): {e}.")
                 raise e
 
-        if self.data_type == "obs":
+        # Standardized processing based on configuration
+        if self.ground_coordinate:
             self.add_coordinates_ground()
 
         self.mask_and_scale()
         self.rename_vars()
         self.sum_variables()
 
-        if self.data_type == "obs":
+        if self.resample:
             self.resample_data()
-            self.filter_obs()
-            if time_interval is not None and "time" in self.obj.dims:
-                self.obj = self.obj.sel(time=slice(time_interval[0], time_interval[-1]))
+
+        if self.data_proc:
+            self.filter_data()
+
+        if time_interval is not None and "time" in self.obj.dims:
+            self.obj = self.obj.sel(time=slice(time_interval[0], time_interval[-1]))
 
         # Scientific hygiene: Update history
         history = self.obj.attrs.get("history", "")
         new_history = f"{pd.Timestamp.now()}: Loaded and processed {self.label} data via MELODIES-MONET Orchestrator."
         self.obj.attrs["history"] = f"{new_history}\n{history}"
 
-    def _get_model_var_list(self):
+    def _get_var_list(self):
         """Gather all variables required for pairing and summing."""
         if not self.variable_dict and not self.mapping:
             return None
@@ -280,27 +286,32 @@ class Data:
             for v in self.variable_summing.values():
                 vars_req.update(v["vars"])
         if self.mapping:
+            # If it's a dict of dicts (legacy model mapping)
             for m in self.mapping.values():
-                vars_req.update(m.keys())
+                if isinstance(m, dict):
+                    vars_req.update(m.keys())
+                else:
+                    # Relational mapping (model_var: obs_var)
+                    vars_req.add(m)
         # Remove standardized names
         for vn in ["temperature_k", "pres_pa_mid"]:
             if vn in vars_req:
                 vars_req.remove(vn)
-        return list(vars_req)
+        return list(vars_req) if vars_req else None
 
     def _guess_source(self):
         if not self.files:
-            return self.label.lower()
+            return self.label.lower() if self.label else "generic"
         fn = self.files[0]
         ext = os.path.splitext(fn)[1].lower()
         if ext in {".ict", ".icartt"}:
             return "icartt"
         if ext == ".csv":
             return "aircraft_csv"
-        return self.label.lower()
+        return self.label.lower() if self.label else "generic"
 
     def add_coordinates_ground(self):
-        if self.obs_type == "ground" and self.ground_coordinate:
+        if self.ground_coordinate:
             self.obj["latitude"] = xr.ones_like(self.obj["time"], dtype=float) * self.ground_coordinate["latitude"]
             self.obj["longitude"] = xr.ones_like(self.obj["time"], dtype=float) * self.ground_coordinate["longitude"]
 
@@ -358,7 +369,7 @@ class Data:
         if self.resample:
             self.obj = self.obj.resample(time=self.resample).mean(dim="time")
 
-    def filter_obs(self):
+    def filter_data(self):
         if not self.data_proc or "filter_dict" not in self.data_proc:
             return
         fd = self.data_proc["filter_dict"]

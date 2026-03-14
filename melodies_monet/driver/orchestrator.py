@@ -201,8 +201,7 @@ class orchestrator:
         """
         if "data" in self.control_dict:
             for label, cfg in self.control_dict["data"].items():
-                inst = Data(data_type=cfg.get("type", "model"))
-                inst.label = label
+                inst = Data(label=label)
                 inst.from_dict(cfg)
 
                 if load_files:
