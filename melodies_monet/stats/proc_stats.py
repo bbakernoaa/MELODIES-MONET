@@ -3,11 +3,12 @@
 
 # Simple MONET utility to calculate statistics from paired hdf file
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import monet_stats
 import inspect
+
+import matplotlib.pyplot as plt
+import monet_stats
+import numpy as np
+
 
 def produce_stat_dict(stat_list, spaces=False):
     """Select statistics. Returns the full name of the statistic.
@@ -33,7 +34,7 @@ def produce_stat_dict(stat_list, spaces=False):
             func = getattr(monet_stats, stat_id)
             doc = func.__doc__
             if doc:
-                fullname = doc.strip().split('\n')[0].strip().strip('.')
+                fullname = doc.strip().split("\n")[0].strip().strip(".")
             else:
                 fullname = stat_id
         except AttributeError:
@@ -85,11 +86,11 @@ def calc(df, stat=None, obsvar=None, modvar=None, wind=False, **kwargs):
         stat_func = getattr(monet_stats, stat)
         sig = inspect.signature(stat_func)
 
-        call_kwargs = {'axis': None}
-        if 'minval' in sig.parameters:
-            call_kwargs['minval'] = kwargs.get('threshold', kwargs.get('minval', 0.0))
-        if 'threshold' in sig.parameters:
-            call_kwargs['threshold'] = kwargs.get('threshold', 0.0)
+        call_kwargs = {"axis": None}
+        if "minval" in sig.parameters:
+            call_kwargs["minval"] = kwargs.get("threshold", kwargs.get("minval", 0.0))
+        if "threshold" in sig.parameters:
+            call_kwargs["threshold"] = kwargs.get("threshold", 0.0)
 
         # Add any other matching kwargs
         for param in sig.parameters:
@@ -158,9 +159,9 @@ def create_table(df, outname="plot", title="stats", out_table_kwargs=None, debug
     for col in plot_df.columns:
         for idx in plot_df.index:
             val = plot_df.loc[idx, col]
-            if hasattr(val, 'compute'):
+            if hasattr(val, "compute"):
                 computed_val = val.compute()
-                if hasattr(computed_val, 'item'):
+                if hasattr(computed_val, "item"):
                     plot_df.loc[idx, col] = computed_val.item()
                 else:
                     plot_df.loc[idx, col] = computed_val
@@ -179,6 +180,7 @@ def create_table(df, outname="plot", title="stats", out_table_kwargs=None, debug
     fig.tight_layout()
 
     from melodies_monet.plots import savefig
+
     savefig(outname + ".png", loc=1, logo_height=70)
 
     return

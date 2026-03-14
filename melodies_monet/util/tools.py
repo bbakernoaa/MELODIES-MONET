@@ -773,74 +773,106 @@ def convert_std_to_amb_bc(ds, convert_vars=[], temp_var=None, pres_var=None):
         ds[var] = ds[var] * convert_std_to_amb_bc
 
 
-def calc_partialcolumn(modobj, var="NO2"):
-    """Calculates the partial column of a species from its concentration
+def calc_partialcolumn(ds: xr.Dataset, var: str = "NO2") -> xr.DataArray:
+    """
+    Calculates the partial column of a species from its concentration
     within a gridcell.
 
     Parameters
     ----------
-    modobj : xr.Dataset
-        Model data
-    var : str
-        variable to calculate the partial column from
+    ds : xr.Dataset
+        Model data containing `var`, 'pres_pa_mid', 'dz_m', and 'temperature_k'.
+    var : str, optional
+        Variable to calculate the partial column from, by default "NO2".
 
     Returns
     -------
     xr.DataArray
-        DataArray containing the partial column of the species.
+        DataArray containing the partial column of the species in molecules/cm2.
     """
+    import pandas as pd
+
     ppbv2molmol = 1e-9
     m2_to_cm2 = 1e4
     fac_units = ppbv2molmol * N_A / m2_to_cm2
-    partial_col = modobj[var] * modobj["pres_pa_mid"] * modobj["dz_m"] * fac_units / (R * modobj["temperature_k"])
+    partial_col = ds[var] * ds["pres_pa_mid"] * ds["dz_m"] * fac_units / (R * ds["temperature_k"])
     partial_col.attrs = {"units": "molecules/cm2", "long_name": f"{var} partial column"}
+
+    # Update history for provenance
+    history = ds.attrs.get("history", "")
+    now = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+    ds.attrs["history"] = history + f" [{now}] Calculated {var} partial column."
+
     return partial_col
 
 
-def calc_totalcolumn(modobj, var="NO2"):
-    """Calculates the total column of a species from its concentration.
+def calc_totalcolumn(ds: xr.Dataset, var: str = "NO2") -> xr.DataArray:
+    """
+    Calculates the total column of a species from its concentration.
 
     Parameters
     ----------
-    modobj : xr.Dataset
-        Model data
-    var : str
-        variable to calculate the total column from
+    ds : xr.Dataset
+        Model data containing `var` and necessary vertical coordinates.
+    var : str, optional
+        Variable to calculate the total column from, by default "NO2".
 
     Returns
     -------
     xr.DataArray
-        DataArray containing the total column of the species.
+        DataArray containing the total column of the species in molecules/cm2.
     """
-    data = calc_partialcolumn(modobj, var)
+    import pandas as pd
+
+    data = calc_partialcolumn(ds, var)
     try:
-        data = data.where(modobj["pres_pa_mid"] <= modobj["surfpres_pa"])
+        data = data.where(ds["pres_pa_mid"] <= ds["surfpres_pa"])
     except KeyError:
         pass
     total_col = data.sum(dim="z", keep_attrs=True)
     total_col.attrs = {"units": "molecules/cm2", "long_name": f"{var} total column"}
+
+    # Update history for provenance
+    history = ds.attrs.get("history", "")
+    now = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+    ds.attrs["history"] = history + f" [{now}] Calculated {var} total column."
+
     return total_col
 
 
-def calc_geolocaltime(modobj):
-    """Calculates the geographic local time based on the longitude.
+def calc_geolocaltime(ds: xr.Dataset) -> xr.DataArray:
+    """
+    Calculates the geographic local time based on the longitude.
 
     Parameters
     ----------
-    modobj : xr.Dataset
-        Model data
+    ds : xr.Dataset
+        Model data containing 'longitude' and 'time'.
 
     Returns
     -------
     xr.DataArray
         DataArray containing the local time based on longitude.
-    """
-    # Make sure that lon is in the range [-180, 180]
-    # This should be guaranteed by the reader, and it isn't needed,
-    # but it is very cheap to redo and should make us be safer.
 
-    hrs2ms = 3600_000
-    timedelta = (modobj["longitude"].values * hrs2ms / 15).astype("timedelta64[ms]")
-    localtime = modobj["time"] + timedelta
+    Examples
+    --------
+    >>> ds = xr.Dataset({"longitude": (("x",), [0, 15]), "time": pd.Timestamp("2023-01-01")})
+    >>> local_time = calc_geolocaltime(ds)
+    """
+    import pandas as pd
+
+    # 15 degrees = 1 hour = 3600 seconds -> 1 degree = 240 seconds
+    offset_seconds = ds["longitude"] * 240
+
+    # Use astype to preserve laziness
+    delta = offset_seconds.astype("timedelta64[s]")
+
+    localtime = ds["time"] + delta
     localtime.attrs["description"] = "Geographic local time, based on longitude"
+
+    # Update history for provenance
+    history = ds.attrs.get("history", "")
+    now = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+    ds.attrs["history"] = history + f" [{now}] Calculated geolocaltime from longitude."
+
     return localtime

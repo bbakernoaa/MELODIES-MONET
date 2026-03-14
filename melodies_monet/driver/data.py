@@ -123,6 +123,7 @@ class Data:
         None
         """
         from glob import glob
+
         from numpy import sort
 
         if not self.file_str:
