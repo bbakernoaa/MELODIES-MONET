@@ -201,8 +201,7 @@ class orchestrator:
         """
         if "data" in self.control_dict:
             for label, cfg in self.control_dict["data"].items():
-                inst = Data(data_type=cfg.get("type", "model"))
-                inst.label = label
+                inst = Data(label=label)
                 inst.from_dict(cfg)
 
                 if load_files:
@@ -395,11 +394,7 @@ class orchestrator:
         Delegates to monet-plots.
         """
         if "plotting" in self.control_dict:
-            try:
-                import monet_plots
-            except ImportError:
-                print("WARNING: monet_plots not found. Plotting cannot be performed.")
-                return
+            from melodies_monet.util.bridge import create_plots
 
             for group_label, cfg in self.control_dict["plotting"].items():
                 # Propagate global analysis settings
@@ -412,7 +407,7 @@ class orchestrator:
                 # Create a copy of needed pairs to avoid modifying the original objects if needed,
                 # but here we just need to pass them to monet_plots.
                 needed_pairs = {k: self.paired[k] for k in cfg.get("data", []) if k in self.paired}
-                monet_plots.create_plots(needed_pairs, **cfg_with_global)
+                create_plots(needed_pairs, **cfg_with_global)
 
     def stats(self):
         """
@@ -420,11 +415,7 @@ class orchestrator:
         Delegates to monet-stats.
         """
         if "stats" in self.control_dict:
-            try:
-                import monet_stats
-            except ImportError:
-                print("WARNING: monet_stats not found. Statistics cannot be calculated.")
-                return
+            from melodies_monet.util.bridge import compute_stats
 
             for group_label, cfg in self.control_dict["stats"].items():
                 # Propagate global analysis settings
@@ -434,7 +425,7 @@ class orchestrator:
                     **cfg,
                 }
                 needed_pairs = {k: self.paired[k] for k in cfg.get("data", []) if k in self.paired}
-                monet_stats.compute_stats(needed_pairs, **cfg_with_global)
+                compute_stats(needed_pairs, **cfg_with_global)
 
     def run(self):
         """
