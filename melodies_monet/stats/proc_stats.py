@@ -5,58 +5,13 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from monet.util.stats import (
-    AC,
-    E1,
-    FB,
-    FE,
-    IOA,
-    MB,
-    ME,
-    MNB,
-    MNE,
-    MO,
-    MP,
-    NMB,
-    NME,
-    NO,
-    NOP,
-    NP,
-    # MNPB, MdnNPB, MNPE, MdnNPE, NMPB, NMdnPB, NMPE, NMdnPE,
-    R2,
-    RM,
-    RMSE,
-    STDO,
-    STDP,
-    WDAC,
-    WDIOA,
-    # HSS, ETS,
-    WDMB,
-    WDME,
-    WDRMSE,
-    MdnB,
-    MdnE,
-    MdnNB,
-    MdnNE,
-    MdnO,
-    MdnP,
-    NMdnB,
-    NMdnE,
-    NMdnGE,
-    RMdn,
-    WDMdnB,
-    WDMdnE,
-    WDNMB_m,
-    d1,
-)
-
-import monet  # noqa: F401
-from melodies_monet.plots import savefig
-
+import pandas as pd
+import monet_stats
+import inspect
 
 def produce_stat_dict(stat_list, spaces=False):
-    """Select statistics. Only statistics listed in the default dictionary
-    below are available.
+    """Select statistics. Returns the full name of the statistic.
+    If the statistic is not found in monet_stats, it returns the ID as is.
 
     Parameters
     ----------
@@ -68,66 +23,37 @@ def produce_stat_dict(stat_list, spaces=False):
 
     Returns
     -------
-    dictionary
-        dictionary of statistics including abbreviations and full name
+    list of strings
+        list of full names of the statistics
 
     """
-    dict_stats_def = {
-        "STDO": "Obs Standard Deviation",
-        "STDP": "Mod Standard Deviation",
-        "MNB": "Mean Normalized Bias (%)",
-        "MNE": "Mean Normalized Gross Error (%)",
-        "MdnNB": "Median Normalized Bias (%)",
-        "MdnNE": "Median Normalized Gross Error (%)",
-        "NMdnGE": "Normalized Median Gross Error (%)",
-        "NO": "Obs Number",
-        "NOP": "Pairs Number",
-        "NP": "Mod Number",
-        "MO": "Obs Mean",
-        "MP": "Mod Mean",
-        "MdnO": "Obs Median",
-        "MdnP": "Mod Median",
-        "RM": "Mean Ratio Obs/Mod",
-        "RMdn": "Median Ratio Obs/Mod",
-        "MB": "Mean Bias",
-        "MdnB": "Median Bias",
-        "NMB": "Normalized Mean Bias (%)",
-        "NMdnB": "Normalized Median Bias (%)",
-        "FB": "Fractional Bias (%)",
-        "ME": "Mean Gross Error",
-        "MdnE": "Median Gross Error",
-        "NME": "Normalized Mean Error (%)",
-        "NMdnE": "Normalized Median Error (%)",
-        "FE": "Fractional Error (%)",
-        "R2": "Coefficient of Determination (R2)",
-        "RMSE": "Root Mean Square Error",
-        "d1": "Modified Index of Agreement",
-        "E1": "Modified Coefficient of Efficiency",
-        "IOA": "Index of Agreement",
-        "AC": "Anomaly Correlation",
-    }
     stat_fullname_list = []
     for stat_id in stat_list:
-        if spaces is False:
-            stat_fullname_list.append(dict_stats_def[stat_id].replace(" ", "_"))
-        else:
-            stat_fullname_list.append(dict_stats_def[stat_id])
-    # Note if you try to add a stat not in this list there will be an error in MELODIES-MONET,
-    # which is intended. If you want to add a new stat, please add the full name to the dictionary above.
+        try:
+            func = getattr(monet_stats, stat_id)
+            doc = func.__doc__
+            if doc:
+                fullname = doc.strip().split('\n')[0].strip().strip('.')
+            else:
+                fullname = stat_id
+        except AttributeError:
+            fullname = stat_id
+
+        if not spaces:
+            fullname = fullname.replace(" ", "_")
+        stat_fullname_list.append(fullname)
+
     return stat_fullname_list
 
 
-# Once redue the regulatory calculations. Use these from the surfplots. Or add these to a util script.
-# Any stats not calculated in MONET will be added as a routine here.
-
-
-def calc(df, stat=None, obsvar=None, modvar=None, wind=False):
+def calc(df, stat=None, obsvar=None, modvar=None, wind=False, **kwargs):
     """
     Calculate statistical metrics between model and observation data.
+    Dynamically calls functions from monet_stats, preserving lazy objects.
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : pandas.DataFrame or xarray.Dataset
         Model/observation paired data.
     stat : str
         Abbreviation of the statistic to calculate (e.g., 'MB', 'RMSE').
@@ -138,110 +64,52 @@ def calc(df, stat=None, obsvar=None, modvar=None, wind=False):
     wind : bool, optional
         Whether the variable is wind, requiring special handling of directional values.
         Default is False.
+    **kwargs : Any
+        Additional arguments passed to the statistic function (e.g., threshold, minval).
 
     Returns
     -------
-    float
+    float or xarray.DataArray
         The calculated statistical value.
     """
-    obs = df[obsvar].values
-    mod = df[modvar].values
+    obs = df[obsvar]
+    mod = df[modvar]
 
-    if stat == "STDO":
-        value = STDO(obs, mod, axis=None)
-    elif stat == "STDP":
-        value = STDP(obs, mod, axis=None)
-    # MNB looks wrong. Don't use for now.
-    elif stat == "MNB":
-        value = MNB(obs, mod, axis=None)
-    # MNE looks wrong. Don't use for now.
-    elif stat == "MNE":
-        value = MNE(obs, mod, axis=None)
-    elif stat == "MdnNB":
-        value = MdnNB(obs, mod, axis=None)
-    elif stat == "MdnNE":
-        value = MdnNE(obs, mod, axis=None)
-    elif stat == "NMdnGE":
-        value = NMdnGE(obs, mod, axis=None)
-    elif stat == "NO":
-        value = NO(obs, mod, axis=None)
-    elif stat == "NOP":
-        value = NOP(obs, mod, axis=None)
-    elif stat == "NP":
-        value = NP(obs, mod, axis=None)
-    elif stat == "MO":
-        value = MO(obs, mod, axis=None)
-    elif stat == "MP":
-        value = MP(obs, mod, axis=None)
-    elif stat == "MdnO":
-        value = MdnO(obs, mod, axis=None)
-    elif stat == "MdnP":
-        value = MdnP(obs, mod, axis=None)
-    elif stat == "RM":
-        value = RM(obs, mod, axis=None)
-    elif stat == "RMdn":
-        value = RMdn(obs, mod, axis=None)
-    elif stat == "MB":
-        if wind is True:
-            value = WDMB(obs, mod, axis=None)
-        else:
-            value = MB(obs, mod, axis=None)
-    elif stat == "MdnB":
-        if wind is True:
-            value = WDMdnB(obs, mod, axis=None)
-        else:
-            value = MdnB(obs, mod, axis=None)
-    elif stat == "NMB":
-        if wind is True:
-            value = WDNMB_m(obs, mod, axis=None)
-        else:
-            value = NMB(obs, mod, axis=None)
-    elif stat == "NMdnB":
-        value = NMdnB(obs, mod, axis=None)
-    elif stat == "FB":
-        value = FB(obs, mod, axis=None)
-    elif stat == "ME":
-        if wind is True:
-            value = WDME(obs, mod, axis=None)
-        else:
-            value = ME(obs, mod, axis=None)
-    elif stat == "MdnE":
-        if wind is True:
-            value = WDMdnE(obs, mod, axis=None)
-        else:
-            value = MdnE(obs, mod, axis=None)
-    elif stat == "NME":
-        value = NME(obs, mod, axis=None)
-    elif stat == "NMdnE":
-        value = NMdnE(obs, mod, axis=None)
-    elif stat == "FE":
-        value = FE(obs, mod, axis=None)
-    elif stat == "R2":
-        value = R2(obs, mod, axis=None)
-    elif stat == "RMSE":
-        if wind is True:
-            value = WDRMSE(obs, mod, axis=None)
-        else:
-            value = RMSE(obs, mod, axis=None)
-    elif stat == "d1":
-        value = d1(obs, mod, axis=None)
-    elif stat == "E1":
-        value = E1(obs, mod, axis=None)
-    elif stat == "IOA":
-        if wind is True:
-            value = WDIOA(obs, mod, axis=None)
-        else:
-            value = IOA(obs, mod, axis=None)
-    elif stat == "AC":
-        if wind is True:
-            value = WDAC(obs, mod, axis=None)
-        else:
-            value = AC(obs, mod, axis=None)
-    else:
-        print("Stat not found: " + stat)
-        value = np.nan
+    # Check for wind-specific stats in monet_stats
+    if wind:
+        wind_stat = f"WD{stat}"
+        if hasattr(monet_stats, wind_stat):
+            stat = wind_stat
 
-    return value
+    try:
+        stat_func = getattr(monet_stats, stat)
+        sig = inspect.signature(stat_func)
+
+        call_kwargs = {'axis': None}
+        if 'minval' in sig.parameters:
+            call_kwargs['minval'] = kwargs.get('threshold', kwargs.get('minval', 0.0))
+        if 'threshold' in sig.parameters:
+            call_kwargs['threshold'] = kwargs.get('threshold', 0.0)
+
+        # Add any other matching kwargs
+        for param in sig.parameters:
+            if param in kwargs and param not in call_kwargs:
+                call_kwargs[param] = kwargs[param]
+
+        value = stat_func(obs, mod, **call_kwargs)
+
+        # If it's an xarray object and we want a scalar for the table,
+        # we might need to compute it eventually, but we should stay lazy as long as possible.
+        # However, MELODIES-MONET stats table usually expects a scalar.
+        # For now, return the object and let the caller decide when to compute.
+        return value
+
+    except AttributeError:
+        print(f"Stat not found in monet_stats: {stat}")
+        return np.nan
+    except Exception as e:
+        print(f"Error calculating {stat}: {e}")
+        return np.nan
 
 
 def create_table(df, outname="plot", title="stats", out_table_kwargs=None, debug=False):
@@ -285,14 +153,29 @@ def create_table(df, outname="plot", title="stats", out_table_kwargs=None, debug
     ax.axis("off")
     ax.axis("tight")
 
-    rows = df["Stat_FullName"].values.tolist()
+    # If the dataframe contains lazy objects, we must compute them before plotting the table.
+    # This is the point where we 'break' laziness for visualization purposes.
 
-    df = df.drop(columns=["Stat_FullName"])
+    # We copy to avoid modifying the original if it was used elsewhere
+    plot_df = df.copy()
+    stat_full_names = plot_df["Stat_FullName"].values.tolist()
+    plot_df = plot_df.drop(columns=["Stat_FullName"])
+
+    # Compute any xarray objects
+    for col in plot_df.columns:
+        for idx in plot_df.index:
+            val = plot_df.loc[idx, col]
+            if hasattr(val, 'compute'):
+                computed_val = val.compute()
+                if hasattr(computed_val, 'item'):
+                    plot_df.loc[idx, col] = computed_val.item()
+                else:
+                    plot_df.loc[idx, col] = computed_val
 
     t = ax.table(
-        cellText=df.values,
-        rowLabels=rows,
-        colLabels=df.columns,
+        cellText=plot_df.values,
+        rowLabels=stat_full_names,
+        colLabels=plot_df.columns,
         loc="center",
         edges=table_kwargs["edges"],
     )
@@ -301,6 +184,8 @@ def create_table(df, outname="plot", title="stats", out_table_kwargs=None, debug
     t.scale(table_kwargs["xscale"], table_kwargs["yscale"])
     plt.title(title, fontsize=table_kwargs["fontsize"] * 1.1, fontweight="bold")
     fig.tight_layout()
+
+    from melodies_monet.plots import savefig
     savefig(outname + ".png", loc=1, logo_height=70)
 
     return

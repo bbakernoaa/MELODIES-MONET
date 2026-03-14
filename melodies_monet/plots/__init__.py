@@ -9,6 +9,11 @@ from pathlib import Path
 
 from monet import savefig as monet_savefig
 
+LOGO_PATH = Path(__file__).parent / "../data/MM_logo.png"
+
+def savefig(fname, **kwargs):
+    return partial(monet_savefig, logo=LOGO_PATH, loc=2, decorate=True, bbox_inches="tight", dpi=200)(fname, **kwargs)
+
 from . import aircraftplots, surfplots, xarray_plots
 
 __all__ = (

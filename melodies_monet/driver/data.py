@@ -241,10 +241,12 @@ class Data:
         except Exception as e:
             if self.files:
                 print(f"Error loading {self.label} ({self.source}): {e}. Falling back to generic xarray.")
+                xr_keys = ["engine", "chunks", "decode_times", "decode_coords", "drop_variables", "parallel"]
+                xr_kwargs = {k: v for k, v in load_kwargs.items() if k in xr_keys}
                 if len(self.files) > 1:
-                    self.obj = xr.open_mfdataset(self.files, **load_kwargs)
+                    self.obj = xr.open_mfdataset(self.files, **xr_kwargs)
                 else:
-                    self.obj = xr.open_dataset(self.files[0], **load_kwargs)
+                    self.obj = xr.open_dataset(self.files[0], **xr_kwargs)
             else:
                 print(f"Error loading {self.label} ({self.source}): {e}.")
                 raise e
