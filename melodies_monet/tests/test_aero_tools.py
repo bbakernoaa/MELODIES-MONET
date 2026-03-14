@@ -64,3 +64,53 @@ def test_provenance_update():
 
     assert "Calculated geolocaltime" in ds.attrs["history"]
     assert "Original history." in ds.attrs["history"]
+
+
+def test_wsdir2uv_parity():
+    """Verify wsdir2uv works identically for NumPy and Dask backends."""
+    ws_data = np.array([10.0, 5.0, 0.0])
+    wdir_data = np.array([0.0, 90.0, 180.0])
+
+    ws_eager = xr.DataArray(ws_data, dims="x", name="ws")
+    wdir_eager = xr.DataArray(wdir_data, dims="x", name="wdir")
+
+    # Eager execution
+    u_eager, v_eager = tools.wsdir2uv(ws_eager, wdir_eager)
+
+    # Lazy execution
+    ws_lazy = ws_eager.chunk({"x": 1})
+    wdir_lazy = wdir_eager.chunk({"x": 1})
+    u_lazy, v_lazy = tools.wsdir2uv(ws_lazy, wdir_lazy)
+
+    # Assertions
+    xr.testing.assert_allclose(u_eager, u_lazy.compute())
+    xr.testing.assert_allclose(v_eager, v_lazy.compute())
+    assert u_eager.attrs["long_name"] == "u_wind_component"
+    assert v_eager.attrs["long_name"] == "v_wind_component"
+    assert u_lazy.chunks is not None
+
+
+def test_get_relhum_parity():
+    """Verify get_relhum works identically for NumPy and Dask backends."""
+    temp_data = np.array([290.0, 300.0])
+    press_data = np.array([101325.0, 100000.0])
+    vap_data = np.array([0.01, 0.02])
+
+    temp_eager = xr.DataArray(temp_data, dims="x", name="temp")
+    press_eager = xr.DataArray(press_data, dims="x", name="press")
+    vap_eager = xr.DataArray(vap_data, dims="x", name="vap")
+
+    # Eager execution
+    rh_eager = tools.get_relhum(temp_eager, press_eager, vap_eager)
+
+    # Lazy execution
+    temp_lazy = temp_eager.chunk({"x": 1})
+    press_lazy = press_eager.chunk({"x": 1})
+    vap_lazy = vap_eager.chunk({"x": 1})
+    rh_lazy = tools.get_relhum(temp_lazy, press_lazy, vap_lazy)
+
+    # Assertions
+    xr.testing.assert_allclose(rh_eager, rh_lazy.compute())
+    assert rh_eager.attrs["units"] == "%"
+    assert "history" in rh_eager.attrs
+    assert rh_lazy.chunks is not None

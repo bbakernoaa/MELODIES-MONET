@@ -118,54 +118,100 @@ def kolmogorov_zurbenko_filter(df, col, window, iterations):
     return df.merge(z, on=["siteid", "time_local"])
 
 
-def wsdir2uv(ws, wdir):
+def _wsdir2uv_numpy(ws, wdir):
+    """Core NumPy implementation for wsdir2uv."""
+    u = -ws * np.sin(np.deg2rad(wdir))
+    v = -ws * np.cos(np.deg2rad(wdir))
+    return u, v
+
+
+def wsdir2uv(ws: xr.DataArray, wdir: xr.DataArray) -> tuple[xr.DataArray, xr.DataArray]:
     """
     Convert wind speed and direction to u and v components.
 
     Parameters
     ----------
-    ws : array-like
+    ws : xr.DataArray
         Wind speed.
-    wdir : array-like
+    wdir : xr.DataArray
         Wind direction in degrees.
 
     Returns
     -------
-    tuple
+    tuple[xr.DataArray, xr.DataArray]
         A tuple containing (u_component, v_component).
-    """
-    from numpy import cos, pi, sin
 
-    u = -ws * sin(wdir * pi / 180.0)
-    v = -ws * cos(wdir * pi / 180.0)
+    Examples
+    --------
+    >>> u, v = wsdir2uv(ws, wdir)
+    """
+    u, v = xr.apply_ufunc(
+        _wsdir2uv_numpy,
+        ws,
+        wdir,
+        input_core_dims=[[], []],
+        output_core_dims=[[], []],
+        dask="parallelized",
+        output_dtypes=[ws.dtype, ws.dtype],
+    )
+
+    u.attrs["long_name"] = "u_wind_component"
+    v.attrs["long_name"] = "v_wind_component"
+
     return u, v
 
 
-def get_relhum(temp, press, vap):
+def _get_relhum_numpy(temp, press, vap):
+    """Core NumPy implementation for get_relhum."""
+    temp_o = 273.16
+    # Saturation vapor pressure (Pa) - Tetens formula
+    es_vap = 611.0 * np.exp(17.67 * ((temp - temp_o) / (temp - 29.65)))
+    # Saturation mixing ratio (kg/kg)
+    ws_vap = 0.622 * (es_vap / press)
+    relhum = 100.0 * (vap / ws_vap)
+    return relhum
+
+
+def get_relhum(temp: xr.DataArray, press: xr.DataArray, vap: xr.DataArray) -> xr.DataArray:
     """
-    Calculate relative humidity.
+    Calculate relative humidity from temperature, pressure, and water vapor mixing ratio.
 
     Parameters
     ----------
-    temp : array-like
+    temp : xr.DataArray
         Temperature in Kelvin.
-    press : array-like
+    press : xr.DataArray
         Pressure in Pascals.
-    vap : array-like
+    vap : xr.DataArray
         Water vapor mixing ratio in kg/kg.
 
     Returns
     -------
-    array-like
+    xr.DataArray
         Relative humidity in percent.
+
+    Examples
+    --------
+    >>> relhum = get_relhum(temp, press, vap)
     """
-    # temp:  temperature (K)
-    # press: pressure (Pa)
-    # vap:   water vapor mixing ratio (kg/kg)
-    temp_o = 273.16
-    es_vap = 611.0 * np.exp(17.67 * ((temp - temp_o) / (temp - 29.65)))
-    ws_vap = 0.622 * (es_vap / press)
-    relhum = 100.0 * (vap / ws_vap)
+    import pandas as pd
+
+    relhum = xr.apply_ufunc(
+        _get_relhum_numpy,
+        temp,
+        press,
+        vap,
+        dask="parallelized",
+        output_dtypes=[temp.dtype],
+    )
+
+    relhum.attrs["units"] = "%"
+    relhum.attrs["long_name"] = "relative_humidity"
+    # Update history for provenance
+    history = relhum.attrs.get("history", "")
+    now = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+    relhum.attrs["history"] = history + f" [{now}] Calculated relative humidity."
+
     return relhum
 
 
