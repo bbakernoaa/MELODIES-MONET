@@ -14,6 +14,7 @@ _submodules = [
     "stats",
     "util",
     "tutorial",
+    "orchestrator",
 ]
 
 __all__ = [__version__] + _submodules

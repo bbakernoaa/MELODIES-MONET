@@ -24,17 +24,16 @@ class Data:
         self.file_str = None
         self.files = None
         self.obj = None
+        self.cfg = {}
 
         # Metadata and processing
         self.variable_dict = None
         self.variable_summing = None
         self.mapping = None
-        self.mod_kwargs = {}
         self.plot_kwargs = None
 
         # Specific to models
         self.is_global = False
-        self.radius_of_influence = 1e6
         self.file_vert_str = None
         self.files_vert = None
         self.file_surf_str = None
@@ -42,7 +41,6 @@ class Data:
         self.file_pm25_str = None
         self.files_pm25 = None
         self.scrip_file = None
-        self.proj = None
 
         # Specific to observations
         self.obs_type = "pt_sfc"
@@ -55,6 +53,9 @@ class Data:
         self.use_dtn = False
 
     def __repr__(self):
+        """
+        Return a string representation of the Data instance.
+        """
         return f"Data(type={self.data_type!r}, label={self.label!r}, source={self.source!r})"
 
     def from_dict(self, cfg: dict):
@@ -71,19 +72,18 @@ class Data:
         Data
             The updated Data instance.
         """
-        if self.data_type == "model":
+        self.cfg = cfg.copy()
+
+        if self.data_type in ["model", "exp"]:
             self.source = cfg.get("mod_type", cfg.get("source"))
             self.file_str = cfg.get("files", cfg.get("filename"))
             self.mapping = cfg.get("mapping")
             self.variable_dict = cfg.get("variables")
             self.variable_summing = cfg.get("variable_summing")
-            self.radius_of_influence = cfg.get("radius_of_influence", 1e6)
             self.is_global = cfg.get("is_global", False)
             self.file_vert_str = cfg.get("files_vert")
             self.file_surf_str = cfg.get("files_surf")
             self.file_pm25_str = cfg.get("files_pm25")
-            self.mod_kwargs = cfg.get("mod_kwargs", {})
-            self.plot_kwargs = cfg.get("plot_kwargs")
             self.scrip_file = cfg.get("scrip_file")
         else:
             self.obs_type = cfg.get("obs_type", "pt_sfc")
@@ -98,7 +98,15 @@ class Data:
             self.data_proc = cfg.get("data_proc")
             self.regrid_method = cfg.get("regrid_method")
 
+        self.plot_kwargs = cfg.get("plot_kwargs", {})
         self.use_dtn = cfg.get("use_dtn", False)
+
+        # Check for model kwargs and observation kwargs
+        if "mod_kwargs" in self.cfg:
+            self.cfg.update(self.cfg.pop("mod_kwargs"))
+        if "obs_kwargs" in self.cfg:
+            self.cfg.update(self.cfg.pop("obs_kwargs"))
+
         return self
 
     def glob_files(self, time_interval: list = None) -> None:
@@ -175,9 +183,43 @@ class Data:
             print(f"WARNING: No files found for {self.label}")
             return
 
-        load_kwargs = self.mod_kwargs.copy()
+        # Build load_kwargs from the configuration
+        load_kwargs = self.cfg.copy()
 
-        if self.data_type == "model":
+        # Merge mod_kwargs if present
+        if "mod_kwargs" in load_kwargs:
+            load_kwargs.update(load_kwargs.pop("mod_kwargs"))
+
+        # Remove keys that are for MELODIES-MONET driver logic, not for monetio.load
+        mm_keys = [
+            "type",
+            "files",
+            "filename",
+            "mapping",
+            "variables",
+            "variable_summing",
+            "plot_kwargs",
+            "use_dtn",
+            "data_proc",
+            "resample",
+            "time_var",
+            "ground_coordinate",
+            "regrid_method",
+            "obs_type",
+            "mod_type",
+            "source",
+            "label",
+            "is_global",
+            "files_vert",
+            "files_surf",
+            "files_pm25",
+            "scrip_file",
+        ]
+        for k in mm_keys:
+            load_kwargs.pop(k, None)
+
+        # Apply automated MM additions (var_list, fname_vert, etc.)
+        if self.data_type in ["model", "exp"]:
             list_input_var = self._get_model_var_list()
             load_kwargs.update({"var_list": list_input_var})
             if self.files_vert:

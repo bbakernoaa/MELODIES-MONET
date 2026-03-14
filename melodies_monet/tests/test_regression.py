@@ -28,7 +28,6 @@ def create_mock_data():
             "lon": np.arange(10),
         },
     )
-    mod_data.radius_of_influence = 10000
     mod_data.mapping = {"obs1": {"O3": "OZONE"}}
     mod_data.variable_dict = {"O3": {}}
 

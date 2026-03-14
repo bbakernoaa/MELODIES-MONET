@@ -6,6 +6,8 @@ from melodies_monet.driver.pair import pair
 # For backward compatibility
 model = Data
 observation = Data
+DataModel = Data
+DataObs = Data
 
 __all__ = (
     "pair",

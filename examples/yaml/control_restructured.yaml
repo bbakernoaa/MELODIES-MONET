@@ -1,61 +1,69 @@
-# Restructured MM Control YAML with Unified Data Section and Ref/Exp terminology
 analysis:
-  start_time: '2019-08-02-12:00:00' #UTC
-  end_time: '2019-08-03-12:00:00' #UTC
-  output_dir: './output'
-  debug: True
-
+  start_time: 2019-08-02-12:00:00
+  end_time: 2019-08-03-12:00:00
+  output_dir: ./output
+  debug: true
 data:
   cmaq_expt:
-    type: exp  # experimental / model data
-    files: 'example_cmaq_files.nc'
-    source: 'cmaq'
-    radius_of_influence: 18000
+    type: exp
+    files: example:camchem:fv
+    source: cmaq
     plot_kwargs:
-      color: 'magenta'
-      marker: 'o'
-      linestyle: '--'
-
+      color: magenta
+      marker: o
+      linestyle: --
+      label: CMAQ v5.3.1
   rrfs_expt:
     type: exp
-    files: 'example_rrfs_files.nc'
-    source: 'ufs'
-    radius_of_influence: 19500
+    files: example:camchem:se
+    source: ufs
     plot_kwargs:
-      color: 'purple'
-      marker: 'x'
-      linestyle: '--'
-
+      color: purple
+      marker: x
+      linestyle: --
+      label: RRFS-CMAQ
   airnow:
-    type: ref  # reference / observational data
-    files: 'example_airnow_files.nc'
+    type: ref
+    files: example:airnow:2019-08
     obs_type: pt_sfc
+    plot_kwargs:
+      color: black
+      marker: s
+      label: AirNow Obs
     variables:
       OZONE:
         unit_scale: 1
-        ylabel_plot: 'Ozone (ppbv)'
+        ylabel_plot: Ozone (ppbv)
         vmin_plot: 15.0
         vmax_plot: 55.0
-
 evaluations:
   all_expts:
-    exp: ['cmaq_expt', 'rrfs_expt']
-    ref: 'airnow'
+    exp:
+    - cmaq_expt
+    - rrfs_expt
+    ref: airnow
     mapping:
-      O3: 'OZONE'
-
+      O3: OZONE
 plotting:
   plot_grp1:
-    type: 'timeseries'
-    domain_type: ['all']
-    domain_name: ['CONUS']
-    data: ['all_expts'] # References the evaluation group defined above
+    type: timeseries
+    domain_type:
+    - all
+    domain_name:
+    - CONUS
+    data:
+    - all_expts
     data_proc:
-      ts_select_time: 'time_local'
-      ts_avg_window: 'h'
-
+      ts_select_time: time_local
+      ts_avg_window: h
 stats:
-  stat_list: ['MB', 'RMSE', 'R2']
-  domain_type: ['all']
-  domain_name: ['CONUS']
-  data: ['all_expts']
+  stat_list:
+  - MB
+  - RMSE
+  - R2
+  domain_type:
+  - all
+  domain_name:
+  - CONUS
+  data:
+  - all_expts

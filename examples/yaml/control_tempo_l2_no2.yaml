@@ -1,144 +1,148 @@
 analysis:
   start_time: '2024-09-05'
   end_time: '2024-09-07'
-  debug: True
+  debug: true
   output_dir: ./
   output_dir_read: ./
   save:
     paired:
-      method: 'netcdf'
-      # prefix: '2024-09-06'
+      method: netcdf
       data: all
   read:
     paired:
-      method: 'netcdf'
-      filenames: {tempo_l2_no2_wrfchem_v4.2: ['tempo_l2_no2_wrfchem_v4.2.nc4']}
-
-
-obs:
+      method: netcdf
+      filenames:
+        tempo_l2_no2_wrfchem_v4.2:
+        - tempo_l2_no2_wrfchem_v4.2.nc4
+data:
+  wrfchem_v4.2:
+    files: /glade/campaign/acom/acom-da/shawnh/AQ_WATCH/20240905/wrf/wrfout_hourly_d02_2024-09-0[5-7]*
+    mod_type: wrfchem
+    mod_kwargs:
+      mech: racm_esrl_vcp
+    mapping:
+      tempo_l2_no2:
+        no2: vertical_column_troposphere
+    projection: null
+    surf_only: false
+    type: model
   tempo_l2_no2:
-    debug: True
+    debug: true
     filename: /glade/campaign/acom/acom-da/sma/TEMPO_NO2_V03/TEMPO_NO2_L2_V03_20240906*_S0*
-    #filename: //glade/derecho/scratch/plichtig/TEMPO/*nc
     obs_type: sat_swath_clm
     sat_type: tempo_l2_no2
     variables:
       main_data_quality_flag:
         main_data_quality_flag_max: 0
-        var_applied: ['vertical_column_troposphere']
+        var_applied:
+        - vertical_column_troposphere
       vertical_column_troposphere:
-        ylabel_plot: 'NO2 trop. column'
+        ylabel_plot: NO2 trop. column
       pressure: {}
       tropopause_pressure: {}
       scattering_weights: {}
       amf_troposphere: {}
-
-
-model:
-  wrfchem_v4.2:
-    files: /glade/campaign/acom/acom-da/shawnh/AQ_WATCH/20240905/wrf/wrfout_hourly_d02_2024-09-0[5-7]*
-    mod_type: 'wrfchem'
-    mod_kwargs:
-      mech: 'racm_esrl_vcp'
-    mapping:
-      tempo_l2_no2:
-        no2: "vertical_column_troposphere"
-    projection: ~
-    surf_only: False
-
-  #camx_v3.2:
-  #  files: /Users/plichtig/melodies_monet/camx_output/mgolbazi/CAMx.nf3d.out.v7.10.cb6r5.20180801.avrg.grd01
-  #  mod_type: 'camx'
-  #  files_vert: /Users/plichtig/melodies_monet/camx_output/mgolbazi/met/camx.3d.12km.180801.bin
-  #  mapping:
-  #    tempo_l2_no2:
-  #      NO2: "vertical_column_troposphere"
-  #  projection: ~
-  #  surf_only: False
-
-
-
-plots:
+    type: obs
+plotting:
   plot_grp1:
-    type: 'timeseries'
+    type: timeseries
     fig_kwargs:
-      figsize: [12,6]
+      figsize:
+      - 12
+      - 6
     default_plot_kwargs:
       linewidth: 2.0
-      markersize: 10.
+      markersize: 10.0
     text_kwargs:
-      fontsize: 18.
-    domain_type: ["all", "auto-region:giorgi", "auto-region:custom"]
-    domain_name: ["CONUS", "CNA", "custom"]
-    domain_box: [37, -108, 40, -102]
-    data: ["tempo_l2_no2_wrfchem_v4.2"]
+      fontsize: 18.0
+    domain_type:
+    - all
+    - auto-region:giorgi
+    - auto-region:custom
+    domain_name:
+    - CONUS
+    - CNA
+    - custom
+    domain_box:
+    - 37
+    - -108
+    - 40
+    - -102
+    data:
+    - tempo_l2_no2_wrfchem_v4.2
     data_proc:
       ts_offset: (-4, 'h')
-      ts_avg_window: 'h'
-      set_axis: True
-
+      ts_avg_window: h
+      set_axis: true
   plot_grp2:
-    type: 'gridded_spatial_bias'
-    fig_kwargs: 
-      states: True
-      counties: True
-    text_kwargs:
-      fontsize: 16
-    domain_type: ['all', 'all']
-    domain_name: ['CONUS', 'model']
-    data: ['tempo_l2_no2_wrfchem_v4.2']
-    data_proc:
-      set_axis: True
-
-  plot_grp3:
-    type: 'spatial_dist'
+    type: gridded_spatial_bias
     fig_kwargs:
-      states: True
-      counties: True
+      states: true
+      counties: true
     text_kwargs:
       fontsize: 16
-    domain_type: ['all', 'all']
-    domain_name: ['CONUS', 'model']
-    data: ['tempo_l2_no2_wrfchem_v4.2']
+    domain_type:
+    - all
+    - all
+    domain_name:
+    - CONUS
+    - model
+    data:
+    - tempo_l2_no2_wrfchem_v4.2
     data_proc:
-      set_axis: True
+      set_axis: true
+  plot_grp3:
+    type: spatial_dist
+    fig_kwargs:
+      states: true
+      counties: true
+    text_kwargs:
+      fontsize: 16
+    domain_type:
+    - all
+    - all
+    domain_name:
+    - CONUS
+    - model
+    data:
+    - tempo_l2_no2_wrfchem_v4.2
+    data_proc:
+      set_axis: true
       vmax: 1e15
       vmin: 0
-
   plot_grp4:
-    type: 'taylor'
-    data: ['tempo_l2_no2_wrfchem_v4.2']
-    domain_type: ['all']
-    domain_name: ['CONUS']
+    type: taylor
+    data:
+    - tempo_l2_no2_wrfchem_v4.2
+    domain_type:
+    - all
+    domain_name:
+    - CONUS
     data_proc:
-      set_axis: True
+      set_axis: true
       ty_scale: 1.5
     default_plot_kwargs:
-      markersize: 10.
-      marker: 's'
-
+      markersize: 10.0
+      marker: s
 stats:
-  # Stats require positive numbers, so if you want to calculate temperature use Kelvin!
-  # Wind direction has special calculations for AirNow if obs name is 'WD'
-  stat_list: ["MB", "MdnB", "R2", "RMSE"]
-  # ^ List stats to calculate. Dictionary of definitions included
-  #   in submodule `plots/proc_stats`. Only stats listed below are currently working.
-  #   Full calc list:
-  #   ['STDO', 'STDP', 'MdnNB','MdnNE','NMdnGE',
-  #    'NO', 'NOP', 'NP', 'MO', 'MP', 'MdnO', 'MdnP',
-  #    'RM', 'RMdn', 'MB', 'MdnB', 'NMB', 'NMdnB', 'FB',
-  #    'ME','MdnE','NME', 'NMdnE', 'FE', 'R2', 'RMSE','d1',
-  #    'E1', 'IOA', 'AC']
-  round_output: 2 # optional; defaults to rounding to 3rd decimal place
-  output_table: False
-  # ^ Always outputs a .txt file.
-  #   Optional to also output a Matplotlib figure table (image).
-  output_table_kwargs: # optional
-    figsize: [7, 3]
-    fontsize: 12.
+  stat_list:
+  - MB
+  - MdnB
+  - R2
+  - RMSE
+  round_output: 2
+  output_table: false
+  output_table_kwargs:
+    figsize:
+    - 7
+    - 3
+    fontsize: 12.0
     xscale: 1.4
     yscale: 1.4
-    edges: "horizontal"
-  domain_type: ["all"]
-  domain_name: ["CONUS"]
-  data: ["tempo_l2_no2_wrfchem_v4.2"]
+    edges: horizontal
+  domain_type:
+  - all
+  domain_name:
+  - CONUS
+  data:
+  - tempo_l2_no2_wrfchem_v4.2

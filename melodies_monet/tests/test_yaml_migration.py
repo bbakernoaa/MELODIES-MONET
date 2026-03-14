@@ -35,11 +35,10 @@ def test_migrate_control_dict_unified_data():
         },
     }
     an._migrate_control_dict()
-    assert "models" in an.control_dict
-    assert "obs" in an.control_dict
-    assert "cmaq_expt" in an.control_dict["models"]
-    assert "airnow" in an.control_dict["obs"]
-    assert an.control_dict["models"]["cmaq_expt"]["source"] == "cmaq"
+    assert "data" in an.control_dict
+    assert "cmaq_expt" in an.control_dict["data"]
+    assert "airnow" in an.control_dict["data"]
+    assert an.control_dict["data"]["cmaq_expt"]["source"] == "cmaq"
 
 
 def test_migrate_control_dict_ref_exp():
@@ -63,10 +62,9 @@ def test_migrate_control_dict_ref_exp():
         },
     }
     an._migrate_control_dict()
-    assert "models" in an.control_dict
-    assert "obs" in an.control_dict
-    assert "cmaq_expt" in an.control_dict["models"]
-    assert "airnow" in an.control_dict["obs"]
+    assert "data" in an.control_dict
+    assert "cmaq_expt" in an.control_dict["data"]
+    assert "airnow" in an.control_dict["data"]
 
 
 def test_migrate_control_dict_legacy():
@@ -88,12 +86,12 @@ def test_migrate_control_dict_legacy():
         "plots": {"plot_grp1": {"type": "timeseries"}},
     }
     an._migrate_control_dict()
-    assert "models" in an.control_dict
+    assert "data" in an.control_dict
     assert "plotting" in an.control_dict
     assert "evaluations" in an.control_dict
     assert "airnow_cmaq" in an.control_dict["evaluations"]
-    assert an.control_dict["evaluations"]["airnow_cmaq"]["model"] == "cmaq"
-    assert an.control_dict["evaluations"]["airnow_cmaq"]["obs"] == "airnow"
+    assert an.control_dict["evaluations"]["airnow_cmaq"]["exp"] == "cmaq"
+    assert an.control_dict["evaluations"]["airnow_cmaq"]["ref"] == "airnow"
 
 
 def test_migrate_control_dict_list_eval():
@@ -147,8 +145,7 @@ def test_pair_data_mapping_logic():
     obs.obs_type = "pt_sfc"
     obs.obj = MagicMock()
 
-    an.models = {"mod1": mod}
-    an.obs = {"obs1": obs}
+    an.data = {"mod1": mod, "obs1": obs}
 
     # This should not crash
     from unittest.mock import patch
