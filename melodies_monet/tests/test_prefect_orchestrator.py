@@ -3,12 +3,7 @@
 import sys
 from unittest.mock import MagicMock, patch
 
-# Mock only what's absolutely necessary and not installed
-if "monet" not in sys.modules:
-    sys.modules["monet"] = MagicMock()
-if "monetio" not in sys.modules:
-    sys.modules["monetio"] = MagicMock()
-
+# Mock optional scientific backends not available in CI
 sys.modules["xesmf"] = MagicMock()
 
 from melodies_monet.driver.orchestrator import orchestrator

@@ -15,7 +15,7 @@ This audit categorizes the internal functions and classes of MELODIES-MONET into
 
 | Function / Module | Description |
 | :--- | :--- |
-| `melodies_monet/util/read_util.py` | Functions like `read_aircraft_obs_csv`, `read_pkl`, `read_analysis_ncf`. |
+| Consolidated to `monetio` / `orchestrator` | `read_aircraft_obs_csv` moved to `monetio.load`; `read_pkl`/`read_analysis_ncf` handled by orchestrator. |
 | `melodies_monet/util/read_grid_util.py` | Functions `read_grid_models` and `read_grid_obs`. |
 | `melodies_monet/util/time_interval_subset.py` | Time-based file filtering for various satellite and model products. |
 | `melodies_monet/util/write_util.py` | NetCDF/Zarr/Pickle persistence logic (`write_analysis_ncf`, `write_ncf`). |
