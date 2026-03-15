@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 import os
 
 import networkx as nx
@@ -179,10 +181,15 @@ class orchestrator:
 
         # Time intervals for chunking
         if "time_interval" in self.control_dict["analysis"]:
+            # Ensure freq is lowercase for Pandas 3.0+ compatibility
+            freq = self.control_dict["analysis"]["time_interval"]
+            if isinstance(freq, str):
+                freq = freq.lower()
+
             time_stamps = pd.date_range(
                 start=self.start_time,
                 end=self.end_time,
-                freq=self.control_dict["analysis"]["time_interval"],
+                freq=freq,
             )
             if time_stamps[-1] < pd.Timestamp(self.end_time):
                 time_stamps = time_stamps.append(pd.DatetimeIndex([self.end_time]))
@@ -231,14 +238,30 @@ class orchestrator:
                 # Model variables for this pairing
                 model_obj = mod.obj[list(set(keys + mod_vars))]
 
-                # Perform pairing
-                paired_data = m.pair(
-                    model_obj,
-                    ref.obj,
-                    suffix=mod.label,
-                    type=ref.obs_type.lower(),
-                    **self.pairing_kwargs.get(ref.obs_type.lower(), {}),
-                )
+                # Perform pairing using the monet accessor
+                # We use combine_point if available, otherwise fallback to monet.pair
+                if hasattr(model_obj.monet, "combine_point"):
+                    paired_data = model_obj.monet.combine_point(
+                        ref.obj,
+                        suffix=mod.label,
+                        type=ref.obs_type.lower(),
+                        **self.pairing_kwargs.get(ref.obs_type.lower(), {}),
+                    )
+                else:
+                    # Fallback to monet.pair if combine_point is not available
+                    # We check if monet has pair attribute
+                    pair_func = getattr(m, "pair", None)
+                    if pair_func is None:
+                        # try to import it
+                        from monet import pair as pair_func
+
+                    paired_data = pair_func(
+                        model_obj,
+                        ref.obj,
+                        suffix=mod.label,
+                        type=ref.obs_type.lower(),
+                        **self.pairing_kwargs.get(ref.obs_type.lower(), {}),
+                    )
 
                 p_inst = pair()
                 p_inst.ref = ref.label

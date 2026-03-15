@@ -1,14 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 import sys
 from unittest.mock import MagicMock, patch
 
 # Mock only what's absolutely necessary and not installed
-try:
-    import monet
-except ImportError:
+if "monet" not in sys.modules:
     sys.modules["monet"] = MagicMock()
-try:
-    import monetio
-except ImportError:
+if "monetio" not in sys.modules:
     sys.modules["monetio"] = MagicMock()
 
 sys.modules["xesmf"] = MagicMock()
@@ -43,7 +41,7 @@ def test_cluster_factory_platform_merge():
     from melodies_monet.orchestrator.cluster_config import ClusterFactory
 
     # Mock SpecCluster to avoid actual job submission during tests
-    with patch("dask_jobqueue.SLURMCluster") as mock_slurm:
+    with patch("dask_jobqueue.SLURMCluster"):
         with patch("dask.distributed.SpecCluster", return_value=MagicMock()) as mock_spec:
             ClusterFactory.get_cluster(platform="hera", account="test_acc")
             # When platform has worker_groups, it uses SpecCluster

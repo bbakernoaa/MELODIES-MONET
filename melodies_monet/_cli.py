@@ -1398,7 +1398,7 @@ def get_openaq(
 
         if method == "api-v2":
             # Drop times not on the hour
-            good = df.time == df.time.dt.floor("H")
+            good = df.time == df.time.dt.floor("h")
             typer.echo(f"Dropping {(~good).sum()}/{len(good)} rows that aren't on the hour.")
             df = df[good]
 

@@ -155,7 +155,7 @@ class Data:
         # Time subsetting
         if time_interval is not None:
             if self.source == "raqms":
-                self.files = tsub.subset_model_filelist(self.files, "%m_%d_%Y_%HZ", "6H", time_interval)
+                self.files = tsub.subset_model_filelist(self.files, "%m_%d_%Y_%HZ", "6h", time_interval)
             elif self.sat_type == "omps_nm":
                 self.files = tsub.subset_OMPS_l2(self.files, time_interval)
             elif self.sat_type == "mopitt_l3":

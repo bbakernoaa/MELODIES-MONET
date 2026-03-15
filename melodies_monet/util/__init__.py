@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 from . import (
     analysis_util,
     grid_util,

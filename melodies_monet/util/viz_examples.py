@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 import cartopy.crs as ccrs
 import hvplot.xarray  # noqa: F401
 import matplotlib.pyplot as plt

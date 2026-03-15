@@ -488,7 +488,7 @@ observation label is first and the model label is second
      for local time
    * **ts_avg_window:** This is for timeseries plots only. This is the averaging 
      window applied to the data. No averaging done if not provided in the yaml file (i.e., ts_avg_window is optional). Averaging is done if a pandas 
-     resample rule (e.g., 'H' is hourly, 'D' is daily) is specified.
+     resample rule (e.g., 'h' is hourly, 'D' is daily) is specified.
    * **altitude_yax2:** This is for "timeseries" plots for aircraft evaluation only. 
      This allows users to add a secondary right y-axis to the timeseries plot. Additional YAML options 
      are described below:

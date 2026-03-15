@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 import sys
 from unittest.mock import MagicMock
 
@@ -10,6 +12,8 @@ sys.modules["xesmf"] = MagicMock()
 sys.modules["cartopy"] = MagicMock()
 sys.modules["matplotlib"] = MagicMock()
 sys.modules["matplotlib.pyplot"] = MagicMock()
+
+import xarray as xr
 
 from melodies_monet.driver.analysis import analysis
 
@@ -150,11 +154,7 @@ def test_pair_data_mapping_logic():
     # This should not crash
     from unittest.mock import patch
 
-    with patch("monet.pair"):
+    with patch("monet.pair", create=True) as mock_pair:
+        mock_pair.return_value = xr.Dataset()
         an.pair_data()
         assert "eval1" in an.paired
-        # Check mapping usage
-        # In pair_data: keys = list(mapping.keys())
-        # model_obj = mod.obj[list(set(keys + mod_vars))]
-        # We can't easily check internal calls without more complex mocks,
-        # but the lack of crash is already a good sign.
