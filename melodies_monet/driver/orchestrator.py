@@ -2,10 +2,10 @@
 #
 import os
 
+import monet as m
 import networkx as nx
 import pandas as pd
 
-import monet as m
 from melodies_monet.driver.data import Data
 from melodies_monet.driver.pair import pair
 

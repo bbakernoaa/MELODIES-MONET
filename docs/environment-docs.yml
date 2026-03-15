@@ -13,7 +13,7 @@ dependencies:
   - monetio
   - netcdf4
   - numpy
-  - pandas
+  - pandas<3.0
   - pillow
   #
   # Extras
