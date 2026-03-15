@@ -27,6 +27,7 @@ dependencies:
   - typer
   - hvplot
   - geoviews
+  - xregrid
   - xesmf
   - wrf-python  # for WRF-Chem reader in monetio
   #
