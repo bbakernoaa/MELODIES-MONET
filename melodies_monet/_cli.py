@@ -257,10 +257,10 @@ def get_aeronet(
     debug: bool = typer.Option(False, "--debug/", help="Print more messages (including full tracebacks)."),
 ):
     """Download AERONET data using monetio and reformat for MM usage."""
+    import monetio as mio
     import numpy as np
     import pandas as pd
 
-    import monetio as mio
     from melodies_monet.util.write_util import write_ncf
 
     global DEBUG
@@ -384,9 +384,9 @@ def get_airnow(
     """Download AirNow data using monetio and reformat for MM usage."""
     import warnings
 
+    import monetio as mio
     import pandas as pd
 
-    import monetio as mio
     from melodies_monet.util.write_util import write_ncf
 
     global DEBUG
@@ -570,9 +570,9 @@ def get_ish_lite(
     """
     import warnings
 
+    import monetio as mio
     import pandas as pd
 
-    import monetio as mio
     from melodies_monet.util.write_util import write_ncf
 
     global DEBUG
@@ -776,9 +776,9 @@ def get_ish(
     """
     import warnings
 
+    import monetio as mio
     import pandas as pd
 
-    import monetio as mio
     from melodies_monet.util.write_util import write_ncf
 
     global DEBUG
@@ -981,9 +981,9 @@ def get_aqs(
     """
     import warnings
 
+    import monetio as mio
     import pandas as pd
 
-    import monetio as mio
     from melodies_monet.util.write_util import write_ncf
 
     global DEBUG
@@ -1029,6 +1029,7 @@ def get_aqs(
                 message="The (error|warn)_bad_lines argument has been deprecated",
             )
             try:
+                # Use meta=True now that we are on a newer monetio
                 df = mio.aqs.add_data(
                     dates,
                     param=param,
@@ -1038,63 +1039,12 @@ def get_aqs(
                     local=False,
                     wide_fmt=True,  # column for each variable
                     n_procs=num_workers,
-                    meta=False,  # TODO: enable or add option once monetio fixes released
+                    meta=True,
                 )
             except KeyError as e:
                 if daily and str(e) == "'time'":
                     typer.echo("Note that the daily option currently requires monetio >0.2.5")
                 raise
-
-    with _timer("Fetching site metadata"):
-        # Need UTC offset in order to compute local time
-        # But currently the `meta=True` option doesn't work
-        meta0 = pd.read_csv(
-            "https://aqs.epa.gov/aqsweb/airdata/aqs_sites.zip",
-            encoding="ISO-8859-1",
-            usecols=[0, 1, 2, 17, 24, 25],
-            dtype=str,
-        )
-        meta = (
-            meta0.copy()
-            .assign(
-                siteid=meta0["State Code"] + meta0["County Code"] + meta0["Site Number"],
-                utcoffset=meta0["GMT Offset"].astype(int),
-            )
-            .drop(
-                columns=["Site Number", "GMT Offset"],
-            )
-            .rename(
-                columns={
-                    "State Code": "state_code",
-                    "County Code": "county_code",
-                    "City Name": "city_name",
-                    "CBSA Name": "cbsa_name",
-                }
-            )
-        )
-        meta.loc[meta["city_name"] == "Not in a City", "city_name"] = "Not in a city"  # normalize
-
-        counties0 = pd.read_csv(
-            "https://aqs.epa.gov/aqsweb/documents/codetables/states_and_counties.csv",
-            encoding="ISO-8859-1",
-            dtype=str,
-        )
-        counties = counties0.copy().rename(
-            columns={
-                "State Code": "state_code",
-                "State Name": "state_name",
-                "State Abbreviation": "state_abbr",
-                "County Code": "county_code",
-                "County Name": "county_name",
-                "EPA Region": "epa_region",  # note without R prefix
-            }
-        )
-        counties["epa_region"] = "R" + counties["epa_region"].str.lstrip("0")
-
-        meta = meta.merge(counties, on=["state_code", "county_code"], how="left")
-
-        if daily:
-            meta = meta.drop(columns=["utcoffset"])
 
     with _timer("Forming xarray Dataset"):
         # Select requested time period (older monetio doesn't do this)
@@ -1157,8 +1107,6 @@ def get_aqs(
             site_vns.append("utcoffset")
         # NOTE: time_local not included since it varies in time as well
 
-        df = df.merge(meta, on="siteid", how="left", suffixes=(None, "_meta"))
-
         ds_site = df[site_vns].groupby("siteid").first().to_xarray().swap_dims(siteid="x")
 
         # Extract units info so we can add as attrs
@@ -1171,7 +1119,6 @@ def get_aqs(
         ds = (
             df[cols]
             .drop(columns=[vn for vn in site_vns if vn != "siteid"])
-            .drop(columns=[col for col in df.columns if col.endswith("_meta")])
             .drop_duplicates(["time", "siteid"], keep="first")
             .set_index(["time", "siteid"])
             .to_xarray()
@@ -1270,9 +1217,9 @@ def get_openaq(
     """Download hourly OpenAQ data using monetio and reformat for MM usage."""
     import warnings
 
+    import monetio as mio
     import pandas as pd
 
-    import monetio as mio
     from melodies_monet.util.write_util import write_ncf
 
     global DEBUG

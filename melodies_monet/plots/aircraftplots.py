@@ -12,6 +12,8 @@ import cartopy.crs as ccrs
 import matplotlib as mpl
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+import monet as monet
+import monet_plots
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -20,7 +22,6 @@ from matplotlib.patches import Rectangle
 from matplotlib.ticker import FuncFormatter
 from monet.util.tools import get_epa_region_bounds as get_epa_bounds
 
-import monet as monet
 from melodies_monet.plots import savefig
 
 sns.set_context("paper")
@@ -35,63 +36,61 @@ def custom_yaxis_formatter(x, pos):
 
 
 def make_spatial_bias(
-    df,
-    df_reg=None,
-    column_o=None,
-    label_o=None,
-    column_m=None,
-    label_m=None,
-    ylabel=None,
-    ptile=None,
-    vdiff=None,
-    outname="plot",
-    domain_type=None,
-    domain_name=None,
-    fig_dict=None,
-    text_dict=None,
-    debug=False,
+    df: pd.DataFrame,
+    df_reg: pd.DataFrame = None,
+    column_o: str = None,
+    label_o: str = None,
+    column_m: str = None,
+    label_m: str = None,
+    ylabel: str = None,
+    ptile: int = None,
+    vdiff: float = None,
+    outname: str = "plot",
+    domain_type: str = None,
+    domain_name: str = None,
+    fig_dict: dict = None,
+    text_dict: dict = None,
+    debug: bool = False,
 ):
     """Creates surface spatial bias plot.
 
     Parameters
     ----------
     df : pandas.DataFrame
-        model/obs paired data to plot
-    df_reg : pandas.DataFrame
-        model/obs paired regulatory data to plot
+        Model/obs paired data to plot.
+    df_reg : pandas.DataFrame, optional
+        Model/obs paired regulatory data to plot.
     column_o : str
-        Column label of observation variable to plot
+        Column label of observation variable to plot.
     label_o : str
-        Name of observation variable to use in plot title
+        Name of observation variable to use in plot title.
     column_m : str
-        Column label of model variable to plot
+        Column label of model variable to plot.
     label_m : str
-        Name of model variable to use in plot title
-    ylabel : str
-        Title of colorbar axis
-    ptile : integer
-        Percentile calculation
-    vdiff : float
-        Min and max value to use on colorbar axis
+        Name of model variable to use in plot title.
+    ylabel : str, optional
+        Title of colorbar axis.
+    ptile : int, optional
+        Percentile calculation (0-100).
+    vdiff : float, optional
+        Min and max value to use on colorbar axis.
     outname : str
-        file location and name of plot (do not include .png)
-    domain_type : str
-        Domain type specified in input yaml file
-    domain_name : str
-        Domain name specified in input yaml file
-    fig_dict : dictionary
-        Dictionary containing information about figure
-    text_dict : dictionary
-        Dictionary containing information about text
-    debug : boolean
-        Whether to plot interactively (True) or not (False). Flag for
-        submitting jobs to supercomputer turn off interactive mode.
+        File location and name of plot (do not include .png).
+    domain_type : str, optional
+        Domain type specified in input yaml file.
+    domain_name : str, optional
+        Domain name specified in input yaml file.
+    fig_dict : dict, optional
+        Dictionary containing information about figure.
+    text_dict : dict, optional
+        Dictionary containing information about text.
+    debug : bool
+        Whether to plot interactively (True) or not (False).
 
     Returns
     -------
-    plot
-        surface bias plot
-
+    None
+        Saves the generated plot to a file.
     """
     if debug is False:
         plt.ioff()
@@ -123,43 +122,28 @@ def make_spatial_bias(
         ylabel = "{:02d}".format(ptile) + "th percentile " + ylabel
 
     if df_reg is not None:
-        # JianHe: include options for percentile calculation (set in yaml file)
         if ptile is None:
             df_mean = df_reg.groupby(["siteid"], as_index=False).mean(numeric_only=True)
         else:
             df_mean = df_reg.groupby(["siteid"], as_index=False).quantile(ptile / 100.0, numeric_only=True)
-
-        # Specify val_max = vdiff. the sp_scatter_bias plot in MONET only uses the val_max value
-        # and then uses -1*val_max value for the minimum.
-        ax = monet.plots.sp_scatter_bias(
-            df_mean,
-            col1=column_o + "_reg",
-            col2=column_m + "_reg",
-            map_kwargs=map_kwargs,
-            val_max=vdiff,
-            cmap="OrangeBlue",
-            edgecolor="k",
-            linewidth=0.8,
-        )
+        col1, col2 = column_o + "_reg", column_m + "_reg"
     else:
-        # JianHe: include options for percentile calculation (set in yaml file)
         if ptile is None:
             df_mean = df.groupby(["siteid"], as_index=False).mean(numeric_only=True)
         else:
             df_mean = df.groupby(["siteid"], as_index=False).quantile(ptile / 100.0, numeric_only=True)
+        col1, col2 = column_o, column_m
 
-        # Specify val_max = vdiff. the sp_scatter_bias plot in MONET only uses the val_max value
-        # and then uses -1*val_max value for the minimum.
-        ax = monet.plots.sp_scatter_bias(
-            df_mean,
-            col1=column_o,
-            col2=column_m,
-            map_kwargs=map_kwargs,
-            val_max=vdiff,
-            cmap="OrangeBlue",
-            edgecolor="k",
-            linewidth=0.8,
-        )
+    p = monet_plots.SpatialBiasScatterPlot(
+        data=df_mean,
+        col1=col1,
+        col2=col2,
+        ax=plt.gca() if plt.get_fignums() else None,
+        cmap="OrangeBlue",
+        vmax=vdiff,
+        **map_kwargs,
+    )
+    ax = p.plot(edgecolor="k", linewidth=0.8)
 
     if domain_type == "all":
         latmin = 25.0
@@ -221,25 +205,35 @@ def make_spatial_bias(
 
 
 ####NEW function for adding 'altitude' variable as secondary y- axis (qzr++)
-def add_yax2_altitude(ax, pairdf, altitude_yax2, text_kwargs, vmin_y2, vmax_y2):
+def add_yax2_altitude(
+    ax: plt.Axes,
+    pairdf: pd.DataFrame,
+    altitude_yax2: dict,
+    text_kwargs: dict,
+    vmin_y2: float,
+    vmax_y2: float,
+) -> plt.Axes:
     """Creates secondary y-axis (altitude) for timeseries plot.
 
     Parameters
     ----------
-    ax : ax
-        Matplotlib ax from previous occurrences so it can overlay obs and model results on the same plot.
+    ax : matplotlib.axes.Axes
+        Matplotlib axes from previous occurrences to overlay obs and model results.
     pairdf : pandas.DataFrame
         Model/obs paired data to plot.
-    text_kwargs : dictionary
-        Dictionary containing information about text.
-    altitude_yax2: dictionary
-        Secondary y-axis (altitude) control options, including altitude_variable, altitude_ticks, etc.
-    vmin_y2, vmax_y2: the value[0], value[1] respectively defined in filter_dict in altitude_yax2 in YAML control option
+    altitude_yax2 : dict
+        Secondary y-axis (altitude) control options.
+    text_kwargs : dict
+        Dictionary containing information about text properties.
+    vmin_y2 : float
+        Minimum value for the secondary y-axis.
+    vmax_y2 : float
+        Maximum value for the secondary y-axis.
 
     Returns
     -------
-    ax : ax
-        Matplotlib ax such that driver.py can iterate to overlay multiple models on the same plot.
+    matplotlib.axes.Axes
+        The modified axes object.
     """
     ax2 = ax.twinx()
 
@@ -287,39 +281,37 @@ def add_yax2_altitude(ax, pairdf, altitude_yax2, text_kwargs, vmin_y2, vmax_y2):
 
 ###NEW curtain plot qzr++  (NEW CURTAIN model plot with model overlay, shared x-axis
 def make_curtain_plot(
-    time,
-    altitude,
-    model_data_2d,
-    obs_pressure,
-    pairdf,
-    mod_var,
-    obs_var,
-    grp_dict,
-    vmin=None,
-    vmax=None,
-    cmin=None,
-    cmax=None,
-    plot_dict=None,
-    outname="plot",
-    domain_type=None,
-    domain_name=None,
-    obs_label_config=None,
-    text_dict=None,
-    debug=False,
+    time: np.ndarray,
+    altitude: np.ndarray,
+    model_data_2d: np.ndarray,
+    obs_pressure: np.ndarray,
+    pairdf: pd.DataFrame,
+    mod_var: str,
+    obs_var: str,
+    grp_dict: dict,
+    vmin: float = None,
+    vmax: float = None,
+    cmin: float = None,
+    cmax: float = None,
+    plot_dict: dict = None,
+    outname: str = "plot",
+    domain_type: str = None,
+    domain_name: str = None,
+    obs_label_config: dict = None,
+    text_dict: dict = None,
+    debug: bool = False,
 ):
     """
-    Generates a curtain plot comparing model data with obs across altitude (Pressure, right now) over time,
-    with the ability to customize the appearance through a configuration dictionary.
-    ##Two Subplots: 1) model data contourf plot with model scatter overlay,
+    Generates a curtain plot comparing model data with obs across altitude (Pressure) over time.
+
+    Two Subplots: 1) model data contourf plot with model scatter overlay,
     2) another for observation data using scatter plot.
-    This layout ensures that both datasets can be analyzed without visual interference from each other.
     Shared X-Axis: The time axis is shared between the two plots for better comparison.
-    Titles and Labels: Each subplot has a title specific to the data it displays.
 
     Parameters
     ----------
     time : numpy.ndarray
-        Array of time points, expected to be numerical values suitable for plotting.
+        Array of time points.
     altitude : numpy.ndarray
         Array of altitude points.
     model_data_2d : numpy.ndarray
@@ -333,30 +325,29 @@ def make_curtain_plot(
     obs_var : str
         Observation variable name for labeling.
     grp_dict : dict
-        Plot configuration options including aesthetics and normalization parameters.
-    vmin : float
+        Plot configuration options.
+    vmin : float, optional
         Min value to use on y-axis.
-    vmax : float
+    vmax : float, optional
         Max value to use on y-axis.
-    cmin : float or None
-        Minimum value for color normalization, if applicable.
-    cmax : float or None
-        Maximum value for color normalization, if applicable.
-    plot_dict : dictionary
-        Dictionary containing information about plotting for each pair
-        (e.g., color, linestyle, markerstyle).
+    cmin : float, optional
+        Minimum value for color normalization.
+    cmax : float, optional
+        Maximum value for color normalization.
+    plot_dict : dict, optional
+        Plotting information for each pair.
     outname : str
         File location and name of plot.
-    domain_type : str
-        Type of domain being plotted (e.g., 'region', 'global').
-    domain_name : str
+    domain_type : str, optional
+        Type of domain being plotted.
+    domain_name : str, optional
         Name of the domain being plotted.
-    obs_label_config : dict
+    obs_label_config : dict, optional
         Configuration dictionary for observation labels.
-    text_dict : dict
-        Dictionary containing text properties (fontsize, fontweight, etc.).
+    text_dict : dict, optional
+        Dictionary containing text properties.
     debug : bool
-        Whether to plot interactively (True) or not (False). Flag for submitting jobs to supercomputer turn off interactive mode.
+        Whether to plot interactively (True) or not (False).
 
     Returns
     -------
@@ -502,44 +493,25 @@ def make_curtain_plot(
         [str(int(tick)) for tick in y_ticks]
     )  ##axs[1].set_yticklabels([str(int(tick)) if tick != y_ticks.min() else '' for tick in y_ticks]) #if needed to hide minimum
 
-    # Separate subplot for the observation scatter plot
+    # Use migrated monet-plots logic
+    p = monet_plots.AircraftCurtainPlot(
+        time=time,
+        altitude=altitude,
+        model_data_2d=model_data_2d,
+        obs_pressure=obs_pressure,
+        pairdf=pairdf,
+        mod_var=mod_var,
+        obs_var=obs_var,
+        fig=fig,
+        ax=axs[0],
+    )
+    p.plot(cmin=cmin, cmax=cmax, cmap=cmap, norm=norm)
+
+    # Re-apply titles and labels from grp_dict/text_dict
     axs[1].set_title(
         "Observation Scatter",
         fontsize=text_dict.get("fontsize", 18),
         fontweight=text_dict.get("fontweight", "bold"),
-    )
-    _ = axs[1].scatter(
-        time_dates,
-        obs_pressure,
-        c=pairdf[obs_var].values,
-        cmap=cmap,
-        norm=norm,
-        edgecolor=(0, 0, 0, 0),
-        linewidth=0.3,
-        alpha=0.5,
-    )
-    axs[1].xaxis.set_major_formatter(mdates.DateFormatter("%m-%d %H"))
-    axs[1].xaxis.set_major_locator(mdates.AutoDateLocator())
-    fig.autofmt_xdate(rotation=45, ha="right")
-
-    ##axs[1].set_ylabel('Pressure (Pa)', fontsize=text_dict.get('fontsize', 18), fontweight=text_dict.get('fontweight', 'bold'))  #made it flexible via YAML specified 'pressure_units'
-    axs[1].tick_params(axis="both", labelsize=text_dict.get("labelsize", 14))
-    axs[1].set_xlabel(
-        "Time",
-        fontsize=text_dict.get("fontsize", 18),
-        fontweight=text_dict.get("fontweight", "bold"),
-    )
-
-    # Plot model scatter data on top of the model curtain plot
-    axs[0].scatter(
-        time_dates,
-        obs_pressure,
-        c=pairdf[mod_var].values,
-        cmap=cmap,
-        norm=norm,
-        edgecolor="black",
-        linewidth=0.5,
-        alpha=0.7,
     )
 
     # Save the curtain plot for the current pair immediately
@@ -547,7 +519,6 @@ def make_curtain_plot(
     savefig(f"{outname}", loc=4, logo_height=250, dpi=300)
     plt.show()
 
-    # Only close the plot if not in debug mode
     if not debug:
         plt.close()
 
@@ -564,65 +535,64 @@ def make_curtain_plot(
 
 ####NEW vertprofile has option for both shading (for interquartile range) or box (interquartile range)-whisker (10th-90th percentile bounds) (qzr++)
 def make_vertprofile(
-    df,
-    column=None,
-    label=None,
-    ax=None,
-    bins=None,
-    altitude_variable=None,
-    ylabel=None,
-    vmin=None,
-    vmax=None,
-    domain_type=None,
-    domain_name=None,
-    plot_dict=None,
-    fig_dict=None,
-    text_dict=None,
-    debug=False,
-    interquartile_style=None,
-):
+    df: pd.DataFrame,
+    column: str = None,
+    label: str = None,
+    ax: plt.Axes = None,
+    bins: int = None,
+    altitude_variable: str = None,
+    ylabel: str = None,
+    vmin: float = None,
+    vmax: float = None,
+    domain_type: str = None,
+    domain_name: str = None,
+    plot_dict: dict = None,
+    fig_dict: dict = None,
+    text_dict: dict = None,
+    debug: bool = False,
+    interquartile_style: str = None,
+) -> plt.Axes:
     """Creates altitude profile plot.
 
     Parameters
     ----------
     df : pandas.DataFrame
         Model/obs paired data to plot.
-    column : str
+    column : str, optional
         Column label of variable to plot.
-    label : str
+    label : str, optional
         Name of variable to use in plot legend.
-    ax : ax
-        Matplotlib ax from previous occurrence so it can overlay obs and model results on the same plot.
-    bins : int or array-like
+    ax : matplotlib.axes.Axes, optional
+        Matplotlib axes from previous occurrence to overlay results.
+    bins : int or array-like, optional
         Bins for binning the altitude variable.
-    altitude_variable: str
-        The Altitude variable in the paired df e.g., 'MSL_GPS_Altitude_YANG'
-    ylabel : str
+    altitude_variable : str, optional
+        The altitude variable in the paired df.
+    ylabel : str, optional
         Title of y-axis.
-    vmin : float
+    vmin : float, optional
         Min value to use on y-axis.
-    vmax : float
+    vmax : float, optional
         Max value to use on y-axis.
-    domain_type : str
-        Domain type specified in input yaml file
-    domain_name : str
-        Domain name specified in input yaml file
-    plot_dict : dictionary
-        Dictionary containing information about plotting for each pair
-        (e.g., color, linestyle, markerstyle).
-    fig_dict : dictionary
+    domain_type : str, optional
+        Domain type specified in input yaml file.
+    domain_name : str, optional
+        Domain name specified in input yaml file.
+    plot_dict : dict, optional
+        Plotting information for each pair.
+    fig_dict : dict, optional
         Dictionary containing information about the figure.
-    text_dict : dictionary
+    text_dict : dict, optional
         Dictionary containing information about text.
     debug : bool
-        Whether to plot interactively (True) or not (False). Flag for submitting jobs to supercomputer turn off interactive mode.
-    interquartile_style= str
-        Whether the vertical profile uses shading or box style for interquartile range
+        Whether to plot interactively (True) or not (False).
+    interquartile_style : str, optional
+        Whether the vertical profile uses shading or box style for interquartile range.
 
     Returns
     -------
-    ax : ax
-        Matplotlib ax such that driver.py can iterate to overlay multiple models on the same plot.
+    matplotlib.axes.Axes
+        The modified axes object.
     """
     if debug is False:
         plt.ioff()
@@ -937,61 +907,67 @@ def make_vertprofile(
         else:
             ax.set_title(domain_name, fontweight="bold", **text_kwargs)
 
-    breakpoint()  # debug
-
     return ax
 
 
 ##NEW Scatter Density Plot for model obs pairs (matplotlib scatter plot if fill=False or seaborn kde sactter density plot if fill= True)
 def make_scatter_density_plot(
-    df,
-    mod_var=None,
-    obs_var=None,
-    ax=None,
-    color_map="viridis",
-    xlabel=None,
-    ylabel=None,
-    title=None,
-    fill=False,
-    vmin_x=None,
-    vmax_x=None,
-    vmin_y=None,
-    vmax_y=None,
-    outname="plot",
+    df: pd.DataFrame,
+    mod_var: str = None,
+    obs_var: str = None,
+    ax: plt.Axes = None,
+    color_map: str = "viridis",
+    xlabel: str = None,
+    ylabel: str = None,
+    title: str = None,
+    fill: bool = False,
+    vmin_x: float = None,
+    vmax_x: float = None,
+    vmin_y: float = None,
+    vmax_y: float = None,
+    outname: str = "plot",
     **kwargs,
-):
+) -> plt.Axes:
     """
-    Creates a scatter density plot for the specified column (variable) in the paired DataFrame (df).
+    Creates a scatter density plot for model/obs pairs.
 
     Parameters
-    --------
-
-    df: dataframe
-        Paired DataFrame containing the model and observation data to plot
-    obs_var: str
-        obs variable name in mapped pairs
-    mod_var: str
-        model variable name in mapped pairs
-    ax: Matplotlib axis from a previous occurrence to overlay obs and model results on the same plot
-    color_map: str
-        Colormap for the density (optional)
-    xlabel: str
-        Label for the x-axis (optional)
-    ylabel: str
-        Label for the y-axis (optional)
-    title: str
-        Title for the plot (optional)
-    fill: bool
-        Fill set to True for seaborn kde plot
+    ----------
+    df : pandas.DataFrame
+        Paired DataFrame containing the model and observation data.
+    mod_var : str, optional
+        Model variable name.
+    obs_var : str, optional
+        Observation variable name.
+    ax : matplotlib.axes.Axes, optional
+        Matplotlib axes from a previous occurrence.
+    color_map : str, optional
+        Colormap for the density.
+    xlabel : str, optional
+        Label for the x-axis.
+    ylabel : str, optional
+        Label for the y-axis.
+    title : str, optional
+        Title for the plot.
+    fill : bool
+        If True, creates a Seaborn KDE plot. If False, a scatter plot.
+    vmin_x : float, optional
+        Min value for x-axis.
+    vmax_x : float, optional
+        Max value for x-axis.
+    vmin_y : float, optional
+        Min value for y-axis.
+    vmax_y : float, optional
+        Max value for y-axis.
     outname : str
         File location and name of plot.
-    **kwargs: dict
-        Additional keyword arguments for customization
+    **kwargs : dict
+        Additional keyword arguments for customization.
 
     Returns
     -------
-    ax : ax
-        Matplotlib ax such that driver.py can iterate to overlay multiple models on the same plot.
+    matplotlib.axes.Axes
+        The modified axes object.
     """
 
     # Create a custom colormap based on color_map options in yaml or just use default colormap id color_map is just a string (e.g. viridis)
@@ -1107,33 +1083,36 @@ def make_scatter_density_plot(
 
 
 ##NEW Violin plot
-def calculate_violin(df, column=None, label=None, plot_dict=None, comb_violin=None, label_violin=None):
+def calculate_violin(
+    df: pd.DataFrame,
+    column: str = None,
+    label: str = None,
+    plot_dict: dict = None,
+    comb_violin: pd.DataFrame = None,
+    label_violin: list = None,
+) -> tuple:
     """
-    Combines data into an acceptable format for violin plots, similar to calculate_boxplot for box plots.
+    Combines data into an acceptable format for violin plots.
 
     Parameters
     ----------
     df : pandas.DataFrame
         DataFrame containing the model/obs paired data to plot.
-    column : str
+    column : str, optional
         Column label of the variable to plot.
-    label : str
+    label : str, optional
         Name of the variable to use in the plot legend.
-    plot_dict : dict
+    plot_dict : dict, optional
         Dictionary containing color information for the plot.
-    comb_violin : pandas.DataFrame
-        DataFrame containing information to create violin plots from previous occurrences,
-        to overlay multiple model results on one plot.
-    label_violin : list
-        List of dictionaries with string labels and colors to use in the violin plot from previous occurrences,
-        to overlay multiple model results on one plot.
+    comb_violin : pandas.DataFrame, optional
+        DataFrame containing information to create violin plots from previous occurrences.
+    label_violin : list, optional
+        List of dictionaries with labels and colors.
 
     Returns
     -------
-    comb_violin : pandas.DataFrame
-        DataFrame containing information to create violin plots.
-    label_violin : list
-        List of dictionaries with string labels and colors to use in the violin plot.
+    tuple
+        (comb_violin, label_violin)
     """
     if comb_violin is None and label_violin is None:
         comb_violin = pd.DataFrame()
@@ -1160,39 +1139,39 @@ def calculate_violin(df, column=None, label=None, plot_dict=None, comb_violin=No
 
 
 def make_violin_plot(
-    comb_violin,
-    label_violin,
-    outname="plot",
-    domain_type=None,
-    domain_name=None,
-    fig_dict=None,
-    text_dict=None,
-    debug=False,
-    ylabel=None,
-    vmin=None,
-    vmax=None,
+    comb_violin: pd.DataFrame,
+    label_violin: list,
+    outname: str = "plot",
+    domain_type: str = None,
+    domain_name: str = None,
+    fig_dict: dict = None,
+    text_dict: dict = None,
+    debug: bool = False,
+    ylabel: str = None,
+    vmin: float = None,
+    vmax: float = None,
 ):
     """
-    Creates a violin plot using combined data from multiple model/observation datasets.
+    Creates a violin plot from combined datasets.
 
     Parameters
     ----------
     comb_violin : pandas.DataFrame
-        DataFrame containing combined data for all datasets to be plotted.
+        DataFrame containing combined data for all datasets.
     label_violin : list
-        List of dictionaries with string labels and colors to use in the violin plot.
+        List of dictionaries with labels and colors.
     outname : str
         File location and name of plot (do not include .png).
-    domain_type : str
+    domain_type : str, optional
         Domain type specified in the input yaml file.
-    domain_name : str
+    domain_name : str, optional
         Domain name specified in the input yaml file.
-    fig_dict : dict
-        Dictionary containing information about figure properties.
-    text_dict : dict
-        Dictionary containing information about text properties.
+    fig_dict : dict, optional
+        Dictionary containing figure properties.
+    text_dict : dict, optional
+        Dictionary containing text properties.
     debug : bool
-        If True, the plot will be shown interactively. Useful for debugging.
+        If True, the plot will be shown interactively.
     ylabel : str, optional
         The label for the y-axis.
     vmin : float, optional
@@ -1203,6 +1182,7 @@ def make_violin_plot(
     Returns
     -------
     None
+        Saves the generated plot to a file.
     """
 
     if not debug:
@@ -1224,20 +1204,17 @@ def make_violin_plot(
     def_text = dict(fontsize=14)  # can increase fontsize for default text (> 14)
     text_kwargs = {**def_text, **text_dict} if text_dict else def_text
 
-    # Create the violin plot
-    # Use 'hue' parameter and set 'orient' to 'v' for vertical orientation
-    sns.violinplot(
+    # Use migrated monet-plots logic
+    p = monet_plots.ViolinPlot(
+        data=melted_comb_violin,
         x="group",
         y="value",
-        data=melted_comb_violin,
         hue="group",
-        hue_order=order,
+        order=order,
         palette=palette,
-        cut=0,
-        orient="v",
-        density_norm="width",
-        inner="quartile",
+        ax=plt.gca(),
     )
+    p.plot()
 
     # Set labels and title with increased size
     plt.xlabel("", weight="bold", fontsize=text_kwargs["fontsize"])

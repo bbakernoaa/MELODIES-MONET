@@ -450,6 +450,72 @@ class orchestrator:
                 needed_pairs = {k: self.paired[k] for k in cfg.get("data", []) if k in self.paired}
                 compute_stats(needed_pairs, **cfg_with_global)
 
+    def load_saved_data(self):
+        """
+        Load previously saved evaluation data (paired, data) if configured in the 'read' section.
+        """
+        if not self.read:
+            return
+
+        from glob import glob
+
+        import xarray as xr
+        from joblib import load
+
+        for attr, cfg in self.read.items():
+            method = cfg.get("method", "netcdf")
+            filenames = cfg.get("filenames")
+            if not filenames:
+                continue
+
+            # Resolve filenames
+            if isinstance(filenames, str):
+                files = sorted(glob(os.path.join(self.output_dir_read, filenames)))
+            elif isinstance(filenames, list):
+                files = []
+                for f in filenames:
+                    files.extend(glob(os.path.join(self.output_dir_read, f)))
+                files = sorted(files)
+            elif isinstance(filenames, dict):
+                # For netcdf paired data, filenames might be a dict {pair_label: [files]}
+                files = {
+                    k: sorted(
+                        glob(os.path.join(self.output_dir_read, v))
+                        if isinstance(v, str)
+                        else [sub for item in v for sub in glob(os.path.join(self.output_dir_read, item))]
+                    )
+                    for k, v in filenames.items()
+                }
+            else:
+                continue
+
+            if method == "pkl":
+                # Handle single or multiple pickle files
+                if isinstance(files, list):
+                    if len(files) == 1:
+                        setattr(self, attr, load(files[0]))
+                    else:
+                        # Logic to merge multiple pickles if they contain dicts
+                        combined = {}
+                        for f in files:
+                            combined.update(load(f))
+                        setattr(self, attr, combined)
+            elif method == "netcdf":
+                if attr == "paired":
+                    # Paired data is usually a dict of pair objects
+                    paired_dict = {}
+                    if isinstance(files, dict):
+                        for label, f_list in files.items():
+                            paired_dict[label] = pair()
+                            paired_dict[label].obj = xr.open_mfdataset(f_list)
+                            paired_dict[label].label = label
+                        setattr(self, attr, paired_dict)
+                else:
+                    # Generic data load
+                    if isinstance(files, list):
+                        ds = xr.open_mfdataset(files)
+                        setattr(self, attr, ds)
+
     def run(self):
         """
         Run the full evaluation workflow.
@@ -457,6 +523,9 @@ class orchestrator:
         orchestrator. Otherwise, it executes tasks sequentially in topological order.
         """
         use_prefect = self.control_dict["analysis"].get("use_prefect", False)
+
+        # Load any pre-existing data if configured
+        self.load_saved_data()
 
         if use_prefect:
             from melodies_monet.orchestrator.flows import main_orchestration_flow
@@ -471,7 +540,12 @@ class orchestrator:
             # We process each interval if defined, otherwise run once
             intervals = self.time_intervals if self.time_intervals else [None]
             for interval in intervals:
-                self.open_data(time_interval=interval)
-                self.pair_data()
+                # Only open data and pair if not already loaded from saved files
+                # This is a simplified check; in a full DAG we would skip specific nodes
+                if not self.data:
+                    self.open_data(time_interval=interval)
+                if not self.paired:
+                    self.pair_data()
+
                 self.stats()
                 self.plotting()

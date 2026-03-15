@@ -704,9 +704,9 @@ def find_obs_time_bounds(files=[], time_var=None):
             elif extension in [".ict", ".icartt"]:
                 obs = mio.icartt.add_data(file)
             elif extension in [".csv"]:
-                from melodies_monet.util.read_util import read_aircraft_obs_csv
+                import monetio as mio
 
-                obs = read_aircraft_obs_csv(filename=file, time_var=time_var)
+                obs = mio.load("aircraft_csv", files=file, time_var=time_var)
             else:
                 raise ValueError(f"extension {extension!r} currently unsupported")
         except Exception as e:
