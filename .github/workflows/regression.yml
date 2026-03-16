@@ -27,6 +27,7 @@ jobs:
       shell: bash -l {0}
       run: |
         python -m pip install --upgrade pip
+        python -m pip install git+https://github.com/bbakernoaa/xregrid.git
         python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monetio.git@develop
         python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monet.git@feature/interp_improvements
         python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monet-stats.git@dev

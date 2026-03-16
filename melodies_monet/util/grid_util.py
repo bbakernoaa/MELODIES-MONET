@@ -7,10 +7,11 @@ file: grid_util.py
 
 import math
 
-# import numba
+import numba
 import numpy as np
 
 
+# @numba.jit(nopython=True)
 def update_sparse_data_grid(
     time_edges,
     x_edges,
@@ -126,7 +127,7 @@ def sparse_data_to_array(
     return count_grid_array, data_grid_array
 
 
-# @numba.jit(nopython=True)
+@numba.jit(nopython=True)
 def update_data_grid(
     time_edges,
     x_edges,

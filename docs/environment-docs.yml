@@ -27,7 +27,6 @@ dependencies:
   - typer
   - hvplot
   - geoviews
-  - xregrid
   - xesmf
   - wrf-python  # for WRF-Chem reader in monetio
   #
@@ -46,5 +45,6 @@ dependencies:
   #
   - pip
   - pip:
+    - git+https://github.com/bbakernoaa/xregrid.git
     # melodies_monet itself
     - '-e ../'

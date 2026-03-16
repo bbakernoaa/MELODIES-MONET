@@ -561,6 +561,9 @@ def vert_interp(ds_model: xr.Dataset, df_obs: pd.DataFrame, var_name_list: list)
     """
     Perform vertical interpolation for pairing.
 
+    Note: This function currently requires conversion to pandas.DataFrame
+    to utilize `pd.merge_asof` for efficient nearest-neighbor time matching.
+
     Parameters
     ----------
     ds_model : xr.Dataset
@@ -581,6 +584,8 @@ def vert_interp(ds_model: xr.Dataset, df_obs: pd.DataFrame, var_name_list: list)
     var_name_list.append("pressure_model_nan")
 
     # Optimization: Extract pressure values once
+    # We use .values here as these are small coordinate arrays,
+    # but the bulk data remains lazy until the final conversion.
     p_obs_vals = sorted(ds_model.pressure_obs.squeeze().values, reverse=True)
 
     var_out_list = []
@@ -630,6 +635,9 @@ def vert_interp(ds_model: xr.Dataset, df_obs: pd.DataFrame, var_name_list: list)
 def mobile_and_ground_pair(ds_model: xr.Dataset, df_obs: pd.DataFrame, var_name_list: list) -> pd.DataFrame:
     """
     Pair mobile or ground-based observations with model data.
+
+    Note: This function currently requires conversion to pandas.DataFrame
+    to utilize `pd.merge_asof` for efficient nearest-neighbor time matching.
 
     Parameters
     ----------
