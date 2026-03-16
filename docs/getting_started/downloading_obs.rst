@@ -15,36 +15,12 @@ intermediate NetCDF file. These preprocess scripts are also useful so that users
 observational data over and over again for the same analysis period. We will work on automating this process further 
 in the future.
 
-The MELODIES MONET tool has a Command Line Interface (CLI) that can be used to download and create 
-MELODIES MONET-ready datasets for: AirNow, AERONET, AQS, ISH, ISH-Lite, and OpenAQ.
+MELODIES MONET leverages :mod:`monetio` to directly download and load many surface observational datasets. Users no longer need to use separate CLI commands for downloading; instead, specify the dataset source (e.g., 'airnow') in the YAML configuration file.
 
-The Command Line Interface allows users to very easily download datasets with a single command line argument. 
-Generally, users only need to select which subcommand to use (i.e., which observational data set you want to download) 
-and then specify the start date and end date like that below to download all US EPA AQS observations in August 2023::
-
-    $ melodies-monet get-aqs -s 2023-08-01 -e 2023-09-01
-
-The other datasets can be downloaded in the same way::
-
-    $ melodies-monet get-aeronet -s 2023-08-01 -e 2023-09-01
-    $ melodies-monet get-airnow -s 2023-08-01 -e 2023-09-01
-    $ melodies-monet get-ish -s 2023-08-01 -e 2023-09-01
-    $ melodies-monet get-ish-lite -s 2023-08-01 -e 2023-09-01
-    $ melodies-monet get-openaq -s 2023-08-01 -e 2023-09-01
-
-The Command Line Interface will default to compressing the dataset, which can significantly save space. However, this
-compression step also takes time and some users have run into problems. Users can easily turn this compression off 
-by adding ``--no-compress``::
-
-    $ melodies-monet get-aqs -s 2023-08-01 -e 2023-09-01 --no-compress
-
-There are many other optional features available that are fully described in the Appendix :doc:`/cli`.
+For more details on available sources and configuration, see :doc:`/users_guide/supported_datasets`.
 
 .. note::
-   For users using MELODIES MONET on the NOAA Hera machine (or other machines 
-   with download restrictions), you will need to use the MELODIES MONET Command Line Interface on a 
-   machine without download restrictions and manually copy the netCDF files produced 
-   onto the NOAA Hera machine.
+   On platforms with strict download restrictions (like NOAA Hera), you may need to download data on a machine with internet access and transfer the files manually.
 
 Aircraft, Sonde, Mobile, and Ground Campaign Data
 -------------------------------------------------

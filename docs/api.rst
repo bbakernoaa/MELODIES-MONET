@@ -17,7 +17,7 @@ API
    tutorial
    util
 
-A typical workflow involves using an instance of :class:`driver.analysis`.
+A typical workflow involves using an instance of :class:`driver.orchestrator` (or its alias :class:`driver.analysis`).
 See :doc:`the examples <examples/intro_examples>`.
 
 :ref:`genindex`

@@ -65,6 +65,8 @@ Table of Contents
    :maxdepth: 4
    :caption: User's Guide
 
+   USER_GUIDE_YAML
+   stats_and_plotting
    users_guide/introduction
    users_guide/description
    users_guide/supported_datasets

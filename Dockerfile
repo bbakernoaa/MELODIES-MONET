@@ -22,9 +22,13 @@ RUN pip install --no-cache-dir --upgrade pip
 
 # Install core repositories
 RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/monetio.git@develop
+RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/xregrid.git
 RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/monet.git@feature/interp_improvements
-RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/monet-stats.git@dev
-RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/monet-plots.git@main
+RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/monet-stats.git
+RUN pip install --no-cache-dir git+https://github.com/bbakernoaa/monet-plots.git@dev
+
+# Install additional dependencies for plotting
+RUN pip install --no-cache-dir pydecorate
 
 # Copy the MELODIES-MONET source code
 COPY . .
