@@ -1,15 +1,8 @@
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-# Mock heavy dependencies
-sys.modules["monet"] = MagicMock()
-sys.modules["monetio"] = MagicMock()
-sys.modules["monet_plots"] = MagicMock()
-sys.modules["monet_stats"] = MagicMock()
-sys.modules["xesmf"] = MagicMock()
-sys.modules["cartopy"] = MagicMock()
-sys.modules["matplotlib"] = MagicMock()
-sys.modules["matplotlib.pyplot"] = MagicMock()
+# We'll use localized mocks instead of global sys.modules pollution
+# to avoid breaking other tests that need the real monet/monetio/etc.
 
 from melodies_monet.driver.analysis import analysis
 
@@ -148,13 +141,8 @@ def test_pair_data_mapping_logic():
     an.data = {"mod1": mod, "obs1": obs}
 
     # This should not crash
-    from unittest.mock import patch
+    from unittest.mock import PropertyMock
 
-    with patch("monet.pair"):
+    with patch("monet.accessors.dataset_accessor.MONETAccessorDataset.pair", new=MagicMock()):
         an.pair_data()
         assert "eval1" in an.paired
-        # Check mapping usage
-        # In pair_data: keys = list(mapping.keys())
-        # model_obj = mod.obj[list(set(keys + mod_vars))]
-        # We can't easily check internal calls without more complex mocks,
-        # but the lack of crash is already a good sign.

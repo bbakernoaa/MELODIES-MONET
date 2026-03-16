@@ -188,6 +188,22 @@ class orchestrator:
                 time_stamps = time_stamps.append(pd.DatetimeIndex([self.end_time]))
             self.time_intervals = [[time_stamps[n], time_stamps[n + 1]] for n in range(len(time_stamps) - 1)]
 
+    def read_analysis(self):
+        """
+        Read previously saved analysis data.
+        """
+        if self.read:
+            from melodies_monet.util.read_util import read_saved_data
+
+            for attr, cfg in self.read.items():
+                read_saved_data(
+                    analysis=self,
+                    filenames=cfg["filenames"],
+                    method=cfg["method"],
+                    attr=attr,
+                    xr_kws=cfg.get("xr_kws", {}),
+                )
+
     def open_data(self, time_interval=None, load_files=True):
         """
         Open and load data sources defined in the control file.
@@ -232,8 +248,7 @@ class orchestrator:
                 model_obj = mod.obj[list(set(keys + mod_vars))]
 
                 # Perform pairing
-                paired_data = m.pair(
-                    model_obj,
+                paired_data = model_obj.monet.pair(
                     ref.obj,
                     suffix=mod.label,
                     type=ref.obs_type.lower(),

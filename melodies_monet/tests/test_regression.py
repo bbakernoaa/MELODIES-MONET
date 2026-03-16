@@ -18,8 +18,7 @@ if "monet_plots" not in sys.modules:
 def create_mock_data():
     from melodies_monet.driver.data import Data
 
-    mod_data = Data(data_type="model")
-    mod_data.label = "mod1"
+    mod_data = Data(label="mod1")
     mod_data.obj = xr.Dataset(
         {"O3": (("time", "lat", "lon"), np.ones((1, 10, 10)))},
         coords={
@@ -31,8 +30,7 @@ def create_mock_data():
     mod_data.mapping = {"obs1": {"O3": "OZONE"}}
     mod_data.variable_dict = {"O3": {}}
 
-    obs_data = Data(data_type="obs")
-    obs_data.label = "obs1"
+    obs_data = Data(label="obs1")
     obs_data.obs_type = "pt_sfc"
     obs_data.obj = xr.Dataset(
         {"OZONE": (("time", "site"), np.ones((1, 5)))},
@@ -62,38 +60,39 @@ def test_regression_sequential_vs_prefect():
     }
 
     # Mock monet.pair to return predictable output
-    import monet as m
+    from unittest.mock import PropertyMock
 
-    m.pair = MagicMock(return_value=xr.Dataset({"O3_mod1": (("time", "site"), np.ones((1, 5)))}))
+    mock_pair = MagicMock(return_value=xr.Dataset({"O3_mod1": (("time", "site"), np.ones((1, 5)))}))
+    with patch("monet.accessors.dataset_accessor.MONETAccessorDataset.pair", new=mock_pair):
 
-    # 1. Run Sequential
-    orc_seq = orchestrator()
-    orc_seq.control_dict = control_dict.copy()
-    orc_seq.control_dict["analysis"]["use_prefect"] = False
-    mod_data_s, obs_data_s = create_mock_data()
-    orc_seq.data = {"mod1": mod_data_s, "obs1": obs_data_s}
+        # 1. Run Sequential
+        orc_seq = orchestrator()
+        orc_seq.control_dict = control_dict.copy()
+        orc_seq.control_dict["analysis"]["use_prefect"] = False
+        mod_data_s, obs_data_s = create_mock_data()
+        orc_seq.data = {"mod1": mod_data_s, "obs1": obs_data_s}
 
-    with patch.object(orchestrator, "open_data", return_value=None):
-        orc_seq.run()
-    seq_paired = orc_seq.paired["eval1"].obj
+        with patch.object(orchestrator, "open_data", return_value=None):
+            orc_seq.run()
+        seq_paired = orc_seq.paired["eval1"].obj
 
-    # 2. Run Prefect (mocking the flow to call the same internal logic)
-    orc_pref = orchestrator()
-    orc_pref.control_dict = control_dict.copy()
-    orc_pref.control_dict["analysis"]["use_prefect"] = True
-    mod_data_p, obs_data_p = create_mock_data()
-    orc_pref.data = {"mod1": mod_data_p, "obs1": obs_data_p}
+        # 2. Run Prefect (mocking the flow to call the same internal logic)
+        orc_pref = orchestrator()
+        orc_pref.control_dict = control_dict.copy()
+        orc_pref.control_dict["analysis"]["use_prefect"] = True
+        mod_data_p, obs_data_p = create_mock_data()
+        orc_pref.data = {"mod1": mod_data_p, "obs1": obs_data_p}
 
-    with patch("melodies_monet.orchestrator.flows.main_orchestration_flow", create=True) as mock_flow:
+        with patch("melodies_monet.orchestrator.flows.main_orchestration_flow", create=True) as mock_flow:
 
-        def side_effect(orc_inst):
-            # Simulate what the flow does: it calls pair_data
-            orc_inst.pair_data()
-            return None
+            def side_effect(orc_inst):
+                # Simulate what the flow does: it calls pair_data
+                orc_inst.pair_data()
+                return None
 
-        mock_flow.side_effect = side_effect
-        orc_pref.run()
-    pref_paired = orc_pref.paired["eval1"].obj
+            mock_flow.side_effect = side_effect
+            orc_pref.run()
+        pref_paired = orc_pref.paired["eval1"].obj
 
     # 3. Compare
     xr.testing.assert_allclose(seq_paired, pref_paired)

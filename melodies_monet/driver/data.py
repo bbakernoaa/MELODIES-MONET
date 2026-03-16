@@ -307,8 +307,6 @@ class Data:
         ext = os.path.splitext(fn)[1].lower()
         if ext in {".ict", ".icartt"}:
             return "icartt"
-        if ext == ".csv":
-            return "aircraft_csv"
         return self.label.lower() if self.label else "generic"
 
     def add_coordinates_ground(self):
