@@ -122,7 +122,6 @@ For example, you can provide mechanism information (e.g., mech: 'cb6r3_ae6_aq') 
 for some models, in order to reduce processing time, you can only pull in the surface
 data (e.g., surf_only: True).
 
-**radius_of_influence:** The "radius of influence" used for pairing in MONET. 
 Typically this is set at the horizontal resolution of your model * 1.5. Setting 
 this to a smaller value will speed up the pairing process. 
 

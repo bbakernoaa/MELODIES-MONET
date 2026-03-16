@@ -16,17 +16,12 @@ N_A = 6.02214076e23
 
 from monet.util.tools import (
     _force_forder,
-    calc_24hr_ave,
-    calc_3hr_ave,
-    calc_8hr_rolling_max,
-    calc_annual_ave,
     findclosest,
     get_epa_region_bounds,
     get_epa_region_df,
     get_giorgi_region_bounds,
     get_giorgi_region_df,
     get_relhum,
-    kolmogorov_zurbenko_filter,
     linregress,
     long_to_wide,
     search_listinlist,
@@ -42,6 +37,78 @@ def list_contains(list1, list2):
                 return True
 
     return False
+
+
+def kolmogorov_zurbenko_filter(df, col, window, iterations):
+    """KZ filter implementation using monet_stats.
+    series is a pandas series
+    window is the filter window m in the units of the data (m = 2q+1)
+    iterations is the number of times the moving average is evaluated
+    """
+    from monet_stats import kz_filter
+
+    # KZ filter in monet_stats expects a Series or DataFrame with time index
+    def _apply_kz(group):
+        group = group.set_index("time_local").sort_index()
+        res = kz_filter(group[col], m=window, k=iterations)
+        return res
+
+    z = df.groupby("siteid", group_keys=False).apply(_apply_kz).reset_index()
+    z.columns = ["time_local", "siteid", col]
+    df = df.reset_index(drop=True)
+    return df.merge(z, on=["siteid", "time_local"], suffixes=("", "_kz"))
+
+
+def calc_8hr_rolling_max(df, col=None, window=None):
+    from monet_stats import mda8
+
+    def _apply_mda8(group):
+        group = group.set_index("time_local").sort_index()
+        return mda8(group[col], dim="time_local")
+
+    res = df.groupby("siteid", group_keys=False).apply(_apply_mda8).reset_index()
+    res.columns = ["time_local", "siteid", col]
+    df = df.reset_index(drop=True)
+    return df.merge(res, on=["siteid", "time_local"], suffixes=("", "_mda8"))
+
+
+def calc_24hr_ave(df, col=None):
+    from monet_stats import resample_data
+
+    def _apply_resample(group):
+        group = group.set_index("time_local").sort_index()
+        return resample_data(group[col], freq="D", method="mean")
+
+    res = df.groupby("siteid", group_keys=False).apply(_apply_resample).reset_index()
+    res.columns = ["time_local", "siteid", col]
+    df = df.reset_index(drop=True)
+    return df.merge(res, on=["siteid", "time_local"], suffixes=("", "_24hr"))
+
+
+def calc_3hr_ave(df, col=None):
+    from monet_stats import resample_data
+
+    def _apply_resample(group):
+        group = group.set_index("time_local").sort_index()
+        return resample_data(group[col], freq="3h", method="mean")
+
+    res = df.groupby("siteid", group_keys=False).apply(_apply_resample).reset_index()
+    res.columns = ["time_local", "siteid", col]
+    df = df.reset_index(drop=True)
+    return df.merge(res, on=["siteid", "time_local"], suffixes=("", "_3hr"))
+
+
+def calc_annual_ave(df, col=None):
+    from monet_stats import resample_data
+
+    def _apply_resample(group):
+        group = group.set_index("time_local").sort_index()
+        return resample_data(group[col], freq="A", method="mean")
+
+    res = df.groupby("siteid", group_keys=False).apply(_apply_resample).reset_index()
+    res.columns = ["time_local", "siteid", col]
+    df = df.reset_index(drop=True)
+    return df.merge(res, on=["siteid", "time_local"], suffixes=("", "_annual"))
 
 
 

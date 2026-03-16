@@ -49,7 +49,6 @@ model:
     mod_kwargs:
       mech: "racm_esrl_vcp"
       surf_only_nc: True  # specify that we have only one vertical level; WRF-Chem specific
-    radius_of_influence: 12000 # meters
     mapping: # of _model_ species name to _obs_ species name
       airnow: # specifically for the obs labeled 'airnow'
         PM2_5_DRY: "PM2.5"
@@ -65,7 +64,6 @@ model:
     mod_kwargs:
       mech: "racm_esrl_vcp"
       surf_only_nc: True
-    radius_of_influence: 12000
     mapping:
       airnow:
         PM2_5_DRY: "PM2.5"
