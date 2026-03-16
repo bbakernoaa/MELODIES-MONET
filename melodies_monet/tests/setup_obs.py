@@ -46,19 +46,27 @@ Generate random test observations
 """
 np.random.seed(control["test_setup"]["random_seed"])
 
-var_names = control["obs"]["test_obs"]["variables"].keys()
+# Handle unified 'data' section or legacy 'obs' section
+if "data" in control and "test_obs" in control["data"]:
+    obs_cfg = control["data"]["test_obs"]
+elif "obs" in control and "test_obs" in control["obs"]:
+    obs_cfg = control["obs"]["test_obs"]
+else:
+    raise ValueError("Could not find 'test_obs' in control file.")
+
+var_names = obs_cfg["variables"].keys()
 
 for ifile in range(args.nfile):
     df_dict = dict()
 
     for var_name in var_names:
-        if "range_min" in control["obs"]["test_obs"]["variables"][var_name]:
-            range_min = control["obs"]["test_obs"]["variables"][var_name]["range_min"]
+        if "range_min" in obs_cfg["variables"][var_name]:
+            range_min = obs_cfg["variables"][var_name]["range_min"]
         else:
             range_min = 0
 
-        if "range_max" in control["obs"]["test_obs"]["variables"][var_name]:
-            range_max = control["obs"]["test_obs"]["variables"][var_name]["range_max"]
+        if "range_max" in obs_cfg["variables"][var_name]:
+            range_max = obs_cfg["variables"][var_name]["range_max"]
         else:
             range_max = 1
 
@@ -73,4 +81,4 @@ for ifile in range(args.nfile):
     ds.attrs = {"timestamp units": "seconds since 1970 Jan 01 00:00:00"}
     logging.debug(ds)
     suffix = "_%d.nc" % ifile
-    ds.to_netcdf(control["obs"]["test_obs"]["files"].replace("*", suffix))
+    ds.to_netcdf(obs_cfg["files"].replace("*", suffix))

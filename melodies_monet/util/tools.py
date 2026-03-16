@@ -5,6 +5,7 @@ from __future__ import division
 from builtins import range
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 __author__ = "barry"
@@ -118,54 +119,100 @@ def kolmogorov_zurbenko_filter(df, col, window, iterations):
     return df.merge(z, on=["siteid", "time_local"])
 
 
-def wsdir2uv(ws, wdir):
+def _wsdir2uv_numpy(ws, wdir):
+    """Core NumPy implementation for wsdir2uv."""
+    u = -ws * np.sin(np.deg2rad(wdir))
+    v = -ws * np.cos(np.deg2rad(wdir))
+    return u, v
+
+
+def wsdir2uv(ws: xr.DataArray, wdir: xr.DataArray) -> tuple[xr.DataArray, xr.DataArray]:
     """
     Convert wind speed and direction to u and v components.
 
     Parameters
     ----------
-    ws : array-like
+    ws : xr.DataArray
         Wind speed.
-    wdir : array-like
+    wdir : xr.DataArray
         Wind direction in degrees.
 
     Returns
     -------
-    tuple
+    tuple[xr.DataArray, xr.DataArray]
         A tuple containing (u_component, v_component).
-    """
-    from numpy import cos, pi, sin
 
-    u = -ws * sin(wdir * pi / 180.0)
-    v = -ws * cos(wdir * pi / 180.0)
+    Examples
+    --------
+    >>> u, v = wsdir2uv(ws, wdir)
+    """
+    u, v = xr.apply_ufunc(
+        _wsdir2uv_numpy,
+        ws,
+        wdir,
+        input_core_dims=[[], []],
+        output_core_dims=[[], []],
+        dask="parallelized",
+        output_dtypes=[ws.dtype, ws.dtype],
+    )
+
+    u.attrs["long_name"] = "u_wind_component"
+    v.attrs["long_name"] = "v_wind_component"
+
     return u, v
 
 
-def get_relhum(temp, press, vap):
+def _get_relhum_numpy(temp, press, vap):
+    """Core NumPy implementation for get_relhum."""
+    temp_o = 273.16
+    # Saturation vapor pressure (Pa) - Tetens formula
+    es_vap = 611.0 * np.exp(17.67 * ((temp - temp_o) / (temp - 29.65)))
+    # Saturation mixing ratio (kg/kg)
+    ws_vap = 0.622 * (es_vap / press)
+    relhum = 100.0 * (vap / ws_vap)
+    return relhum
+
+
+def get_relhum(temp: xr.DataArray, press: xr.DataArray, vap: xr.DataArray) -> xr.DataArray:
     """
-    Calculate relative humidity.
+    Calculate relative humidity from temperature, pressure, and water vapor mixing ratio.
 
     Parameters
     ----------
-    temp : array-like
+    temp : xr.DataArray
         Temperature in Kelvin.
-    press : array-like
+    press : xr.DataArray
         Pressure in Pascals.
-    vap : array-like
+    vap : xr.DataArray
         Water vapor mixing ratio in kg/kg.
 
     Returns
     -------
-    array-like
+    xr.DataArray
         Relative humidity in percent.
+
+    Examples
+    --------
+    >>> relhum = get_relhum(temp, press, vap)
     """
-    # temp:  temperature (K)
-    # press: pressure (Pa)
-    # vap:   water vapor mixing ratio (kg/kg)
-    temp_o = 273.16
-    es_vap = 611.0 * np.exp(17.67 * ((temp - temp_o) / (temp - 29.65)))
-    ws_vap = 0.622 * (es_vap / press)
-    relhum = 100.0 * (vap / ws_vap)
+    import pandas as pd
+
+    relhum = xr.apply_ufunc(
+        _get_relhum_numpy,
+        temp,
+        press,
+        vap,
+        dask="parallelized",
+        output_dtypes=[temp.dtype],
+    )
+
+    relhum.attrs["units"] = "%"
+    relhum.attrs["long_name"] = "relative_humidity"
+    # Update history for provenance
+    history = relhum.attrs.get("history", "")
+    now = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+    relhum.attrs["history"] = history + f" [{now}] Calculated relative humidity."
+
     return relhum
 
 
@@ -510,62 +557,67 @@ def resample_stratify(da, levels, vertical, axis=1, interpolation="linear", extr
     return out
 
 
-def vert_interp(ds_model, df_obs, var_name_list):
+def vert_interp(ds_model: xr.Dataset, df_obs: pd.DataFrame, var_name_list: list) -> pd.DataFrame:
+    """
+    Perform vertical interpolation for pairing.
+
+    Note: This function currently requires conversion to pandas.DataFrame
+    to utilize `pd.merge_asof` for efficient nearest-neighbor time matching.
+
+    Parameters
+    ----------
+    ds_model : xr.Dataset
+        Model data.
+    df_obs : pd.DataFrame
+        Observation data.
+    var_name_list : list
+        List of variables to interpolate.
+
+    Returns
+    -------
+    pd.DataFrame
+        Paired data.
+    """
     from pandas import merge_asof
 
     ds_model["pressure_model_nan"] = ds_model["pressure_model"].copy()
     var_name_list.append("pressure_model_nan")
 
+    # Optimization: Extract pressure values once
+    # We use .values here as these are small coordinate arrays,
+    # but the bulk data remains lazy until the final conversion.
+    p_obs_vals = sorted(ds_model.pressure_obs.squeeze().values, reverse=True)
+
     var_out_list = []
     for var_name in var_name_list:
         if var_name == "pressure_model":
-            out = resample_stratify(
-                ds_model[var_name],
-                sorted(ds_model.pressure_obs.squeeze().values, reverse=True),
-                ds_model["pressure_model"],
-                axis=1,
-                interpolation="linear",
-                extrapolation="linear",
-            )
-            # Use linear extrapolation for the pressure_model so that later these will pair correctly with pressure_obs.
+            extrap = "linear"
         elif var_name == "pressure_model_nan":
-            out = resample_stratify(
-                ds_model[var_name],
-                sorted(ds_model.pressure_obs.squeeze().values, reverse=True),
-                ds_model["pressure_model"],
-                axis=1,
-                interpolation="linear",
-                extrapolation="nan",
-            )
-            # Keep track of the extrapolation points with a NaN so that can print out notes and warnings for users.
+            extrap = "nan"
         else:
-            out = resample_stratify(
-                ds_model[var_name],
-                sorted(ds_model.pressure_obs.squeeze().values, reverse=True),
-                ds_model["pressure_model"],
-                axis=1,
-                interpolation="linear",
-                extrapolation="nearest",
-            )
+            extrap = "nearest"
+
+        out = resample_stratify(
+            ds_model[var_name],
+            p_obs_vals,
+            ds_model["pressure_model"],
+            axis=1,
+            interpolation="linear",
+            extrapolation=extrap,
+        )
         out.name = var_name
         var_out_list.append(out)
 
+    # Conversion to dataframe is unavoidable for merge_asof,
+    # but we minimize the data being converted.
     df_model = xr.merge(var_out_list).to_dataframe().reset_index()
-    for x in df_model.x.unique():
-        if df_model[df_model.x == x].pressure_obs.unique() > df_model[df_model.x == x].pressure_model_nan.max():
-            print(
-                f"Note: Point {x!r}, is below the mid-point of the lowest model level and nearest neighbor extrapolation",
-                "occurs for vertical pairing.",
-            )
-        elif df_model[df_model.x == x].pressure_obs.unique() < df_model[df_model.x == x].pressure_model_nan.min():
-            print(
-                f"Warning: Point {x!r}, is above the mid-point of the highest model level and nearest neighbor extrapolation",
-                "occurs for vertical pairing. Extrapolating beyond the model top is not recommended. Proceed with caution.",
-            )
+
+    # Clean up and rename
     df_model.drop(
         labels=["x", "y", "z", "pressure_obs", "pressure_model_nan", "time_obs"],
         axis=1,
         inplace=True,
+        errors="ignore",
     )
     df_model.rename(columns={"pressure_model": "pressure_obs"}, inplace=True)
 
@@ -580,26 +632,40 @@ def vert_interp(ds_model, df_obs, var_name_list):
     return final_df_model
 
 
-def mobile_and_ground_pair(ds_model, df_obs, var_name_list):
+def mobile_and_ground_pair(ds_model: xr.Dataset, df_obs: pd.DataFrame, var_name_list: list) -> pd.DataFrame:
+    """
+    Pair mobile or ground-based observations with model data.
+
+    Note: This function currently requires conversion to pandas.DataFrame
+    to utilize `pd.merge_asof` for efficient nearest-neighbor time matching.
+
+    Parameters
+    ----------
+    ds_model : xr.Dataset
+        Model data.
+    df_obs : pd.DataFrame
+        Observation data.
+    var_name_list : list
+        List of variables to pair.
+
+    Returns
+    -------
+    pd.DataFrame
+        Paired data.
+    """
     from pandas import merge_asof
 
-    var_out_list = []
-    # Extract just the surface level data from correct model variables
-    # if there is a z dimension, extract the surface, otherwise assume data is at surface and issue warning
+    # Extract just the surface level data
     if "z" in ds_model.dims:
-        for var_name in var_name_list:
-            out = ds_model[var_name].isel(z=0)
-            out.name = var_name
-            var_out_list.append(out)
+        ds_surf = ds_model[var_name_list].isel(z=0)
     else:
         print("WARNING: No z dimension in model, assuming all data at surface.")
-        for var_name in var_name_list:
-            out = ds_model[var_name]
-            out.name = var_name
-            var_out_list.append(out)
+        ds_surf = ds_model[var_name_list]
 
-    df_model = xr.merge(var_out_list).to_dataframe().reset_index()
-    df_model.drop(labels=["x", "y", "time_obs"], axis=1, inplace=True)
+    df_model = ds_surf.to_dataframe().reset_index()
+
+    # Drop non-essential columns before merge to save memory
+    df_model.drop(labels=["x", "y", "time_obs"], axis=1, inplace=True, errors="ignore")
 
     final_df_model = merge_asof(
         df_obs,
@@ -646,9 +712,9 @@ def find_obs_time_bounds(files=[], time_var=None):
             elif extension in [".ict", ".icartt"]:
                 obs = mio.icartt.add_data(file)
             elif extension in [".csv"]:
-                from melodies_monet.util.read_util import read_aircraft_obs_csv
+                import monetio as mio
 
-                obs = read_aircraft_obs_csv(filename=file, time_var=time_var)
+                obs = mio.load("aircraft_csv", files=file, time_var=time_var)
             else:
                 raise ValueError(f"extension {extension!r} currently unsupported")
         except Exception as e:

@@ -83,7 +83,7 @@ def write_analysis_ncf(obj, output_dir="", fn_prefix=None, keep_groups=None, tit
             "E",
             "F",
             "G",
-            "H",
+            "h",
             "I",
             "J",
             "K",

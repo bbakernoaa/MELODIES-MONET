@@ -63,7 +63,7 @@ data:
 - **`variables`**: Rename variables, apply unit scaling (multiply, divide, add, subtract), and set detection limits (`LLOD`).
 - **`variable_summing`**: Create new variables by summing existing ones.
 - **`data_proc`**: Apply arbitrary filters to the dataset (e.g., `isin`, `==`, `>=`, `!=`).
-- **`resample`**: Resample time-series data using standard rules (e.g., '1H', 'D').
+- **`resample`**: Resample time-series data using standard rules (e.g., '1h', 'D').
 
 ---
 

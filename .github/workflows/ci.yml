@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, MM2]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, MM2]
   workflow_dispatch:
 
 jobs:
@@ -30,12 +30,12 @@ jobs:
           create-args: >-
             pytest
 
-      - if: ${{ matrix.monet == 'dev' }}
-        name: Install development versions of monet and monetio
+      - name: Install development versions of core repositories
         run: |
-          python -m pip list | grep monet
-          python -m pip install --force-reinstall --no-deps https://github.com/noaa-oar-arl/monetio/archive/develop.zip
-          python -m pip install --force-reinstall --no-deps https://github.com/noaa-oar-arl/monet/archive/develop.zip
+          python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monetio.git@develop
+          python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monet.git@feature/interp_improvements
+          python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monet-stats.git@dev
+          python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monet-plots.git@main
 
       - name: Versions
         run: |

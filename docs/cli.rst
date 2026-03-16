@@ -13,33 +13,9 @@ any Python code::
 **Subcommands**
 
 * |run|_ -- run a control file
-* |get-airnow|_ -- get AirNow data
-* |get-aeronet|_ -- get AERONET data
-* |get-aqs|_ -- get AQS data
-* |get-ish|_ -- get ISH data
-* |get-ish-lite|_ -- get ISH-Lite data
-* |get-openaq|_ -- get OpenAQ data
 
 .. |run| replace:: ``run``
 .. _run: #melodies-monet-run
-
-.. |get-airnow| replace:: ``get-airnow``
-.. _get-airnow: #melodies-monet-get-airnow
-
-.. |get-aeronet| replace:: ``get-aeronet``
-.. _get-aeronet: #melodies-monet-get-aeronet
-
-.. |get-aqs| replace:: ``get-aqs``
-.. _get-aqs: #melodies-monet-get-aqs
-
-.. |get-ish| replace:: ``get-ish``
-.. _get-ish: #melodies-monet-get-ish
-
-.. |get-ish-lite| replace:: ``get-ish-lite``
-.. _get-ish-lite: #melodies-monet-get-ish-lite
-
-.. |get-openaq| replace:: ``get-openaq``
-.. _get-openaq: #melodies-monet-get-openaq
 
 .. click:: melodies_monet._cli:_typer_click_object
    :prog: melodies-monet

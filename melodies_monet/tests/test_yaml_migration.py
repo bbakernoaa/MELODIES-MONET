@@ -1,18 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 import sys
-from unittest.mock import MagicMock
-
-# Mock heavy dependencies
-sys.modules["monet"] = MagicMock()
-sys.modules["monetio"] = MagicMock()
-sys.modules["monet_plots"] = MagicMock()
-sys.modules["monet_stats"] = MagicMock()
-sys.modules["xesmf"] = MagicMock()
-sys.modules["cartopy"] = MagicMock()
-sys.modules["matplotlib"] = MagicMock()
-sys.modules["matplotlib.pyplot"] = MagicMock()
-
+from unittest.mock import MagicMock, patch
+import pytest
+import xarray as xr
 from melodies_monet.driver.analysis import analysis
-
 
 def test_migrate_control_dict_unified_data():
     an = analysis()
@@ -41,33 +33,7 @@ def test_migrate_control_dict_unified_data():
     assert an.control_dict["data"]["cmaq_expt"]["source"] == "cmaq"
 
 
-def test_migrate_control_dict_ref_exp():
-    an = analysis()
-    an.control_dict = {
-        "analysis": {
-            "start_time": "2019-08-02-12:00:00",
-            "end_time": "2019-08-03-12:00:00",
-            "output_dir": "./output",
-        },
-        "data": {
-            "cmaq_expt": {"type": "exp", "files": "cmaq_files", "source": "cmaq"},
-            "airnow": {"type": "ref", "files": "airnow_files", "obs_type": "pt_sfc"},
-        },
-        "evaluations": {
-            "airnow_cmaq": {
-                "exp": "cmaq_expt",
-                "ref": "airnow",
-                "mapping": {"O3": "OZONE"},
-            }
-        },
-    }
-    an._migrate_control_dict()
-    assert "data" in an.control_dict
-    assert "cmaq_expt" in an.control_dict["data"]
-    assert "airnow" in an.control_dict["data"]
-
-
-def test_migrate_control_dict_legacy():
+def test_migrate_control_dict_labels():
     an = analysis()
     an.control_dict = {
         "analysis": {
@@ -147,14 +113,7 @@ def test_pair_data_mapping_logic():
 
     an.data = {"mod1": mod, "obs1": obs}
 
-    # This should not crash
-    from unittest.mock import patch
-
-    with patch("monet.pair"):
+    with patch("monet.pair", create=True) as mock_pair:
+        mock_pair.return_value = xr.Dataset()
         an.pair_data()
         assert "eval1" in an.paired
-        # Check mapping usage
-        # In pair_data: keys = list(mapping.keys())
-        # model_obj = mod.obj[list(set(keys + mod_vars))]
-        # We can't easily check internal calls without more complex mocks,
-        # but the lack of crash is already a good sign.

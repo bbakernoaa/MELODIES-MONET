@@ -32,10 +32,10 @@ end_time = pd.to_datetime(an.control_dict["analysis"]["end_time"])
 start_timestamp = start_time.timestamp()
 end_timestamp = end_time.timestamp()
 
-ntime = an.control_dict["obs"]["test_obs"]["sparse_data_grid"]["ntime"]
-nlat = an.control_dict["obs"]["test_obs"]["sparse_data_grid"]["nlat"]
-nlon = an.control_dict["obs"]["test_obs"]["sparse_data_grid"]["nlon"]
-lon0 = an.control_dict["obs"]["test_obs"]["sparse_data_grid"]["lon0"]
+ntime = an.control_dict["data"]["test_obs"]["sparse_data_grid"]["ntime"]
+nlat = an.control_dict["data"]["test_obs"]["sparse_data_grid"]["nlat"]
+nlon = an.control_dict["data"]["test_obs"]["sparse_data_grid"]["nlon"]
+lon0 = an.control_dict["data"]["test_obs"]["sparse_data_grid"]["lon0"]
 
 # generate uniform grid
 time_edges = np.linspace(start_timestamp, end_timestamp, ntime + 1, endpoint=True, dtype=float)
@@ -56,7 +56,7 @@ data_grid_sparse = dict()
 count_grid = np.zeros((ntime, nlat, nlon), dtype=np.int32)
 data_grid = np.zeros((ntime, nlat, nlon), dtype=np.float32)
 
-files = sorted(glob(an.control_dict["obs"]["test_obs"]["files"]))
+files = sorted(glob(an.control_dict["data"]["test_obs"]["files"]))
 obs_var = an.control_dict["test_setup"]["obs_var"]
 
 # read obs
@@ -69,10 +69,10 @@ for filename in files:
         time_edges,
         lat_edges,
         lon_edges,
-        obs_ds["timestamps"],
-        obs_ds["lat"],
-        obs_ds["lon"],
-        obs_ds[obs_var],
+        obs_ds["timestamps"].values,
+        obs_ds["lat"].values,
+        obs_ds["lon"].values,
+        obs_ds[obs_var].values,
         count_grid_sparse,
         data_grid_sparse,
     )
@@ -81,10 +81,10 @@ for filename in files:
         time_edges,
         lat_edges,
         lon_edges,
-        obs_ds["timestamps"],
-        obs_ds["lat"],
-        obs_ds["lon"],
-        obs_ds[obs_var],
+        obs_ds["timestamps"].values,
+        obs_ds["lat"].values,
+        obs_ds["lon"].values,
+        obs_ds[obs_var].values,
         count_grid,
         data_grid,
     )

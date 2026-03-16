@@ -2,9 +2,9 @@ name: Regression Testing
 
 on:
   push:
-    branches: [ main, develop, 'jules-*' ]
+    branches: [ main, develop, MM2, 'jules-*' ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, MM2 ]
 
 jobs:
   regression:
@@ -12,29 +12,33 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Set up micromamba
+      uses: mamba-org/setup-micromamba@v1
       with:
-        python-version: '3.10'
+        environment-file: docs/environment-docs.yml
+        cache-environment: true
+        create-args: >-
+          pytest
+          pytest-mpl
 
-    - name: Install System Dependencies
+    - name: Install Dependencies and Core Repositories
+        # We install these separately to ensure we get the right branches
+        # while using the rest of the environment from the yml
+      shell: bash -l {0}
       run: |
-        sudo apt-get update
-        sudo apt-get install -y libnetcdf-dev libhdf5-dev
-
-    - name: Install Core Repositories
-      run: |
-        pip install --upgrade pip
-        pip install git+https://github.com/bbakernoaa/monetio.git@develop
-        pip install git+https://github.com/bbakernoaa/monet.git@feature/interp_improvements
-        pip install git+https://github.com/bbakernoaa/monet-stats.git@dev
-        pip install git+https://github.com/bbakernoaa/monet-plots.git@main
+        python -m pip install --upgrade pip
+        python -m pip install git+https://github.com/bbakernoaa/xregrid.git
+        python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monetio.git@develop
+        python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monet.git@feature/interp_improvements
+        python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monet-stats.git@dev
+        python -m pip install --force-reinstall --no-deps git+https://github.com/bbakernoaa/monet-plots.git@main
 
     - name: Install MELODIES-MONET
+      shell: bash -l {0}
       run: |
-        pip install -e .
-        pip install prefect prefect-dask dask-jobqueue dask-cloudprovider networkx pooch pytest pytest-mpl xarray pandas numpy
+        python -m pip install -e .
 
     - name: Run Regression Tests
+      shell: bash -l {0}
       run: |
         python -m pytest melodies_monet/tests/test_regression.py

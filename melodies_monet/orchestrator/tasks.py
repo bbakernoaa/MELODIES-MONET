@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 from dask.distributed import worker_client
 from prefect import get_run_logger, task
 
@@ -72,8 +74,14 @@ def run_pairing_task(eval_label, cfg, model_inst, obs_inst, pairing_kwargs, **kw
         futures = []
         for var_mod, var_obs in mapping.items():
             vars_to_pair = list(set([var_mod] + mod_vars))
+
+            def _wrap_pair(mod_obj, obs_obj, **kwargs):
+                if hasattr(mod_obj.monet, "combine_point"):
+                    return mod_obj.monet.combine_point(obs_obj, **kwargs)
+                return m.pair(mod_obj, obs_obj, **kwargs)
+
             f = client.submit(
-                m.pair,
+                _wrap_pair,
                 model_inst.obj[vars_to_pair],
                 obs_inst.obj,
                 suffix=model_inst.label,

@@ -7,19 +7,27 @@ dependencies:
   - python=3.11
   #
   # melodies_monet deps
-  - matplotlib-base<3.9  # for pandas v1 compat
+  - matplotlib-base
+  - esmf
   - monet
   - monetio
   - netcdf4
   - numpy
-  - pandas<2
-  - pillow<10
+  - pandas<3.0
+  - pillow
   #
   # Extras
+  - prefect
+  - prefect-dask
+  - dask-jobqueue
+  - dask-cloudprovider
   - numba
   - pooch
   - timezonefinder
   - typer
+  - hvplot
+  - geoviews
+  - xesmf
   - wrf-python  # for WRF-Chem reader in monetio
   #
   # Docs
@@ -37,5 +45,6 @@ dependencies:
   #
   - pip
   - pip:
+    - git+https://github.com/bbakernoaa/xregrid.git
     # melodies_monet itself
     - '-e ../'

@@ -1,6 +1,7 @@
 analysis:
   start_time: '2019-09-09T00:00:00'
   end_time:   '2019-09-11T23:59:59'
+  output_dir: '.'
   debug: True
 
 test_setup:
@@ -8,8 +9,9 @@ test_setup:
   freq: 30s
   obs_var: A_obs
 
-obs:
+data:
   test_obs:
+    type: obs
     files: test_obs*
     obs_type: sfc_unstruct
     variables:

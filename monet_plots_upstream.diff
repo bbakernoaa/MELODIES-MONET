@@ -1,0 +1,232 @@
+--- a/src/monet_plots/plots/curtain.py
++++ b/src/monet_plots/plots/curtain.py
+@@ -1,13 +1,15 @@
+ # src/monet_plots/plots/curtain.py
+ """Vertical curtain plot for cross-sectional data."""
+
+-from typing import Any, Optional
+-
++import matplotlib.pyplot as plt
++import matplotlib.dates as mdates
++import numpy as np
+ import xarray as xr
++from typing import Any, Optional
+
+ from ..plot_utils import get_plot_kwargs
+ from .base import BasePlot
+-
++from .scatter import ScatterPlot
+
+ class CurtainPlot(BasePlot):
+     """Vertical curtain plot for cross-sectional data.
+@@ -101,3 +103,130 @@
+         self.ax.set_ylabel(self.y)
+
+         return self.ax
++
++class AircraftCurtainPlot(BasePlot):
++    """Specialized aircraft curtain plot with model background and obs overlay."""
++
++    def __init__(
++        self,
++        time: np.ndarray,
++        altitude: np.ndarray,
++        model_data_2d: np.ndarray,
++        obs_pressure: np.ndarray,
++        pairdf: pd.DataFrame,
++        mod_var: str,
++        obs_var: str,
++        **kwargs: Any,
++    ):
++        """
++        Initialize Aircraft Curtain Plot.
++
++        Parameters
++        ----------
++        time : np.ndarray
++            1D array of time points.
++        altitude : np.ndarray
++            1D array of altitude/pressure points for the model grid.
++        model_data_2d : np.ndarray
++            2D array (time, altitude) of model data.
++        obs_pressure : np.ndarray
++            1D array of pressure points for observations.
++        pairdf : pd.DataFrame
++            DataFrame containing paired model/obs data for scatter overlay.
++        mod_var : str
++            Name of model variable in pairdf.
++        obs_var : str
++            Name of observation variable in pairdf.
++        **kwargs : Any
++            Keyword arguments passed to BasePlot.
++        """
++        # This plot typically uses two subplots
++        if "fig" not in kwargs:
++            kwargs["figsize"] = kwargs.get("figsize", (20, 8))
++            fig, axs = plt.subplots(nrows=2, sharex=True, gridspec_kw={"height_ratios": [1, 1]}, **{k:v for k,v in kwargs.items() if k in ["figsize", "dpi"]})
++            kwargs["fig"] = fig
++            kwargs["ax"] = axs[0]
++
++        super().__init__(**kwargs)
++        self.axs = self.fig.get_axes()
++        self.time = time
++        self.altitude = altitude
++        self.model_data_2d = model_data_2d
++        self.obs_pressure = obs_pressure
++        self.pairdf = pairdf
++        self.mod_var = mod_var
++        self.obs_var = obs_var
++
++    def plot(self, cmin=None, cmax=None, cmap="viridis", norm=None, **kwargs):
++        """Generate the aircraft curtain plot."""
++        if cmin is None: cmin = min(np.nanmin(self.model_data_2d), np.nanmin(self.pairdf[self.obs_var]))
++        if cmax is None: cmax = max(np.nanmax(self.model_data_2d), np.nanmax(self.pairdf[self.obs_var]))
++
++        if norm is None:
++            norm = plt.Normalize(vmin=cmin, vmax=cmax)
++
++        time_dates = mdates.date2num(self.time)
++        time_mesh, altitude_mesh = np.meshgrid(time_dates, self.altitude, indexing="ij")
++
++        # 1. Model Curtain (Top Subplot)
++        levels = np.linspace(cmin, cmax, 200)
++        cf = self.axs[0].contourf(time_mesh, altitude_mesh, self.model_data_2d, levels=levels, cmap=cmap, norm=norm, extend="both")
++
++        # 2. Model Scatter Overlay (Top Subplot)
++        self.axs[0].scatter(time_dates, self.obs_pressure, c=self.pairdf[self.mod_var], cmap=cmap, norm=norm, edgecolor="black", linewidth=0.5, alpha=0.7)
++
++        # 3. Obs Scatter (Bottom Subplot)
++        self.axs[1].scatter(time_dates, self.obs_pressure, c=self.pairdf[self.obs_var], cmap=cmap, norm=norm, edgecolor=(0,0,0,0), linewidth=0.3, alpha=0.5)
++
++        # Formatting
++        for ax in self.axs:
++            ax.invert_yaxis()
++            ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d %H"))
++            ax.xaxis.set_major_locator(mdates.AutoDateLocator())
++
++        self.fig.autofmt_xdate(rotation=45, ha="right")
++
++        cbar = self.fig.colorbar(cf, ax=self.axs.tolist(), orientation="horizontal", pad=0.1, aspect=50)
++        return self.axs
++--- a/src/monet_plots/plots/__init__.py
+++++ b/src/monet_plots/plots/__init__.py
++@@ -4,7 +4,7 @@
++ from .conditional_bias import ConditionalBiasPlot
++ from .conditional_quantile import ConditionalQuantilePlot
++-from .curtain import CurtainPlot
+++from .curtain import CurtainPlot, AircraftCurtainPlot
++ from .diurnal_error import DiurnalErrorPlot
++ from .ensemble import SpreadSkillPlot
++ from .facet_grid import FacetGridPlot
++@@ -19,4 +19,5 @@
++ from .rank_histogram import RankHistogramPlot
++ from .reliability_diagram import ReliabilityDiagramPlot
++ from .rev import RelativeEconomicValuePlot
++ from .ridgeline import RidgelinePlot
++ from .roc_curve import ROCCurvePlot
++ from .scatter import ScatterPlot
++ from .scorecard import ScorecardPlot
++ from .soccer import SoccerPlot
++ from .spatial import SpatialPlot, SpatialTrack
++ from .spatial_bias_scatter import SpatialBiasScatterPlot
++ from .spatial_contour import SpatialContourPlot
++ from .spatial_imshow import SpatialImshowPlot
++ from .taylor_diagram import TaylorDiagramPlot
++ from .timeseries import TimeSeriesPlot
++ from .trajectory import TrajectoryPlot
++ from .wind_barbs import WindBarbsPlot
++ from .wind_quiver import WindQuiverPlot
+++from .violin import ViolinPlot
++
++ __all__ = [
++     "BasePlot",
++@@ -38,4 +39,6 @@
++     "CurtainPlot",
+++    "AircraftCurtainPlot",
++     "DiurnalErrorPlot",
++     "FingerprintPlot",
++     "BivariatePolarPlot",
++     "ConditionalQuantilePlot",
+++    "ViolinPlot",
++ ]
++--- /dev/null
+++++ b/src/monet_plots/plots/violin.py
++@@ -0,0 +1,56 @@
+++from __future__ import annotations
+++
+++from typing import Any
+++
+++import matplotlib.pyplot as plt
+++import pandas as pd
+++import seaborn as sns
+++
+++from .base import BasePlot
+++
+++
+++class ViolinPlot(BasePlot):
+++    """Create a violin plot from combined datasets."""
+++
+++    def __init__(
+++        self,
+++        data: pd.DataFrame,
+++        order: list[str] = None,
+++        palette: dict[str, str] = None,
+++        **kwargs: Any,
+++    ) -> None:
+++        """Initialize the violin plot.
+++
+++        Parameters
+++        ----------
+++        data : pandas.DataFrame
+++            DataFrame in wide or long format.
+++        order : list of str, optional
+++            Order to plot the categorical levels in.
+++        palette : dict, optional
+++            Colors to use for the different levels of the hue variable.
+++        **kwargs : Any
+++            Additional keyword arguments passed to BasePlot.
+++        """
+++        super().__init__(**kwargs)
+++        self.data = data
+++        self.order = order
+++        self.palette = palette
+++
+++    def plot(self, **kwargs: Any) -> plt.Axes:
+++        """Generate the violin plot.
+++
+++        Parameters
+++        ----------
+++        **kwargs : Any
+++            Additional keyword arguments passed to seaborn.violinplot.
+++
+++        Returns
+++        -------
+++        matplotlib.axes.Axes
+++            The axes object with the violin plot.
+++        """
+++        if self.data.empty:
+++            return self.ax
+++
+++        # If data is in wide format, melt it for seaborn
+++        if self.order and all(col in self.data.columns for col in self.order):
+++            plot_df = pd.melt(self.data[self.order], var_name="group", value_name="value")
+++            x, y = "group", "value"
+++        else:
+++            plot_df = self.data
+++            x = kwargs.pop("x", None)
+++            y = kwargs.pop("y", None)
+++
+++        # Track B defaults often use width normalization
+++        final_kwargs = {
+++            "cut": 0,
+++            "orient": "v",
+++            "density_norm": "width",
+++            "inner": "quartile",
+++            "order": self.order,
+++            "palette": self.palette,
+++        }
+++        final_kwargs.update(kwargs)
+++
+++        sns.violinplot(data=plot_df, x=x, y=y, ax=self.ax, **final_kwargs)
+++
+++        return self.ax

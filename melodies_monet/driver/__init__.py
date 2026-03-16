@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+#
 from melodies_monet.driver.analysis import analysis
 from melodies_monet.driver.data import Data
 from melodies_monet.driver.orchestrator import orchestrator

@@ -11,6 +11,7 @@ import numba
 import numpy as np
 
 
+# @numba.jit(nopython=True)
 def update_sparse_data_grid(
     time_edges,
     x_edges,
@@ -61,10 +62,10 @@ def update_sparse_data_grid(
             i_y = np.clip(i_y, 0, ny - 1)
             if (i_time, i_x, i_y) in count_grid.keys():
                 count_grid[(i_time, i_x, i_y)] += 1
-                data_grid[(i_time, i_x, i_y)] += data_obs[i].values
+                data_grid[(i_time, i_x, i_y)] += data_obs[i]
             else:
                 count_grid[(i_time, i_x, i_y)] = 1
-                data_grid[(i_time, i_x, i_y)] = data_obs[i].values
+                data_grid[(i_time, i_x, i_y)] = data_obs[i]
 
 
 def normalize_sparse_data_grid(count_grid, data_grid):
